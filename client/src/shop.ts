@@ -28,6 +28,9 @@ function render() {
     ? account?.wallet ? 'Профиль сохранён на сервере и привязан к кошельку. Его можно восстановить на другом устройстве. Сигнал пока является игровыми очками.' : 'Профиль сохраняется на сервере. Привяжите кошелёк, чтобы восстановить прогресс после очистки браузера или на другом устройстве. Сигнал пока является игровыми очками.'
     : account?.wallet ? 'Profile saved on the server and linked to your wallet. Restore it on another device. Signal is currently game points.' : 'Profile saved on the server. Link a wallet to restore progress on another device or after clearing browser data. Signal is currently game points.';
   launcher.textContent = `${w.shop} · ${account?.balance ?? 0} ${w.currency}`;
+  if (import.meta.env.VITE_DEMO_MODE === 'true') w.saved = lang === 'ru'
+    ? 'Это демо: баланс, скины и привязка кошелька могут сброситься после перезапуска сервера. Сигнал — тестовые игровые очки.'
+    : 'Demo: balance, skins and wallet links may reset when the server restarts. Signal is test game points.';
   if (!dialog.open) return;
   dialog.innerHTML = `<div class="settings-heading"><h2 id="shop-title">${w.shop}</h2><button id="shop-close" aria-label="${w.close}">×</button></div><p class="shop-balance">${w.balance}: <b>${account?.balance ?? 0} ${w.currency}</b></p>${lastReward ? `<p class="shop-reward">${w.reward}: +${lastReward}</p>` : ''}<div class="skin-grid">${SKINS.map((skin) => {
     const owned = account?.owned.includes(skin.id);

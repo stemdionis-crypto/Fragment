@@ -1,5 +1,31 @@
 # Publishing Fragment
 
+## Free concept demo on Render
+
+The root `render.yaml` provisions one free Node.js web service, with both the
+client and WebSocket server. Connect the repository through Render Blueprints:
+https://dashboard.render.com/select-repo?type=blueprint
+
+Select `stemdionis-crypto/Fragment`, branch `main`, and confirm the preview shows
+one **Free** web service and no paid databases or disks. Deploy the Blueprint.
+Render provides the HTTPS URL. Wallet sign-in automatically uses its trusted
+`RENDER_EXTERNAL_URL`. Custom domains still need `FRAGMENT_PUBLIC_ORIGIN`.
+
+The service deploys after GitHub checks pass. Do not configure the optional
+`FRAGMENT_DEPLOY_HOOK` as well: native Render auto-deploy handles this demo.
+
+Free services sleep after inactivity, so opening the game can take time to wake
+the server. Profiles are stored in temporary files and are lost on server
+restarts/redeploys. The main menu and shop explicitly label this limitation.
+No local profiles or wallet access tokens are uploaded to the hosting service.
+
+For a later release, switch to a paid service with persistent storage or an
+external database, keep one game server instance, and remove `VITE_DEMO_MODE`
+only after persistence is verified. Wallet links cannot restore discarded
+demo profiles.
+
+References: https://render.com/docs/free and https://render.com/docs/blueprint-spec
+
 Publish this `fragment` directory as the repository root. The parent directory
 contains a different game, Here Lies. Do not upload that parent's index.html.
 Opening either project's HTML through file:// does not start its development

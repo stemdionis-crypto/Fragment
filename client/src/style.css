@@ -1002,6 +1002,7 @@ h2 {
 }
 .home-account > button { flex: 1 1 180px; }
 #wallet-hint { margin: 8px 0 18px; }
+.demo-note { border-left: 2px solid var(--bone); padding-left: 10px; }
 .card-top {
   display: flex;
   justify-content: space-between;

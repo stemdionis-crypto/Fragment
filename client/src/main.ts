@@ -95,6 +95,7 @@ function mountHome() {
         <div class="home-top">${langSwitchHtml()}</div>
         <h1 class="title">Fragment</h1>
         <p class="lead">${t('lead')}</p>
+        ${import.meta.env.VITE_DEMO_MODE === 'true' ? `<p class="fine demo-note">${lang === 'ru' ? 'Демо концепции · Прогресс временный и может сброситься после перезапуска сервера.' : 'Concept demo · Progress is temporary and may reset when the server restarts.'}</p>` : ''}
         <div class="home-account"><button id="wallet-home"></button></div>
         <p id="wallet-hint" class="fine"></p>
 
@@ -170,7 +171,9 @@ function updateHomeWallet() {
     ? (lang === 'ru' ? 'Ожидаем подпись…' : 'Waiting for signature…')
     : wallet ? `◎ ${shortAddr(wallet)}` : (lang === 'ru' ? 'Войти через кошелёк' : 'Sign in with wallet');
   button.disabled = walletBusy() || !!wallet;
-  $('#wallet-hint').textContent = wallet
+  $('#wallet-hint').textContent = import.meta.env.VITE_DEMO_MODE === 'true'
+    ? (lang === 'ru' ? 'Можно играть без кошелька. В демо привязка и прогресс действуют до сброса сервера.' : 'Play without a wallet. Demo wallet links and progress last until the server resets.')
+    : wallet
     ? (lang === 'ru' ? 'Профиль привязан к кошельку. Прогресс сохранён.' : 'Profile linked to your wallet. Progress saved.')
     : (lang === 'ru' ? 'Играйте гостем или привяжите кошелёк, чтобы восстановить прогресс на другом устройстве.' : 'Play as a guest or link a wallet to restore progress on another device.');
 }

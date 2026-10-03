@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: fragment-demo
+    runtime: node
+    plan: free
+    region: frankfurt
+    repo: https://github.com/stemdionis-crypto/Fragment
+    branch: main
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: FRAGMENT_DATA_DIR
+        value: /tmp/fragment-demo-profiles
+      - key: VITE_DEMO_MODE
+        value: "true"
