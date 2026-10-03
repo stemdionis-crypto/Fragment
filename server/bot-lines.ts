@@ -1,4 +1,5 @@
 import type { Glyph, Lang, PrivateInfo, PublicState, Value } from '../shared/protocol';
+import { isCipher } from '../shared/trial-rules';
 
 const RU: Record<Glyph, string> = {
   triangle: 'крыша домика',
@@ -57,6 +58,7 @@ export function linesFor(info: PrivateInfo, s: PublicState, LANG: Lang): string[
     const c = t.controls.find((x) => x.id === k.controlId);
     const owner = s.players.find((p) => p.id === c?.ownerId)?.name ?? '?';
     const label = c ? (LANG === 'ru' ? c.label.ru : c.label.en).toLowerCase() : '';
+    if (isCipher(t.kind)) return tr(`${owner}, исходная подсказка для тебя: ${describeValue(k.value, LANG)}. Примени правило испытания.`, `${owner}, your input clue: ${describeValue(k.value, LANG)}. Apply the trial rule.`);
     if (t.kind === 'frequency') return tr(`${owner}, твоя цифра — ${describeValue(k.value, LANG)}.`, `${owner}, your digit: ${describeValue(k.value, LANG)}.`);
     if (t.kind === 'code') return tr(`${owner}, у тебя (${label}) стоит ${describeValue(k.value, LANG)}.`, `${owner}, in your place (${label}): ${describeValue(k.value, LANG)}.`);
     return tr(`${owner}, твоя ${label} — на ${describeValue(k.value, LANG)}.`, `${owner}, your ${label}: ${describeValue(k.value, LANG)}.`);

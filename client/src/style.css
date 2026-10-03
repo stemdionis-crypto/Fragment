@@ -1262,6 +1262,9 @@ h2 {
 .code-seat { display: grid; gap: 3px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
 .code-seat.mine { border-color: var(--bone); }
 .code-seat span, .code-arrow { color: var(--muted); }
+.cipher-scale { margin-top: 12px; }
+.cipher-scale .glyph-row { gap: 8px; flex-wrap: wrap; }
+.scale-item { display: grid; justify-items: center; gap: 3px; color: var(--muted); }
 .digit {
   font-family: var(--font-type);
   font-size: 34px;

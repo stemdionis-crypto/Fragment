@@ -1,3 +1,5 @@
+import assert from 'node:assert/strict';
+import { HAND_TRIALS, decodeClue } from '../shared/trial-rules';
 // Sanity check for the trials, for 3 and 4 players and every set of pictures:
 //   - every player owns exactly one control (a vote in "Missing")
 //   - the right setting of a control is known to exactly one player, and never to its owner
@@ -23,7 +25,7 @@ for (const kind of TRIAL_KINDS) {
       const pooled = solveFromKnowledge(t, knowsList, handsList);
       const solved = t.controls.every((c) => pooled.get(c.id) === c.target);
       let fair = true;
-      if (kind === 'missing') {
+      if (HAND_TRIALS.includes(kind)) {
         // No single hand reveals the missing picture
         fair = players.every((_, i) => [...solveFromKnowledge(t, [], [handsList[i]]).values()].every((v) => v === null));
       } else {
@@ -41,7 +43,28 @@ for (const kind of TRIAL_KINDS) {
   }
 }
 let varied = 0;
-for (let i = 0; i < 500; i++) if (new Set(trialSequence(3).map((p) => p.kind)).size === 3) varied++;
+for (let i = 0; i < 500; i++) if (new Set(trialSequence(5).map((p) => p.kind)).size === 5) varied++;
 failed ||= varied !== 500;
-console.log(`${varied === 500 ? 'ok  ' : 'FAIL'} every game has 3 different trials (${varied}/500)`);
+console.log(`${varied === 500 ? 'ok  ' : 'FAIL'} every game has 5 different trials (${varied}/500)`);
+assert.equal(TRIAL_KINDS.length, 20);
+assert.equal(new Set(TRIAL_KINDS).size, 20);
+const seen = new Set<string>();
+for (let i = 0; i < 500; i++) trialSequence(5).forEach(t => seen.add(t.kind));
+assert.equal(seen.size, 20, 'all trials can be selected');
+assert.throws(() => trialSequence(21));
+assert.throws(() => trialSequence(0));
+const digits = [0,1,2,3,4,5,6,7,8,9];
+const expected = {
+  mirror: [9,8,7,6,5,4,3,2,1,0], echo: [1,2,3,4,5,6,7,8,9,0],
+  countdown: [9,0,1,2,3,4,5,6,7,8], amplifier: [0,2,4,6,8,0,2,4,6,8],
+  balance: [5,6,7,8,9,0,1,2,3,4],
+};
+for (const [kind, outputs] of Object.entries(expected)) {
+  digits.forEach((d, i) => assert.equal(decodeClue(kind as typeof TRIAL_KINDS[number], d, digits), outputs[i]));
+}
+[0,2,4,6,8].forEach((d,i) => assert.equal(decodeClue('half',d,digits),i));
+const scale = ITEM_SETS[sets[0]];
+const positions = { next: [1,2,3,4,5,6,7,0], previous: [7,0,1,2,3,4,5,6], opposite: [4,5,6,7,0,1,2,3], reflection: [7,6,5,4,3,2,1,0], pairs: [1,0,3,2,5,4,7,6], leap: [2,3,4,5,6,7,0,1] };
+for (const [kind, indices] of Object.entries(positions)) scale.forEach((v,i) => assert.equal(decodeClue(kind as typeof TRIAL_KINDS[number], v, scale),scale[indices[i]]));
+console.log('ok   twenty-trial pool, selection coverage and independent cipher examples');
 process.exit(failed ? 1 : 0);

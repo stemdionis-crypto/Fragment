@@ -20,7 +20,10 @@ export interface L {
 
 // Every trial gives each player their own control on the radio.
 // The right setting of your control is known to someone else.
-export type TrialKind = 'tuning' | 'frequency' | 'code' | 'missing';
+export type TrialKind = 'tuning' | 'frequency' | 'code' | 'missing'
+  | 'common' | 'duplicate' | 'rare' | 'crowd'
+  | 'mirror' | 'echo' | 'countdown' | 'amplifier' | 'half' | 'balance'
+  | 'next' | 'previous' | 'opposite' | 'reflection' | 'pairs' | 'leap';
 
 // A control's value: an item picture, or a digit 0–9
 export type Value = Glyph | number;
@@ -30,7 +33,7 @@ export const PLAYER_COLORS = ['#c9c4b8', '#8d9499', '#7d93a3', '#a8655a', '#8690
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 4;
 export const MAX_ATTEMPTS = 3; // per trial
-export const TRIALS_PER_GAME = 3;
+export const TRIALS_PER_GAME = 5;
 export const ROUND_SECONDS = 10 * 60;
 export const CHAT_MAX = 140;
 export const TURN_SECONDS = 30;

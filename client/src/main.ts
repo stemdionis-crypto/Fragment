@@ -18,6 +18,7 @@ import { settings } from './settings';
 import { initSettingsUI, placeSettingsButton } from './settings-ui';
 import { initShop, placeShopButton, handleShopMessage } from './shop';
 import { SKINS } from '../../shared/economy';
+import { isCipher, SYMBOL_CIPHERS, HAND_TRIALS } from '../../shared/trial-rules';
 import { connectWallet, initWalletAuth, handleWalletMessage, walletBusy } from './wallet-auth';
 import { glyphSvg } from './glyphs';
 import { Net, saveSession, savedSession } from './net';
@@ -366,7 +367,7 @@ function renderMyControls() {
           .join('')}</div>`;
       }
       const label = s.trial?.kind === 'code' ? (lang === 'ru' ? `Ваше место в коде: ${tl(c.label)}` : `Your position in the code: ${tl(c.label)}`) : tl(c.label);
-      return `<div class="my-control"><p class="control-label">${esc(label)}</p><p class="fine">${lang === 'ru' ? 'Здесь выставляйте свой ответ по подсказке другого игрока. Карточка «Вы знаете» предназначена для соседа.' : 'Set your own answer here using another player’s clue. The “You know” card is for your teammate.'}</p>${body}</div>`;
+      return `<div class="my-control"><p class="control-label">${esc(label)}</p><p class="fine">${HAND_TRIALS.includes(s.trial!.kind) ? (lang === 'ru' ? 'Сравните карточки всей команды и выберите общий ответ по правилу испытания.' : 'Compare the whole team’s cards and choose the shared answer using the trial rule.') : (lang === 'ru' ? 'Здесь выставляйте свой ответ по подсказке другого игрока. Карточка «Вы знаете» предназначена для соседа.' : 'Set your own answer here using another player’s clue. The “You know” card is for your teammate.')}</p>${body}</div>`;
     })
     .join('');
   app.querySelectorAll<HTMLButtonElement>('#myControls [data-control]').forEach((b) => {
@@ -410,11 +411,11 @@ function renderMine() {
         const owner = s.players.find((p) => p.id === c?.ownerId);
         return `<li class="know-row">
           <span class="know-who"><span class="fine">${lang === 'ru' ? 'Подсказка для' : 'Clue for'}</span><span class="pname" style="color:${owner?.color ?? '#999'}">${esc(owner?.name ?? '?')} ${owner?.bot ? `<span class="tag">${t('bot')}</span>` : ''}</span><span class="fine">${s.trial!.kind === 'code' ? (lang === 'ru' ? 'Место в коде' : 'Position in the code') : (lang === 'ru' ? 'Пульт' : 'Control')}: ${c ? esc(tl(c.label)) : ''}</span></span>
-          <span class="know-value">${valueHtml(k.value, 40)}<span class="fine">${lang === 'ru' ? 'Ответ соседа' : 'Teammate’s answer'}</span></span>
+          <span class="know-value">${valueHtml(k.value, 40)}<span class="fine">${isCipher(s.trial!.kind) ? (lang === 'ru' ? 'Исходная подсказка' : 'Input clue') : (lang === 'ru' ? 'Ответ соседа' : 'Teammate’s answer')}</span></span>
         </li>`;
       })
       .join('');
-    parts.push(`<div class="piece"><p class="eyebrow">${t('youKnow')}</p><p class="fine">${t('youKnowHint')}</p><ul class="know-list">${rows}</ul></div>`);
+    parts.push(`<div class="piece"><p class="eyebrow">${t('youKnow')}</p><p class="fine">${isCipher(s.trial.kind) ? (lang === 'ru' ? 'Это исходная подсказка для соседа, а не готовый ответ. Опишите её; сосед применит правило испытания.' : 'This is your teammate’s input clue, not the final answer. Describe it; they apply the trial rule.') : t('youKnowHint')}</p><ul class="know-list">${rows}</ul></div>`);
   }
   if (priv.hand?.length)
     parts.push(
@@ -471,6 +472,7 @@ function updateGame() {
       <span class="task">${esc(tl(tr.task))}</span>
       <span class="q">${esc(tl(tr.prompt))}</span>${tr.kind === 'code' ? `<div class="code-order">${tr.controls.map((c) => { const owner = s.players.find((p) => p.id === c.ownerId); return `<span class="code-seat ${c.ownerId === myId ? 'mine' : ''}"><b>${esc(owner?.name ?? '?')}${c.ownerId === myId ? ` · ${t('you')}` : owner?.bot ? ` · ${t('bot')}` : ''}</b><span>${esc(tl(c.label))}</span></span>`; }).join('<span class="code-arrow" aria-hidden="true">→</span>')}</div>` : ''}`;
     maybeShowIntro(tr);
+    if (SYMBOL_CIPHERS.includes(tr.kind)) $('#prompt').insertAdjacentHTML('beforeend', `<div class="cipher-scale"><span class="fine">${lang === 'ru' ? 'Общая шкала · слева направо' : 'Shared scale · left to right'}</span><div class="glyph-row">${tr.controls[0].options.map((g, i) => `<span class="scale-item">${glyphSvg(g as Glyph, '#e3ddcf', 25)}<small>${i + 1}</small></span>`).join('')}</div></div>`);
   }
 
   // Re-draw your controls only when they change (keeps clicks snappy)

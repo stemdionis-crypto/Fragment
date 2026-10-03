@@ -43,7 +43,7 @@ const en = {
   findMatch: 'Find a random match',
   matchNote: 'Join other players · starts automatically with 3–4 people',
   searchingMatch: 'Finding teammates',
-  matchLobbyNote: 'We are gathering real players. Once three join, an 8-second countdown starts; a fourth can join too. No wallet needed.',
+  matchLobbyNote: 'We are gathering real players. Once three join, an 8-second countdown starts; a fourth can join too. A linked wallet is required.',
   cancelSearch: 'Cancel search',
   matchWaiting: (n: number) => `Players found: ${n}/3. Waiting for teammates…`,
   matchCountdown: (n: number) => `Team found! Starting in ${n}s…`,
@@ -69,13 +69,13 @@ const en = {
   inviteCopied: 'Invite link copied',
   howItWorks: 'How it works',
   rules: [
-    'The radio sets you <b>three trials in a row</b>, each one different: describe a hidden item, put a code together, find what went missing, work out who came first… The items change too: signs, everyday objects, animals. Each of you holds only <b>part of what is needed</b>.',
+    'The radio sets you <b>five trials randomly selected from twenty</b>, each one different: describe a hidden item, put a code together, find what went missing, decode a distorted signal… The items change too: signs, everyday objects, animals. Each of you holds only <b>part of what is needed</b>.',
     'Share your clues in the chat, <b>in turns</b>: up to three messages, then the floor passes on.',
     '<b>The radio reads every message.</b> The names of the items (“cat”, “candle”, “star”) and numbers turn into static and make it suspicious. Even misspelled or in another alphabet.',
     'So <b>describe</b> instead of naming: not “cat” but “the one who purrs”, not “clock” but “what ticks on the wall”.',
     'The radio <b>learns</b>: repeat a metaphor too often and it understands it too. Keep inventing.',
     'When its eye is fully open, it <b>retunes</b>: the trial starts over with new clues.',
-    'Pass all three trials and your team receives a <b>Fragment</b>: a record of the language you invented, on Solana.',
+    'Pass all five trials and your team receives a <b>Fragment</b>: a record of the language you invented. Solana NFT minting is planned.',
   ],
   installPhantom: 'Install <a href="https://phantom.app" target="_blank" rel="noopener">Phantom</a> to receive your Fragment on Solana.',
   walletConnected: (a: string) => `Wallet connected: ${a}`,
@@ -142,7 +142,7 @@ const en = {
   youKnow: 'You know',
   youKnowHint: 'This is your teammate’s answer, not yours. Tell the named player what to choose using a description instead of the item’s name.',
   knowHand: 'What you have',
-  knowHandHint: 'The missing picture is definitely not here.',
+  knowHandHint: 'These are your cards. Compare them with the other players’ cards using the trial rule.',
 };
 
 type Dict = typeof en;
@@ -183,13 +183,13 @@ const ru: Dict = {
   inviteCopied: 'Ссылка скопирована',
   howItWorks: 'Как играть',
   rules: [
-    'Радио устроит вам <b>три испытания подряд</b>, каждый раз разные: опиши загаданное, собери код, найди пропажу, разберись, кто пришёл первым… Меняются и картинки: знаки, предметы, звери. У каждого из вас только <b>часть того, что нужно</b>.',
+    'Радио устроит вам <b>пять случайных испытаний из двадцати</b>, каждый раз разные: опиши загаданное, собери код, найди пропажу, расшифруй изменённый сигнал… Меняются и картинки: знаки, предметы, звери. У каждого из вас только <b>часть того, что нужно</b>.',
     'Делитесь подсказками в чате. Пишут <b>по очереди</b>: до трёх сообщений, потом ход переходит дальше.',
     '<b>Радио читает каждое сообщение.</b> Названия того, что на картинках («кот», «свеча», «звезда»), и числа оно глушит помехами, и его подозрение растёт. Даже если написать с ошибкой или латиницей.',
     'Поэтому <b>описывайте</b>, а не называйте: не «кот», а «тот, кто мурлычет», не «часы», а «то, что тикает на стене».',
     'Радио <b>учится</b>: если повторять одну метафору, оно её запомнит. Придумывайте новые.',
     'Когда глаз радио откроется полностью, оно <b>сменит волну</b>: испытание начнётся заново с другими подсказками.',
-    'Пройдите все три испытания, и команда получит <b>Фрагмент</b>: запись языка, который вы придумали, в блокчейне Solana.',
+    'Пройдите все пять испытаний, и команда получит <b>Фрагмент</b>: запись языка, который вы придумали. Выпуск NFT в Solana запланирован.',
   ],
   installPhantom: 'Установите <a href="https://phantom.app" target="_blank" rel="noopener">Phantom</a>, чтобы получить Фрагмент в Solana.',
   walletConnected: (a) => `Кошелёк подключён: ${a}`,
@@ -253,7 +253,7 @@ const ru: Dict = {
   youKnow: 'Вы знаете',
   youKnowHint: 'Это ответ соседа, не ваш. Объясните указанному игроку, что выбрать: опишите картинку, не называя её прямо.',
   knowHand: 'Что у вас есть',
-  knowHandHint: 'Пропавшей картинки здесь точно нет.',
+  knowHandHint: 'Это ваши карточки. Сравните их с карточками других игроков по правилу испытания.',
 };
 
 const DICTS: Record<Lang, Dict> = { en, ru };

@@ -1,6 +1,7 @@
+import { TRIALS_PER_GAME } from '../shared/protocol';
 // End-to-end check against a running server (npm run dev):
 // 3 clients create/join a room, chat in turns, each sets their own control, a wrong check,
-// then all three trials passed with "I'm sure", and a Fragment at the end.
+// then all five trials passed with "I'm sure", and a Fragment at the end.
 //   npm run e2e
 import WebSocket from 'ws';
 import type { ClientMessage, PrivateInfo, PublicState, ServerMessage, Value } from '../shared/protocol';
@@ -77,7 +78,7 @@ await sleep(300);
 assert(a.state!.turnId !== speaker.id, 'pass gives the floor to the next player');
 
 const kinds: string[] = [];
-for (let round = 0; round < 3; round++) {
+for (let round = 0; round < TRIALS_PER_GAME; round++) {
   const trial = a.state!.trial!;
   kinds.push(trial.kind);
   const answer = solveFromKnowledge(
@@ -123,12 +124,12 @@ for (let round = 0; round < 3; round++) {
   await sleep(200);
   for (const cl of all) cl.send({ t: 'ready', on: true });
   await sleep(1200);
-  if (round < 2) assert(a.state!.trial!.index === round + 1 && a.state!.attemptsLeft === 3, `trial ${round + 1} passed when everyone was sure`);
+  if (round < TRIALS_PER_GAME - 1) assert(a.state!.trial!.index === round + 1 && a.state!.attemptsLeft === 3, `trial ${round + 1} passed when everyone was sure`);
 }
-assert(new Set(kinds).size === 3, `three different trials: ${kinds.join(', ')}`);
-assert(a.state!.phase === 'won', 'the third trial opens the radio');
+assert(new Set(kinds).size === TRIALS_PER_GAME, `five different trials: ${kinds.join(', ')}`);
+assert(a.state!.phase === 'won', 'the fifth trial opens the radio');
 const f = a.state!.fragment!;
-assert(f.trials.length === 3 && f.wrong === 1 && f.heard === 1, `fragment ${f.id}: ${f.trials.map((x) => x.ru).join(', ')}`);
+assert(f.trials.length === TRIALS_PER_GAME && f.wrong === 1 && f.heard === 1, `fragment ${f.id}: ${f.trials.map((x) => x.ru).join(', ')}`);
 
 a.send({ t: 'again' });
 await sleep(300);

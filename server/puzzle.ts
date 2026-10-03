@@ -5,6 +5,7 @@
 // The radio checks the answer only when every player has pressed "I'm sure".
 
 import { ITEM_SETS, type Glyph, type ItemSet, type Knowledge, type L, type TrialKind, type Value } from '../shared/protocol';
+import { NUMBER_CIPHERS, SYMBOL_CIPHERS, HAND_TRIALS, decodeClue, handCandidates } from '../shared/trial-rules';
 
 export interface Control {
   id: string;
@@ -12,6 +13,7 @@ export interface Control {
   label: L;
   options: Value[];
   target: Value;
+  clue?: Value;
 }
 
 export interface Trial {
@@ -25,7 +27,7 @@ export interface Trial {
   hands?: Record<string, Glyph[]>; // "Missing": the items each player holds
 }
 
-export const TRIAL_KINDS: TrialKind[] = ['tuning', 'frequency', 'code', 'missing'];
+export const TRIAL_KINDS: TrialKind[] = ['tuning', 'frequency', 'code', 'missing', 'common', 'duplicate', 'rare', 'crowd', ...NUMBER_CIPHERS, ...SYMBOL_CIPHERS];
 
 function shuffle<T>(arr: readonly T[]): T[] {
   const a = [...arr];
@@ -47,7 +49,7 @@ function circle(players: string[], controls: Omit<Control, 'ownerId'>[]): Pick<T
   for (const c of owned) {
     // The player before the owner in the circle knows it (alone at the table, you know your own: test mode only)
     const knower = order.length > 1 ? order[(order.indexOf(c.ownerId) + order.length - 1) % order.length] : c.ownerId;
-    knows[knower].push({ controlId: c.id, value: c.target });
+    knows[knower].push({ controlId: c.id, value: c.clue ?? c.target });
   }
   return { controls: owned, knows };
 }
@@ -178,7 +180,70 @@ function missingTrial(set: ItemSet, players: string[]): Trial {
 
 // ---------- building a game ----------
 
+const CIPHERS: Partial<Record<TrialKind, { title: L; rule: L }>> = {
+  mirror: { title: both('Mirror', 'Зеркало'), rule: both('Subtract the clue digit from nine.', 'Вычтите цифру подсказки из девяти.') },
+  echo: { title: both('Echo', 'Эхо сигнала'), rule: both('Move one digit forward. After nine comes zero.', 'Сдвиньте цифру на шаг вперёд. После девяти идёт ноль.') },
+  countdown: { title: both('Countdown', 'Обратный отсчёт'), rule: both('Move one digit backward. Before zero comes nine.', 'Сдвиньте цифру на шаг назад. Перед нулём идёт девять.') },
+  amplifier: { title: both('Amplifier', 'Усилитель'), rule: both('Double the clue digit and keep only the last digit.', 'Удвойте цифру подсказки и оставьте только последнюю цифру результата.') },
+  half: { title: both('Half signal', 'Полусигнал'), rule: both('Divide the even clue digit by two.', 'Разделите чётную цифру подсказки пополам.') },
+  balance: { title: both('Counterweight', 'Противовес'), rule: both('Add five to the clue digit and keep only the last digit.', 'Прибавьте к цифре подсказки пять и оставьте последнюю цифру результата.') },
+  next: { title: both('Next station', 'Следующая станция'), rule: both('Choose the picture one step to the right of the clue on the shared scale. The scale wraps around.', 'Выберите картинку справа от подсказки на общей шкале. После последней идёт первая.') },
+  previous: { title: both('Return signal', 'Обратный сигнал'), rule: both('Choose the picture one step to the left of the clue on the shared scale. Before the first comes the last.', 'Выберите картинку слева от подсказки на общей шкале. Перед первой идёт последняя.') },
+  opposite: { title: both('Opposite pole', 'Другой полюс'), rule: both('Move four pictures to the right of the clue on the eight-picture scale, wrapping around.', 'От картинки подсказки отсчитайте четыре шага вправо по шкале. После последней идёт первая.') },
+  reflection: { title: both('Reflected scale', 'Отражение'), rule: both('Reflect the clue position across the scale: the first swaps with the last, the second with the second-to-last.', 'Отразите место подсказки на шкале: первая меняется с последней, вторая — с предпоследней.') },
+  pairs: { title: both('Paired keys', 'Парные ключи'), rule: both('The scale is split into adjacent pairs. Choose the other picture in your clue’s pair.', 'Шкала разбита на соседние пары. Выберите другую картинку из пары, в которой находится подсказка.') },
+  leap: { title: both('Signal jump', 'Скачок сигнала'), rule: both('Move two pictures to the right of the clue on the shared scale, wrapping around.', 'От картинки подсказки сделайте два шага вправо по шкале. После последней идёт первая.') },
+};
+
+function cipherTrial(kind: TrialKind, set: ItemSet, players: string[]): Trial {
+  const numeric = NUMBER_CIPHERS.includes(kind);
+  const options: Value[] = numeric ? [0,1,2,3,4,5,6,7,8,9] : shuffle(itemsOf(set));
+  const definition = CIPHERS[kind]!;
+  const controls = players.map((_, i) => {
+    const clue = pick(kind === 'half' ? [0,2,4,6,8] : options);
+    return { id: `cipher${i}`, label: both(`Receiver ${i + 1}`, `Приёмник ${i + 1}`), options: [...options], clue, target: decodeClue(kind, clue, options) };
+  });
+  return {
+    kind, set: numeric ? undefined : set, title: definition.title,
+    prompt: both('…I changed the signal. Work out what reaches your receiver.', '…я изменил сигнал. Разберитесь, что придёт в ваш приёмник.'),
+    task: both(
+      `${definition.rule.en} Your neighbour knows your input clue. Describe their clue, listen to yours, apply the rule, and set your own result. Confirm when ready.`,
+      `${definition.rule.ru} Исходную подсказку для вас знает сосед. Опишите его подсказку, выслушайте свою, примените правило и выставьте у себя результат. Затем нажмите «Я уверен».`,
+    ),
+    ...circle(players, controls),
+  };
+}
+
+const COLLECTIONS: Partial<Record<TrialKind, { title: L; task: L }>> = {
+  common: { title: both('Common ground', 'Общее звено'), task: both('Find the only picture held by every player.', 'Найдите единственную картинку, которая есть у каждого игрока.') },
+  duplicate: { title: both('Double trace', 'Двойной след'), task: both('Find the only picture held by exactly two players. Every other picture is held by one.', 'Найдите единственную картинку, которая есть ровно у двух игроков. Остальные есть только у одного.') },
+  rare: { title: both('Lone witness', 'Одинокий свидетель'), task: both('Find the only picture held by just one player. Every other picture is held by two.', 'Найдите единственную картинку, которая есть только у одного игрока. Остальные есть у двух.') },
+  crowd: { title: both('Most voices', 'Большинство голосов'), task: both('Find the picture held by the most players. There is exactly one such picture.', 'Найдите картинку, которая встречается у наибольшего числа игроков. Такая картинка только одна.') },
+};
+
+function collectionTrial(kind: TrialKind, set: ItemSet, players: string[]): Trial {
+  const items = shuffle(itemsOf(set)), target = items[0], n = players.length;
+  const hands: Glyph[][] = Array.from({ length: n }, () => []);
+  let cursor = 0;
+  for (const item of items) {
+    const count = item === target ? (kind === 'duplicate' ? 2 : kind === 'rare' ? 1 : n)
+      : kind === 'common' ? n - 1 : kind === 'rare' ? 2 : 1;
+    for (let i = 0; i < count; i++) hands[(cursor++) % n].push(item);
+  }
+  const definition = COLLECTIONS[kind]!;
+  return {
+    kind, set, title: definition.title,
+    prompt: both('…compare your evidence. None of you sees the whole picture.', '…сравните свои улики. Никто из вас не видит всей картины.'),
+    task: both(`${definition.task.en} Describe your cards without naming them directly. Compare all hands, choose the same answer and confirm together.`, `${definition.task.ru} Опишите свои карточки, не называя картинки прямо. Сравните наборы, выберите общий ответ и подтвердите вместе.`),
+    controls: players.map((p, i) => ({ id: `vote${i}`, ownerId: p, label: both('Your vote', 'Ваш голос'), options: [...items], target })),
+    knows: Object.fromEntries(players.map((p) => [p, []])),
+    hands: Object.fromEntries(shuffle(players).map((p, i) => [p, shuffle(hands[i])])),
+  };
+}
+
 export function generateTrial(kind: TrialKind, set: ItemSet, players: string[]): Trial {
+  if (NUMBER_CIPHERS.includes(kind) || SYMBOL_CIPHERS.includes(kind)) return cipherTrial(kind, set, players);
+  if (HAND_TRIALS.includes(kind) && kind !== 'missing') return collectionTrial(kind, set, players);
   switch (kind) {
     case 'tuning':
       return tuningTrial(set, players);
@@ -188,6 +253,7 @@ export function generateTrial(kind: TrialKind, set: ItemSet, players: string[]):
       return codeTrial(set, players);
     case 'missing':
       return missingTrial(set, players);
+    default: throw new Error(`Unknown trial: ${kind}`);
   }
 }
 
@@ -196,8 +262,9 @@ export interface TrialPlan {
   set: ItemSet;
 }
 
-// Three different trials, each picture trial on a different set of pictures
+// Sample without replacement; shuffle both challenges and picture sets.
 export function trialSequence(count: number): TrialPlan[] {
+  if (!Number.isInteger(count) || count < 1 || count > TRIAL_KINDS.length) throw new Error('Invalid trial count');
   const sets = shuffle(Object.keys(ITEM_SETS) as ItemSet[]);
   return shuffle(TRIAL_KINDS)
     .slice(0, count)
@@ -209,12 +276,14 @@ export function trialSequence(count: number): TrialPlan[] {
 // Pool everybody's knowledge: the value every control must be set to, or null if nobody knows it
 export function solveFromKnowledge(trial: { kind: TrialKind; controls: { id: string; options: Value[] }[] }, knows: Knowledge[][], hands: Glyph[][] = []) {
   const answer = new Map<string, Value | null>(trial.controls.map((c) => [c.id, null]));
-  if (trial.kind === 'missing') {
-    const seen = new Set(hands.flat());
-    const left = (trial.controls[0]?.options ?? []).filter((x) => !seen.has(x as Glyph));
+  if (HAND_TRIALS.includes(trial.kind)) {
+    const left = handCandidates(trial.kind, trial.controls[0]?.options ?? [], hands);
     if (left.length === 1) trial.controls.forEach((c) => answer.set(c.id, left[0]));
     return answer;
   }
-  for (const k of knows.flat()) answer.set(k.controlId, k.value);
+  for (const k of knows.flat()) {
+    const control = trial.controls.find((c) => c.id === k.controlId);
+    if (control) answer.set(k.controlId, decodeClue(trial.kind, k.value, control.options));
+  }
   return answer;
 }

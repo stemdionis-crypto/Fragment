@@ -1,3 +1,5 @@
+import { TRIAL_KINDS } from '../server/puzzle';
+import { TRIALS_PER_GAME } from '../shared/protocol';
 import assert from 'node:assert/strict';
 import type { WebSocket } from 'ws';
 import type { ServerMessage } from '../shared/protocol';
@@ -19,7 +21,7 @@ room.stopTimer();
 
 const botTick = (now: number) => (room as unknown as { tickCompanions(now: number): void }).tickCompanions(now);
 try {
-  for (let index = 0; index < 3; index++) {
+  for (let index = 0; index < TRIALS_PER_GAME; index++) {
     const trial = room.trial!;
     const privateMsg = messages.filter((m) => m.t === 'private').at(-1);
     assert.ok(privateMsg?.t === 'private' && !privateMsg.info.targets, 'human never receives debug answers');
@@ -34,7 +36,7 @@ try {
     room.setControl(human, control.id, control.target);
     room.setReady(human, true);
     await new Promise((resolve) => setTimeout(resolve, 700));
-    assert.equal(room.phase, index === 2 ? 'won' : 'playing');
+    assert.equal(room.phase, index === TRIALS_PER_GAME - 1 ? 'won' : 'playing');
     console.log(`ok   practice trial ${index + 1}: ${trial.kind}`);
   }
   assert.ok(room.fragment);
@@ -49,3 +51,27 @@ try {
 } finally {
   room.stopTimer();
 }
+
+// Every rule must work with production companions, not only the random five above.
+for (const kind of TRIAL_KINDS) {
+  const testRoom = new Room('RULE', true, 'ru');
+  const player = testRoom.addPlayer('Tester', '#c9c4b8', socket);
+  testRoom.addCompanions();
+  testRoom.start(player);
+  testRoom.stopTimer();
+  try {
+    testRoom.plan[0].kind = kind;
+    (testRoom as unknown as { setupTrial(): void }).setupTrial();
+    assert(!('target' in testRoom.publicState().trial!.controls[0]));
+    assert(!('clue' in testRoom.publicState().trial!.controls[0]));
+    player.lastChat = 0;
+    testRoom.turnId = player.id;
+    testRoom.chatFrom(player, '…');
+    (testRoom as unknown as { tickCompanions(now: number): void }).tickCompanions(Date.now() + 5000);
+    assert.equal(testRoom.ready.size, 2, `companions confirm ${kind}`);
+    testRoom.trial!.controls.filter(c => c.ownerId !== player.id).forEach(c => {
+      assert.equal(testRoom.values.get(c.id), c.target, `companion sets ${kind}`);
+    });
+  } finally { testRoom.stopTimer(); }
+}
+console.log('ok   all twenty rules with production companions and public clue privacy');

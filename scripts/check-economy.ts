@@ -1,3 +1,4 @@
+import { TRIALS_PER_GAME } from '../shared/protocol';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
@@ -23,7 +24,7 @@ try {
   for (let game = 0; game < 2; game++) {
     room.start(human);
     room.stopTimer();
-    for (let trial = 0; trial < 3; trial++) {
+    for (let trial = 0; trial < TRIALS_PER_GAME; trial++) {
       room.turnId = human.id;
       human.lastChat = 0;
       room.chatFrom(human, '…');
