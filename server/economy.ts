@@ -10,7 +10,14 @@ const accounts = new Map<string, Account>();
 export const profileListeners = new Set<(id: string) => void>();
 if (existsSync(file)) {
   const saved = JSON.parse(readFileSync(file, 'utf8')) as Account[];
+  let migrated = false;
+  const retiredEmotes: Record<string, number> = { 'emote-think': 0, 'emote-wave': 0, 'emote-wow': 15, 'emote-laugh': 20, 'emote-love': 25 };
   for (const account of saved) {
+    const retired = [...new Set(account.items ?? [])].filter(id => Object.hasOwn(retiredEmotes, id));
+    if (retired.length) {
+      account.balance += retired.reduce((sum, id) => sum + retiredEmotes[id], 0);
+      migrated = true;
+    }
     account.items = [...new Set([...DEFAULT_ITEMS, ...(account.items ?? []).filter(id => COSMETICS.some(i => i.id === id))])];
     account.loadout = { ...DEFAULT_LOADOUT, ...account.loadout };
     for (const [slot, id] of Object.entries(account.loadout)) {
@@ -18,6 +25,7 @@ if (existsSync(file)) {
     }
     accounts.set(account.id, account);
   }
+  if (migrated) persist();
 }
 function persist() {
   mkdirSync(directory, { recursive: true });
@@ -92,6 +100,5 @@ export function equipItem(id: string, itemId: string) {
   const a = accounts.get(id)!;
   const item = COSMETICS.find(i => i.id === itemId);
   if (!item || !a.items.includes(itemId)) throw new Error('Item is not owned / Предмет не куплен');
-  if (item.category === 'emote') throw new Error('Emotes are used during play / Эмоции используются в игре');
   change(a, () => { a.loadout[item.category as keyof typeof a.loadout] = itemId; });
 }

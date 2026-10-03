@@ -51,7 +51,6 @@ export interface PlayerView {
   bot?: boolean;
   skin?: SkinId;
   cosmetics?: Loadout;
-  emote?: { id: string; until: number };
 }
 
 export interface ChatMessage {
@@ -145,7 +144,6 @@ export type ClientMessage =
   | { t: 'identify'; token?: string }
   | { t: 'buy_item'; item: string }
   | { t: 'equip_item'; item: string }
-  | { t: 'emote'; item: string }
   | { t: 'buy'; skin: string }
   | { t: 'equip'; skin: string }
   | { t: 'match'; name: string; color: string }

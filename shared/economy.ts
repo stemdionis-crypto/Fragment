@@ -10,12 +10,12 @@ export interface RewardView { amount: number; balance: number; }
 
 export type CosmeticSlot = 'head' | 'face' | 'table' | 'wallpaper' | 'lighting' | 'poster' | 'decor' | 'victory';
 export type Loadout = Partial<Record<CosmeticSlot, string>>;
-export type CosmeticCategory = CosmeticSlot | 'emote';
+export type CosmeticCategory = CosmeticSlot;
 export const CATEGORY_NAMES: Record<CosmeticCategory, { ru: string; en: string }> = {
-  head: { ru: 'Головные уборы', en: 'Headwear' }, face: { ru: 'Аксессуары', en: 'Accessories' },
+  head: { ru: 'Головные уборы', en: 'Headwear' }, face: { ru: 'Маски и аксессуары', en: 'Masks and accessories' },
   table: { ru: 'Стол', en: 'Table' }, wallpaper: { ru: 'Обои', en: 'Wallpaper' },
   lighting: { ru: 'Освещение', en: 'Lighting' }, poster: { ru: 'Плакаты', en: 'Posters' },
-  decor: { ru: 'Декор', en: 'Decor' }, victory: { ru: 'Победа', en: 'Victory' }, emote: { ru: 'Эмоции', en: 'Emotes' },
+  decor: { ru: 'Декор', en: 'Decor' }, victory: { ru: 'Победа', en: 'Victory' },
 };
 const item = (id: string, category: CosmeticCategory, price: number, ru: string, en: string, icon: string) => ({ id, category, price, name: { ru, en }, icon });
 export const COSMETICS = [
@@ -23,7 +23,12 @@ export const COSMETICS = [
   item('headphones', 'head', 30, 'Студийные наушники', 'Studio headphones', '🎧'),
   item('beanie', 'head', 25, 'Вязаная шапка', 'Knitted beanie', '◒'),
   item('beret', 'head', 40, 'Берет архивиста', 'Archivist beret', '◓'),
-  item('face-none', 'face', 0, 'Без аксессуара', 'No accessory', '◯'),
+  item('face-none', 'face', 0, 'Облик скина', 'Original skin face', '◯'),
+  item('mask-skull', 'face', 45, 'Костяная маска', 'Bone mask', '◈'),
+  item('mask-plague', 'face', 60, 'Чумной доктор', 'Plague doctor', '◇'),
+  item('mask-oni', 'face', 75, 'Маска демона', 'Demon mask', '◆'),
+  item('mask-welder', 'face', 50, 'Сварочная маска', 'Welding mask', '▣'),
+  item('mask-respirator', 'face', 40, 'Респиратор', 'Respirator', '◎'),
   item('glasses', 'face', 20, 'Круглые очки', 'Round glasses', '◎'),
   item('scarf', 'face', 35, 'Шарф странника', 'Traveller scarf', '〰'),
   item('table-default', 'table', 0, 'Старый стол', 'Old table', '▱'),
@@ -46,13 +51,6 @@ export const COSMETICS = [
   item('victory-sparks', 'victory', 50, 'Искры эфира', 'Airwave sparks', '✦'),
   item('victory-rings', 'victory', 60, 'Волны сигнала', 'Signal waves', '◎'),
   item('victory-stars', 'victory', 75, 'Созвездие', 'Constellation', '⋆'),
-  item('emote-think', 'emote', 0, 'Думаю', 'Thinking', '🤔'),
-  item('emote-wave', 'emote', 0, 'Привет', 'Hello', '👋'),
-  item('emote-wow', 'emote', 15, 'Удивление', 'Surprise', '😮'),
-  item('emote-laugh', 'emote', 20, 'Смех', 'Laughing', '😄'),
-  item('emote-love', 'emote', 25, 'Нравится', 'Love it', '♥'),
 ];
 export const DEFAULT_ITEMS = COSMETICS.filter(i => i.price === 0).map(i => i.id);
-export const DEFAULT_LOADOUT: Loadout = Object.fromEntries(COSMETICS.filter(i => i.price === 0 && i.category !== 'emote').map(i => [i.category, i.id]));
-export const EMOTE_COOLDOWN_MS = 3000;
-export const EMOTE_DURATION_MS = 2500;
+export const DEFAULT_LOADOUT: Loadout = Object.fromEntries(COSMETICS.filter(i => i.price === 0).map(i => [i.category, i.id]));

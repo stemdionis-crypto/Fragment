@@ -84,8 +84,8 @@ possible. Keep the data directory private and persistent when hosting.
 
 ### Cosmetic collection
 
-The main-menu shop has five tabs with previews: characters, accessories, room,
-emotes and victory effects. Existing skins retain their IDs and ownership but
+The main-menu shop has four tabs with previews: characters, accessories, room
+and victory effects. Existing skins retain their IDs and ownership but
 now use distinct illustrated models based on the character reference: a goblin
 with a gas mask, a gamer with a headset, and a hooded masked figure. Accessories use independent headwear and face slots.
 
@@ -95,10 +95,11 @@ individual. Victory effects are individual decorations on the victory screen.
 All purchases, balances and equipment are validated and persisted by the server.
 Old profiles automatically receive free defaults without losing existing skins.
 
-Two free emotes and three purchasable emotes appear above the character for 2.5
-seconds. Every emote shares a **three-second server cooldown**, tracked by account
-across rooms. Emotes do not alter clues, turns, suspicion or rewards. Reduced
-motion settings disable their animations and the victory animations.
+Five purchasable face masks replace the skin's built-in mask rather than layering
+over it. Choosing **Original skin face** restores the goblin's gas mask or the
+hooded character's original face. Only one face item is equipped at a time.
+Emotes have been removed from the game and shop; paid emotes in older profiles
+are refunded once during migration. Reduced motion disables victory animations.
 
 These items are currently off-chain cosmetics purchased with Signal, not minted
 NFTs. The free hosted demo can reset its temporary profile data after a restart.

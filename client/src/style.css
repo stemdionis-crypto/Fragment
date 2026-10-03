@@ -1286,14 +1286,10 @@ h2 {
 .item-preview { border: 0; background: transparent; height: 130px; padding: 0; width: 100%; }
 .item-preview svg { height: 130px; }
 .item-icon { font-size: 46px; color: #c9c2ae; display: grid; place-items: center; height: 100%; }
-.emote-preview, .victory-preview { height: 100%; display: grid; place-items: center; font-size: 85px; color: #d4c9a6; position: relative; }
+.victory-preview { height: 100%; display: grid; place-items: center; font-size: 85px; color: #d4c9a6; position: relative; }
 .victory-preview i { position: absolute; width: 110px; height: 110px; border: 1px solid #c7bc98; border-radius: 50%; animation: cosmetic-wave 3s infinite; }
 .victory-preview i:nth-child(3) { animation-delay: 1s; }
 .victory-preview i:nth-child(4) { animation-delay: 2s; }
-.emote-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 10px 0; }
-.emote-controls button { padding: 6px 12px; font-size: 21px; }
-.emote-controls button:disabled { opacity: .4; }
-.emote-bubble { display: none; pointer-events: none; }
 .victory-particles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
 .victory-particles i { position: absolute; left: var(--x); top: var(--y); color: #d6c499; font-style: normal; font-size: 35px; animation: cosmetic-spark 3s var(--delay) infinite; }
 #overlay[data-victory="victory-rings"] .victory-particles i { font-size: 95px; color: #a4c5c2; animation-name: cosmetic-wave; }
@@ -1308,18 +1304,8 @@ body.reduced-motion .victory-preview i, body.reduced-motion .victory-particles i
 .victory-stars i { border-radius: 0; rotate: 45deg; width: 50px; height: 50px; }
 
 .character-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
-.seat.emoting-laugh .body { animation: character-laugh .35s ease-in-out infinite; }
-.seat.emoting-think .head { animation: character-think 1.2s ease-in-out infinite; }
-.seat.emoting-wave .emote-bubble { animation: character-wave .6s ease-in-out infinite; }
-.seat.emoting-wow .eyes { transform: scaleY(1.25); transform-origin: 0 -180px; }
-.seat.emoting-love .emote-bubble text { fill: #9a5558; animation: character-heart .7s ease-in-out infinite; }
-@keyframes character-laugh { 50% { translate: 0 -4px; } }
-@keyframes character-think { 50% { rotate: -4deg; } }
-@keyframes character-wave { 50% { rotate: 8deg; } }
-@keyframes character-heart { 50% { scale: 1.1; } }
 @media (max-width:600px) { .character-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 
-.seat.emoting-think .head, .seat.emoting-wave .emote-bubble, .seat.emoting-love .emote-bubble text { transform-box: fill-box; transform-origin: center; }
 
 #overlay .fragment-card { position: relative; z-index: 1; }
 .victory-particles { z-index: 0; }

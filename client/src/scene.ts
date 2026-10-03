@@ -1,3 +1,4 @@
+import { isMask, maskSvg } from './masks';
 // The room: a 2D stage in layers (wall, table + people, foreground), with a camera that
 // moves to whoever holds the floor. Same hand-drawn look as the radio.
 
@@ -11,7 +12,7 @@ export function accessorySvg(look: Loadout = {}) {
     : look.head === 'beret' ? '<path d="M-51 -216 Q-68 -244 -18 -253 Q35 -270 57 -233 L39 -213Z" fill="#55675f" stroke="#171719" stroke-width="4"/><path d="M-43 -214H41" stroke="#b1bba3" stroke-width="8"/>' : '';
   const face = look.face === 'glasses' ? '<g fill="none" stroke="#c7c1ac" stroke-width="3"><circle cx="-16" cy="-180" r="13"/><circle cx="16" cy="-180" r="13"/><path d="M-3 -180H3 M-29 -184L-44 -190 M29 -184L44 -190"/></g>'
     : look.face === 'scarf' ? '<path d="M-30 -135Q0 -119 30 -135L27 -111Q0 -103 -27 -111Z" fill="#b0977c" stroke="#242424" stroke-width="3"/><path d="M8 -112L25 -53L43 -60L28 -121Z" fill="#8c7766"/>' : '';
-  return head + face;
+  return maskSvg(look.face) + head + face;
 }
 // Distinct character models share only the stage coordinates and animation hooks.
 function modelSvg(id: SkinId, color: string, look: Loadout = {}) {
@@ -36,6 +37,7 @@ function goblinModel(look: Loadout) {
       <path d="M43 -204Q89 -226 128 -222L103 -195Q90 -178 55 -174Z" fill="#6e935f" stroke-width="4"/>
       <path d="M-57 -196L-106 -212L-86 -194L-67 -188 M57 -196L106 -212L86 -194L67 -188" fill="none" stroke="#3d603c" stroke-width="3"/>
       <path d="M-57 -181Q-68 -231 -33 -250Q0 -268 33 -250Q68 -231 57 -181L37 -131Q0 -115 -37 -131Z" fill="#779666" stroke-width="4"/>
+      ${isMask(look.face) ? '' : `<g data-native-mask="goblin">
       <path d="M-48 -231L-35 -249L-18 -252L-3 -220 M38 -246L53 -232L40 -212" fill="none" stroke="#725d40" stroke-width="12"/>
       <path d="M-51 -222Q0 -238 51 -222L55 -179L36 -136Q0 -119 -36 -136L-55 -179Z" fill="#53583e" stroke-width="4"/>
       <path d="M0 -228V-187 M-45 -153L-54 -143 M44 -153L53 -143" fill="none" stroke="#292f24" stroke-width="2"/>
@@ -48,6 +50,7 @@ function goblinModel(look: Loadout) {
       <ellipse cx="3" cy="-125" rx="25" ry="23" fill="#766c43" stroke-width="3"/>
       <ellipse cx="3" cy="-125" rx="18" ry="16" fill="#333b29" stroke-width="3"/>
       <ellipse cx="3" cy="-125" rx="10" ry="9" fill="#82754b" stroke-width="3"/>
+      </g>`}
       ${accessorySvg({ ...look, face: look.face === 'scarf' ? 'face-none' : look.face }).replaceAll('cy="-180"','cy="-190"')}
     </g>
     ${look.face === 'scarf' ? `<g transform="translate(0 44)">${accessorySvg({face:'scarf'})}</g>` : ''}
@@ -91,15 +94,18 @@ function shadowModel(look: Loadout) {
     <g class="head">
       <path d="M-69 -145L-65 -222Q-54 -260 0 -272Q54 -260 65 -222L69 -145L45 -104H-45Z" fill="#3b4849" stroke-width="4"/>
       <path d="M-53 -202Q-49 -241 0 -254Q49 -241 53 -202L43 -151L0 -127L-43 -151Z" fill="#1e282b" stroke-width="3"/>
+      ${isMask(look.face) ? '' : `<g data-native-mask="shadow">
       <path d="M-44 -207Q-39 -233 0 -243Q39 -233 44 -207L36 -160L0 -138L-36 -160Z" fill="#303b40" stroke-width="3"/>
       <path d="M-27 -222Q-15 -202 -4 -204 M27 -222Q15 -202 4 -204 M0 -209L-6 -174L0 -165L6 -174Z M-28 -166L-16 -151 M28 -166L16 -151" fill="none" stroke="#172126" stroke-width="2.5"/>
       <g class="eyes" fill="#10191c" stroke="#4a5758" stroke-width="1.5"><path d="M-33 -196Q-16 -203 -7 -188Q-20 -180 -33 -190Z M33 -196Q16 -203 7 -188Q20 -180 33 -190Z"/></g>
+      </g>`}
       <path d="M-58 -214Q-60 -164 -47 -133 M58 -214Q60 -164 47 -133" fill="none" stroke="#637171" stroke-width="2"/>
-      <g transform="scale(1.14 1)">${accessorySvg({...look, face: look.face === 'scarf' ? 'face-none' : look.face})}</g>
+      <g transform="scale(1.14 1)">${accessorySvg({...look, face: isMask(look.face) || look.face === 'scarf' ? 'face-none' : look.face})}</g>
     </g>
     <path d="M-68 -142Q-27 -106 43 -128L69 -148L88 -112Q67 -50 0 -54Q-68 -67 -88 -112Z" fill="#465354" stroke-width="4"/>
     <path d="M-65 -129Q0 -84 67 -131 M-71 -111Q-7 -66 67 -110 M-60 -95Q0 -59 54 -93" fill="none" stroke="#6a7775" stroke-width="2.5"/>
     <path d="M-45 -88Q-7 -70 32 -79" fill="none" stroke="#273639" stroke-width="4"/>
+    ${isMask(look.face) ? `<g transform="translate(0 -8)">${maskSvg(look.face)}</g>` : ''}
     ${look.face === 'scarf' ? `<path d="M-55 -102Q0 -67 55 -102L50 -87Q0 -56 -50 -87Z" fill="#ac977c" stroke-width="3"/>` : ''}
   </g>`;
 }
@@ -160,7 +166,6 @@ function character(p: PlayerView, seat: Seat, i: number, me: boolean) {
       ${modelSvg(skin.id, p.color, p.cosmetics)}
       <circle class="turn-ring" cx="0" cy="-182" r="${skin.id === 'operator' ? 92 : skin.id === 'wanderer' ? 86 : skin.id === 'phantom' ? 82 : 72}" fill="none" stroke="#e3ddcf" stroke-width="4" stroke-dasharray="${2 * Math.PI * (skin.id === 'operator' ? 92 : skin.id === 'wanderer' ? 86 : skin.id === 'phantom' ? 82 : 72)}" stroke-dashoffset="0" transform="rotate(-90 0 -182)"/>
     </g></g>
-    <g class="emote-bubble" transform="translate(0 -305)"><rect x="-31" y="-38" width="62" height="54" rx="18" fill="#e3ddcf" stroke="#292d30" stroke-width="3"/><text y="0" text-anchor="middle" style="font-size:30px"></text></g>
     <g class="plate" transform="translate(0 ${seat.back ? 64 : 48})">
       <rect x="-80" y="-18" width="160" height="34" rx="6" fill="#0d0e0f" stroke="${p.color}" stroke-width="2"/>
       <text x="0" y="6" text-anchor="middle" fill="${p.color}">${escapeXml(p.name)}${me ? ' ·' : ''}</text>

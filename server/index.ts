@@ -204,7 +204,6 @@ wss.on('connection', (socket: WebSocket, request) => {
         default: {
           if (!room || !me) return;
           if (msg.t === 'start') room.start(me);
-          else if (msg.t === 'emote') room.emoteFrom(me, String(msg.item));
           else if (msg.t === 'chat') room.chatFrom(me, String(msg.text ?? ''));
           else if (msg.t === 'set') room.setControl(me, String(msg.control), msg.value);
           else if (msg.t === 'ready') room.setReady(me, !!msg.on);

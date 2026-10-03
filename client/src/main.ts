@@ -16,8 +16,8 @@ import {
 import { sfx, unlockAudio, setSoundscape } from './audio';
 import { settings } from './settings';
 import { initSettingsUI, placeSettingsButton } from './settings-ui';
-import { initShop, placeShopButton, handleShopMessage, cosmeticProfile } from './shop';
-import { COSMETICS, EMOTE_COOLDOWN_MS, SKINS } from '../../shared/economy';
+import { initShop, placeShopButton, handleShopMessage } from './shop';
+import { SKINS } from '../../shared/economy';
 import { isCipher, SYMBOL_CIPHERS, HAND_TRIALS } from '../../shared/trial-rules';
 import { connectWallet, initWalletAuth, handleWalletMessage, walletBusy } from './wallet-auth';
 import { glyphSvg } from './glyphs';
@@ -322,15 +322,6 @@ function mountGame() {
 
   $('#readyBtn').onclick = () => net.send({ t: 'ready', on: !me()?.ready });
   $('#passBtn').onclick = () => net.send({ t: 'pass' });
-  const emotions = document.createElement('div');
-  emotions.className = 'emote-controls';
-  emotions.innerHTML = `<span class="fine">${lang === 'ru' ? 'Эмоции · КД 3 с' : 'Emotes · 3s cooldown'}</span>${COSMETICS.filter(i => i.category === 'emote' && cosmeticProfile()?.items?.includes(i.id)).map(i => `<button data-emote="${i.id}" title="${i.name[lang]}" aria-label="${i.name[lang]}">${i.icon}</button>`).join('')}`;
-  $('#sceneWrap').after(emotions);
-  emotions.querySelectorAll<HTMLButtonElement>('[data-emote]').forEach(b => b.onclick = () => {
-    if (Date.now() < emoteAvailableAt) return;
-    emoteAvailableAt = Date.now() + EMOTE_COOLDOWN_MS;
-    net.send({ t: 'emote', item: b.dataset.emote! });
-  });
   sceneKey = '';
   lastTurnId = '';
   introKey = '';
@@ -515,7 +506,6 @@ function updateGame() {
 
 let camera: Camera | null = null;
 let sceneKey = '';
-let emoteAvailableAt = 0;
 let lastTurnId = '';
 let lastBubbleId = 0;
 const bubbles = new Map<string, { el: HTMLDivElement; until: number }>(); // by seat id or 'radio'
@@ -904,22 +894,6 @@ function frame(t: number) {
     camera?.update(t);
     placeBubbles(t);
     updateTurnRing();
-    const now = Date.now();
-    app.querySelectorAll<HTMLButtonElement>('[data-emote]').forEach(b => { b.disabled = now < emoteAvailableAt || state?.phase !== 'playing'; });
-    for (const p of state?.players ?? []) {
-      const bubble = app.querySelector<SVGGElement>(`.seat[data-id="${p.id}"] .emote-bubble`);
-      if (bubble) {
-        const active = p.emote && p.emote.until > now;
-        bubble.style.display = active ? 'block' : 'none';
-        bubble.querySelector('text')!.textContent = active ? COSMETICS.find(i => i.id === p.emote!.id)?.icon ?? '' : '';
-        const seat = bubble.closest('.seat')!;
-        for (const id of ['wave','think','wow','laugh','love']) seat.classList.toggle(`emoting-${id}`, !!active && p.emote!.id === `emote-${id}`);
-        if (active && bubble.dataset.until !== String(p.emote!.until)) {
-          bubble.dataset.until = String(p.emote!.until);
-          if (!settings.reducedMotion) bubble.animate([{ opacity: 0, translate: '0 12px' }, { opacity: 1, translate: '0 0' }], { duration: 240 });
-        }
-      }
-    }
   }
   if (state?.phase === 'playing' && mounted === 'game') {
     const left = Math.max(0, Math.ceil((state.endsAt - Date.now()) / 1000));
