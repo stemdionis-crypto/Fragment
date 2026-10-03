@@ -659,7 +659,8 @@ function updateTurnUi() {
 function updateTurnRing() {
   if (!state || state.phase !== 'playing') return;
   const left = Math.max(0, state.turnEndsAt - Date.now()) / (TURN_SECONDS * 1000);
-  app.querySelector<SVGCircleElement>(`.seat.active .turn-ring`)?.setAttribute('stroke-dashoffset', String(452 * (1 - left)));
+  const ring = app.querySelector<SVGCircleElement>('.seat.active .turn-ring');
+  if (ring) ring.setAttribute('stroke-dashoffset', String(2 * Math.PI * ring.r.baseVal.value * (1 - left)));
 }
 
 function fragmentArt(f: FragmentRecord) {

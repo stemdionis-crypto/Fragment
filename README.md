@@ -86,8 +86,8 @@ possible. Keep the data directory private and persistent when hosting.
 
 The main-menu shop has five tabs with previews: characters, accessories, room,
 emotes and victory effects. Existing skins retain their IDs and ownership but
-now use different clothing silhouettes: a uniform jacket, poncho and high-collar
-coat. Accessories use independent headwear and face slots.
+now use distinct illustrated models based on the character reference: a goblin
+with a gas mask, a gamer with a headset, and a hooded masked figure. Accessories use independent headwear and face slots.
 
 Room cosmetics cover the table, wallpaper, lighting, poster and one desk decoration.
 Every participant sees the creator's equipped room set. Character accessories are

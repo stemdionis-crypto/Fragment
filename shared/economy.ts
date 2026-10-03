@@ -1,8 +1,8 @@
 export const SKINS = [
   { id: 'classic', name: { ru: 'Незнакомец', en: 'Stranger' }, price: 0, cloth: '#45464a', accent: '#aaa69d' },
-  { id: 'operator', name: { ru: 'Оператор', en: 'Operator' }, price: 20, cloth: '#394e4b', accent: '#a8b9a5' },
-  { id: 'wanderer', name: { ru: 'Странник', en: 'Wanderer' }, price: 60, cloth: '#69584b', accent: '#c9b89a' },
-  { id: 'phantom', name: { ru: 'Призрак эфира', en: 'Airwave Ghost' }, price: 120, cloth: '#444b61', accent: '#a6b6c7' },
+  { id: 'operator', name: { ru: 'Гоблин в маске', en: 'Masked Goblin' }, price: 20, cloth: '#394e4b', accent: '#a8b9a5' },
+  { id: 'wanderer', name: { ru: 'Геймер', en: 'Gamer' }, price: 60, cloth: '#69584b', accent: '#c9b89a' },
+  { id: 'phantom', name: { ru: 'Тёмный человек', en: 'Shadow Figure' }, price: 120, cloth: '#444b61', accent: '#a6b6c7' },
 ] as const;
 export type SkinId = typeof SKINS[number]['id'];
 export interface ProfileView { balance: number; owned: SkinId[]; equipped: SkinId; wins: number; wallet?: string; items: string[]; loadout: Loadout; }
