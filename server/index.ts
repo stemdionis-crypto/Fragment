@@ -45,6 +45,9 @@ wss.on('connection', (socket: WebSocket, request) => {
   let pendingWallet: { address: string; expiresAt: number } | null = null;
   let lastChallenge = 0;
   const send = (msg: ServerMessage) => socket.send(JSON.stringify(msg));
+  const requireWallet = () => {
+    if (!accountId || !profile(accountId).wallet) throw new GameError('Sign in with a verified Solana wallet to play with others', 'Для игры с друзьями и случайного подбора войдите через Solana-кошелёк и подтвердите подпись');
+  };
   const onProfile = (id: string) => {
     if (id !== accountId || socket.readyState !== socket.OPEN) return;
     send({ t: 'profile', profile: profile(id) });
@@ -126,6 +129,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           break;
         }
         case 'match': {
+          requireWallet();
           if (room && me) {
             if (!room.matchmaking) throw new GameError('Already in a room', 'Вы уже в комнате');
             send({ t: 'joined', playerId: me.id, code: room.code });
@@ -150,6 +154,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           break;
         }
         case 'create': {
+          if (msg.practice !== true) requireWallet();
           if (room && me) throw new GameError('Already in a room', 'Вы уже в комнате');
           room = new Room(newCode(), msg.practice === true, msg.lang === 'en' ? 'en' : 'ru');
           rooms.set(room.code, room);
@@ -161,6 +166,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           break;
         }
         case 'join': {
+          requireWallet();
           if (room && me) throw new GameError('Already in a room', 'Вы уже в комнате');
           const r = rooms.get(String(msg.code).toUpperCase().trim());
           if (!r) throw new GameError('No room with this code', 'Комнаты с таким кодом нет');
@@ -176,6 +182,7 @@ wss.on('connection', (socket: WebSocket, request) => {
         case 'resume': {
           const r = rooms.get(String(msg.code).toUpperCase());
           if (!r) throw new GameError('This room no longer exists', 'Этой комнаты больше нет');
+          if (!r.practice) requireWallet();
           const returning = r.players.find((p) => p.id === msg.playerId);
           if (returning?.accountId && returning.accountId !== accountId) throw new GameError('This player belongs to another profile', 'Этот игрок принадлежит другому профилю');
           me = r.resume(msg.playerId, socket);

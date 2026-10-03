@@ -140,15 +140,18 @@ function mountHome() {
     net.send({ t: 'create', name: nameInput.value, color: chosen, practice: true, lang });
   };
   $('#match').onclick = () => {
+    if (!canPlayOnline()) return;
     savePrefs(nameInput.value, chosen);
     $<HTMLButtonElement>('#match').disabled = true;
     net.send({ t: 'match', name: nameInput.value, color: chosen });
   };
   $('#create').onclick = () => {
+    if (!canPlayOnline()) return;
     savePrefs(nameInput.value, chosen);
     net.send({ t: 'create', name: nameInput.value, color: chosen });
   };
   const join = () => {
+    if (!canPlayOnline()) return;
     if (codeInput.value.length !== 4) return toast(t('enterCode'), 'error');
     savePrefs(nameInput.value, chosen);
     net.send({ t: 'join', code: codeInput.value, name: nameInput.value, color: chosen });
@@ -164,6 +167,13 @@ function mountHome() {
   nameInput.focus();
 }
 
+function canPlayOnline() {
+  if (wallet) return true;
+  toast(lang === 'ru' ? 'Для игры с друзьями и случайного подбора войдите через Solana-кошелёк. После подписи выберите режим снова.' : 'Sign in with a Solana wallet to play with friends or find a match. After signing, select the mode again.');
+  void connectWallet();
+  return false;
+}
+
 function updateHomeWallet() {
   if (mounted !== 'home') return;
   const button = $<HTMLButtonElement>('#wallet-home');
@@ -172,10 +182,13 @@ function updateHomeWallet() {
     : wallet ? `◎ ${shortAddr(wallet)}` : (lang === 'ru' ? 'Войти через кошелёк' : 'Sign in with wallet');
   button.disabled = walletBusy() || !!wallet;
   $('#wallet-hint').textContent = import.meta.env.VITE_DEMO_MODE === 'true'
-    ? (lang === 'ru' ? 'Можно играть без кошелька. В демо привязка и прогресс действуют до сброса сервера.' : 'Play without a wallet. Demo wallet links and progress last until the server resets.')
+    ? (lang === 'ru' ? 'С ботами — без кошелька. С друзьями и случайными игроками — через Solana-кошелёк. В демо привязка и прогресс временные.' : 'Bots need no wallet. Friends and matchmaking require a Solana wallet. Demo wallet links and progress are temporary.')
     : wallet
     ? (lang === 'ru' ? 'Профиль привязан к кошельку. Прогресс сохранён.' : 'Profile linked to your wallet. Progress saved.')
-    : (lang === 'ru' ? 'Играйте гостем или привяжите кошелёк, чтобы восстановить прогресс на другом устройстве.' : 'Play as a guest or link a wallet to restore progress on another device.');
+    : (lang === 'ru' ? 'С ботами можно играть гостем. Для игры с друзьями и случайного подбора нужен Solana-кошелёк.' : 'Play with bots as a guest. Friends and matchmaking require a Solana wallet.');
+  $<HTMLButtonElement>('#match').textContent = t('findMatch') + (wallet ? '' : ' · ◎');
+  $<HTMLButtonElement>('#create').textContent = t('createRoom') + (wallet ? '' : ' · ◎');
+  $<HTMLButtonElement>('#join').title = wallet ? '' : (lang === 'ru' ? 'Нужен Solana-кошелёк' : 'Solana wallet required');
 }
 
 // ---------- lobby ----------

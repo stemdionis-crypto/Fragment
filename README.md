@@ -53,6 +53,12 @@ Gameplay is fast and fully off-chain (WebSocket, authoritative server). Solana s
 
 ## Run locally
 
+Online matchmaking and friend rooms require a profile linked to a Solana
+wallet through a verified message signature. Creating, joining and resuming
+online rooms are checked by the server. Practice with bots remains open to
+guests. Merely sending a wallet address does not grant online access.
+Current cosmetics and Signal are off-chain game data; NFT minting is planned.
+
 ### Signal and cosmetics
 
 The shop offers three cosmetic skins (20, 60 and 120 Signal), plus the free
