@@ -16,9 +16,6 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    env:
-      FRAGMENT_DATA_DIR: ${{ runner.temp }}/fragment-profiles
-      FRAGMENT_TEST_WORK: ${{ runner.temp }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,6 +28,8 @@ jobs:
       - run: npx tsx scripts/check-wallet-auth.ts
       - run: npx tsx scripts/check-practice.ts --prod
       - run: npx tsx scripts/check-economy.ts
+        env:
+          FRAGMENT_TEST_WORK: ${{ runner.temp }}
       - run: npm run build
 
   deploy:
