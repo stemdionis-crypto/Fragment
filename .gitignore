@@ -1,0 +1,11 @@
+node_modules/
+client/dist/
+.env
+.env.local
+.env.*
+!.env.example
+*.keypair.json
+.data/
+economy-test-*/
+wallet-test-*/
+*.log

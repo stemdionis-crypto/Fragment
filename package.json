@@ -1,0 +1,31 @@
+{
+  "name": "fragment",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A 3-4 player puzzle where an old radio listens to everything you say.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c gray,white \"tsx watch server/index.ts\" \"vite --config client/vite.config.ts\"",
+    "dev:server": "tsx watch server/index.ts",
+    "dev:client": "vite --config client/vite.config.ts",
+    "start": "tsx server/index.ts --prod",
+    "build": "vite build --config client/vite.config.ts",
+    "typecheck": "tsc -p server --noEmit && tsc -p client --noEmit",
+    "bots": "tsx scripts/bots.ts",
+    "e2e": "tsx scripts/e2e.ts",
+    "check": "tsx scripts/check-trials.ts && tsx scripts/check-listener.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "@types/ws": "^8.5.12",
+    "concurrently": "^9.0.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0"
+  }
+}

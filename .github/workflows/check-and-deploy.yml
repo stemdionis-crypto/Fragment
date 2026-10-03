@@ -1,0 +1,45 @@
+name: Check and deploy Fragment
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fragment-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      FRAGMENT_DATA_DIR: ${{ runner.temp }}/fragment-profiles
+      FRAGMENT_TEST_WORK: ${{ runner.temp }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run check
+      - run: npx tsx scripts/check-wallet-auth.ts
+      - run: npx tsx scripts/check-practice.ts --prod
+      - run: npx tsx scripts/check-economy.ts
+      - run: npm run build
+
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOOK: ${{ secrets.FRAGMENT_DEPLOY_HOOK }}
+    steps:
+      - name: Trigger hosting deployment when configured
+        if: env.DEPLOY_HOOK != ''
+        run: curl --fail --silent --show-error --output /dev/null --request POST "$DEPLOY_HOOK"
