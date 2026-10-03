@@ -82,6 +82,27 @@ This prototype has no transferable token or NFT minting.
 It is not a Sybil-resistant reward economy: multiple device accounts remain
 possible. Keep the data directory private and persistent when hosting.
 
+### Cosmetic collection
+
+The main-menu shop has five tabs with previews: characters, accessories, room,
+emotes and victory effects. Existing skins retain their IDs and ownership but
+now use different clothing silhouettes: a uniform jacket, poncho and high-collar
+coat. Accessories use independent headwear and face slots.
+
+Room cosmetics cover the table, wallpaper, lighting, poster and one desk decoration.
+Every participant sees the creator's equipped room set. Character accessories are
+individual. Victory effects are individual decorations on the victory screen.
+All purchases, balances and equipment are validated and persisted by the server.
+Old profiles automatically receive free defaults without losing existing skins.
+
+Two free emotes and three purchasable emotes appear above the character for 2.5
+seconds. Every emote shares a **three-second server cooldown**, tracked by account
+across rooms. Emotes do not alter clues, turns, suspicion or rewards. Reduced
+motion settings disable their animations and the victory animations.
+
+These items are currently off-chain cosmetics purchased with Signal, not minted
+NFTs. The free hosted demo can reset its temporary profile data after a restart.
+
 ### Finding teammates
 
 **Find a random match** gathers real players in public waiting rooms, separate

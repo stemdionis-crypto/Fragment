@@ -16,8 +16,8 @@ import {
 import { sfx, unlockAudio, setSoundscape } from './audio';
 import { settings } from './settings';
 import { initSettingsUI, placeSettingsButton } from './settings-ui';
-import { initShop, placeShopButton, handleShopMessage } from './shop';
-import { SKINS } from '../../shared/economy';
+import { initShop, placeShopButton, handleShopMessage, cosmeticProfile } from './shop';
+import { COSMETICS, EMOTE_COOLDOWN_MS, SKINS } from '../../shared/economy';
 import { isCipher, SYMBOL_CIPHERS, HAND_TRIALS } from '../../shared/trial-rules';
 import { connectWallet, initWalletAuth, handleWalletMessage, walletBusy } from './wallet-auth';
 import { glyphSvg } from './glyphs';
@@ -322,6 +322,15 @@ function mountGame() {
 
   $('#readyBtn').onclick = () => net.send({ t: 'ready', on: !me()?.ready });
   $('#passBtn').onclick = () => net.send({ t: 'pass' });
+  const emotions = document.createElement('div');
+  emotions.className = 'emote-controls';
+  emotions.innerHTML = `<span class="fine">${lang === 'ru' ? 'Эмоции · КД 3 с' : 'Emotes · 3s cooldown'}</span>${COSMETICS.filter(i => i.category === 'emote' && cosmeticProfile()?.items?.includes(i.id)).map(i => `<button data-emote="${i.id}" title="${i.name[lang]}" aria-label="${i.name[lang]}">${i.icon}</button>`).join('')}`;
+  $('#sceneWrap').after(emotions);
+  emotions.querySelectorAll<HTMLButtonElement>('[data-emote]').forEach(b => b.onclick = () => {
+    if (Date.now() < emoteAvailableAt) return;
+    emoteAvailableAt = Date.now() + EMOTE_COOLDOWN_MS;
+    net.send({ t: 'emote', item: b.dataset.emote! });
+  });
   sceneKey = '';
   lastTurnId = '';
   introKey = '';
@@ -471,7 +480,8 @@ function updateGame() {
       <span class="trial-name">${esc(tl(tr.title))}</span>
       <span class="task">${esc(tl(tr.task))}</span>
       <span class="q">${esc(tl(tr.prompt))}</span>${tr.kind === 'code' ? `<div class="code-order">${tr.controls.map((c) => { const owner = s.players.find((p) => p.id === c.ownerId); return `<span class="code-seat ${c.ownerId === myId ? 'mine' : ''}"><b>${esc(owner?.name ?? '?')}${c.ownerId === myId ? ` · ${t('you')}` : owner?.bot ? ` · ${t('bot')}` : ''}</b><span>${esc(tl(c.label))}</span></span>`; }).join('<span class="code-arrow" aria-hidden="true">→</span>')}</div>` : ''}`;
-    maybeShowIntro(tr);
+    if (s.phase === 'playing') maybeShowIntro(tr);
+    else $('#trialIntro').hidden = true;
     if (SYMBOL_CIPHERS.includes(tr.kind)) $('#prompt').insertAdjacentHTML('beforeend', `<div class="cipher-scale"><span class="fine">${lang === 'ru' ? 'Общая шкала · слева направо' : 'Shared scale · left to right'}</span><div class="glyph-row">${tr.controls[0].options.map((g, i) => `<span class="scale-item">${glyphSvg(g as Glyph, '#e3ddcf', 25)}<small>${i + 1}</small></span>`).join('')}</div></div>`);
   }
 
@@ -505,6 +515,7 @@ function updateGame() {
 
 let camera: Camera | null = null;
 let sceneKey = '';
+let emoteAvailableAt = 0;
 let lastTurnId = '';
 let lastBubbleId = 0;
 const bubbles = new Map<string, { el: HTMLDivElement; until: number }>(); // by seat id or 'radio'
@@ -545,10 +556,10 @@ function seatOf(id: string) {
 
 function updateScene() {
   const s = state!;
-  const key = s.players.map((p) => `${p.id}${p.name}${p.color}${p.skin}`).join('|');
+  const key = s.players.map((p) => `${p.id}${p.name}${p.color}${p.skin}${JSON.stringify(p.cosmetics)}`).join('|') + JSON.stringify(s.roomStyle);
   if (key !== sceneKey) {
     sceneKey = key;
-    $('#sceneHost').innerHTML = sceneSvg(s.players, myId);
+    $('#sceneHost').innerHTML = sceneSvg(s.players, myId, s.roomStyle);
     camera = new Camera($('#sceneHost').querySelector('svg')!);
     camera.focusSeat(seatOf(s.turnId));
     bubbles.forEach((b) => b.el.remove());
@@ -689,6 +700,8 @@ function updateOverlay() {
   const again = s.hostId === myId ? `<button id="again" class="primary">${t('backToRoom')}</button>` : `<p class="fine">${t('waitingHostShort')}</p>`;
 
   if (s.phase === 'won' && s.fragment) {
+    const victory = me()?.cosmetics?.victory ?? 'victory-default';
+    ov.dataset.victory = victory;
     const f = s.fragment;
     const mm = `${Math.floor(f.seconds / 60)}:${String(f.seconds % 60).padStart(2, '0')}`;
     ov.innerHTML = `
@@ -719,6 +732,7 @@ function updateOverlay() {
         </div>
       </div>`;
   } else {
+    delete ov.dataset.victory;
     ov.innerHTML = `
       <div class="lost-card">
         <p class="eyebrow">${s.lostReason === 'time' ? t('timeUp') : t('noTries')}</p>
@@ -726,6 +740,11 @@ function updateOverlay() {
         <p class="fine">${t('lostStats')(s.retunes, s.learned.length)}</p>
         ${again}
       </div>`;
+  }
+  if (s.phase === 'won' && ov.dataset.victory !== 'victory-default') {
+    const effect = document.createElement('div'); effect.className = 'victory-particles'; effect.setAttribute('aria-hidden', 'true');
+    effect.innerHTML = Array.from({length:18},(_,i)=>`<i style="--x:${(i * 37) % 100}%;--y:${(i * 23) % 100}%;--delay:${i * .12}s">${ov.dataset.victory === 'victory-stars' ? '✧' : ov.dataset.victory === 'victory-rings' ? '◯' : '·'}</i>`).join('');
+    ov.append(effect);
   }
   ov.hidden = false;
   const btn = ov.querySelector<HTMLButtonElement>('#again');
@@ -884,6 +903,22 @@ function frame(t: number) {
     camera?.update(t);
     placeBubbles(t);
     updateTurnRing();
+    const now = Date.now();
+    app.querySelectorAll<HTMLButtonElement>('[data-emote]').forEach(b => { b.disabled = now < emoteAvailableAt || state?.phase !== 'playing'; });
+    for (const p of state?.players ?? []) {
+      const bubble = app.querySelector<SVGGElement>(`.seat[data-id="${p.id}"] .emote-bubble`);
+      if (bubble) {
+        const active = p.emote && p.emote.until > now;
+        bubble.style.display = active ? 'block' : 'none';
+        bubble.querySelector('text')!.textContent = active ? COSMETICS.find(i => i.id === p.emote!.id)?.icon ?? '' : '';
+        const seat = bubble.closest('.seat')!;
+        for (const id of ['wave','think','wow','laugh','love']) seat.classList.toggle(`emoting-${id}`, !!active && p.emote!.id === `emote-${id}`);
+        if (active && bubble.dataset.until !== String(p.emote!.until)) {
+          bubble.dataset.until = String(p.emote!.until);
+          if (!settings.reducedMotion) bubble.animate([{ opacity: 0, translate: '0 12px' }, { opacity: 1, translate: '0 0' }], { duration: 240 });
+        }
+      }
+    }
   }
   if (state?.phase === 'playing' && mounted === 'game') {
     const left = Math.max(0, Math.ceil((state.endsAt - Date.now()) / 1000));

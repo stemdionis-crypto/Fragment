@@ -3,17 +3,32 @@
 
 import type { PlayerView } from '../../shared/protocol';
 import { radioSvg } from './radio';
-import { SKINS, type SkinId } from '../../shared/economy';
+import { SKINS, type SkinId, type Loadout } from '../../shared/economy';
 
-export function skinAccessory(id: SkinId) {
-  if (id === 'operator') return '<path d="M-53 -180 V-203 Q0 -267 53 -203 V-180" fill="none" stroke="#a9c7bd" stroke-width="9"/><rect x="-59" y="-194" width="17" height="35" rx="6" fill="#365a50"/><rect x="42" y="-194" width="17" height="35" rx="6" fill="#365a50"/>';
-  if (id === 'wanderer') return '<path d="M-56 -211 Q0 -286 56 -211 L67 -207 L-67 -207 Z" fill="#714a36" stroke="#e0bc83" stroke-width="4"/><path d="M-30 -118 L0 -62 L30 -118" fill="#e0bc83"/>';
-  if (id === 'phantom') return '<path d="M-52 -195 Q-45 -268 0 -273 Q45 -268 52 -195" fill="none" stroke="#c5b1ef" stroke-width="10"/><rect x="-33" y="-191" width="66" height="22" rx="9" fill="#514175" stroke="#c5b1ef" stroke-width="3"/>';
-  return '';
+export function accessorySvg(look: Loadout = {}) {
+  const head = look.head === 'headphones' ? '<path d="M-53 -185 V-202 Q0 -265 53 -202 V-185" fill="none" stroke="#aeb9b0" stroke-width="7"/><rect x="-60" y="-199" width="18" height="38" rx="7" fill="#343e3e" stroke="#aeb9b0" stroke-width="3"/><rect x="42" y="-199" width="18" height="38" rx="7" fill="#343e3e" stroke="#aeb9b0" stroke-width="3"/>'
+    : look.head === 'beanie' ? '<path d="M-48 -211 Q-42 -258 0 -260 Q42 -258 48 -211Z" fill="#8b7768" stroke="#171719" stroke-width="4"/><rect x="-49" y="-219" width="98" height="17" rx="5" fill="#aa9680"/><path d="M-26 -239V-219 M-9 -250V-219 M9 -250V-219 M26 -239V-219" stroke="#665b52" stroke-width="3"/>'
+    : look.head === 'beret' ? '<path d="M-51 -216 Q-68 -244 -18 -253 Q35 -270 57 -233 L39 -213Z" fill="#55675f" stroke="#171719" stroke-width="4"/><path d="M-43 -214H41" stroke="#b1bba3" stroke-width="8"/>' : '';
+  const face = look.face === 'glasses' ? '<g fill="none" stroke="#c7c1ac" stroke-width="3"><circle cx="-16" cy="-180" r="13"/><circle cx="16" cy="-180" r="13"/><path d="M-3 -180H3 M-29 -184L-44 -190 M29 -184L44 -190"/></g>'
+    : look.face === 'scarf' ? '<path d="M-30 -135Q0 -119 30 -135L27 -111Q0 -103 -27 -111Z" fill="#b0977c" stroke="#242424" stroke-width="3"/><path d="M8 -112L25 -53L43 -60L28 -121Z" fill="#8c7766"/>' : '';
+  return head + face;
 }
-export function skinPortrait(id: SkinId) {
-  const skin = SKINS.find((s) => s.id === id) ?? SKINS[0];
-  return `<svg viewBox="-90 -290 180 320" role="img" aria-label="${skin.name.en}"><path d="M-80 10 Q-80 -115 0 -118 Q80 -115 80 10Z" fill="${skin.cloth}"/><ellipse cx="0" cy="-182" rx="44" ry="52" fill="#b4ada0"/><path d="M-46 -186 Q0 -267 46 -186 Q0 -236 -46 -186Z" fill="#27272b"/><circle cx="-15" cy="-180" r="5"/><circle cx="15" cy="-180" r="5"/>${skinAccessory(id)}</svg>`;
+function modelSvg(id: SkinId, color: string, look: Loadout = {}) {
+  const skin = SKINS.find(s => s.id === id) ?? SKINS[0];
+  const cloth = id === 'classic' ? shade(color, .42) : skin.cloth;
+  const accent = id === 'classic' ? shade(color, .62) : skin.accent;
+  const body = id === 'wanderer' ? `<path d="M-112 10L-84 -89Q-45 -134 0 -124Q45 -134 84 -89L112 10Z" fill="${cloth}" stroke="#111213" stroke-width="5"/><path d="M-83 -61L0 -24L83 -61 M-98 -22L0 6L98 -22" fill="none" stroke="${accent}" stroke-width="7"/><path d="M-27 -120L0 -71L27 -120" fill="#33312f"/>`
+    : id === 'operator' ? `<path d="M-93 10L-85 -78Q-69 -119 0 -120Q69 -119 85 -78L93 10Z" fill="${cloth}" stroke="#111213" stroke-width="5"/><path d="M-32 -118L0 -78L32 -118L24 -68H-24Z" fill="${accent}"/><path d="M0 -78V10 M-75 -48H-24V-13H-75 M24 -48H75V-13H24" fill="none" stroke="#89998d" stroke-width="3"/><rect x="29" y="-88" width="30" height="11" rx="3" fill="${accent}"/>`
+    : id === 'phantom' ? `<path d="M-70 10L-66 -85L-39 -145H39L66 -85L70 10Z" fill="${cloth}" stroke="#111213" stroke-width="5"/><path d="M-39 -145L-27 -93L0 -76L27 -93L39 -145" fill="#2e3441" stroke="${accent}" stroke-width="3"/><path d="M0 -75V10 M-44 -37L-30 -19 M44 -37L30 -19" stroke="${accent}" stroke-width="3"/>`
+    : `<path d="M-96 10C-96 -72 -64 -118 0 -118C64 -118 96 -72 96 10Z" fill="${cloth}" stroke="#111213" stroke-width="5"/><path d="M-30 -112L0 -60L30 -112" fill="none" stroke="${accent}" stroke-width="5"/>`;
+  const rx = id === 'phantom' ? 37 : id === 'wanderer' ? 48 : 44;
+  const hair = id === 'phantom' ? '<path d="M-40 -181Q-57 -258 0 -250Q52 -244 40 -154L25 -170L27 -211L-23 -219L-34 -155Z" fill="#252a34" stroke="#111213" stroke-width="4"/>'
+    : id === 'wanderer' ? '<path d="M-51 -185Q-53 -249 -4 -246Q48 -256 51 -185L34 -211L4 -221L-29 -207Z" fill="#37332e" stroke="#111213" stroke-width="4"/>'
+    : '<path d="M-46 -186C-50 -246 50 -250 46 -186C34 -214 -20 -222 -46 -186Z" fill="#292b2c" stroke="#111213" stroke-width="4"/>';
+  return `${body}<rect x="-15" y="-140" width="30" height="30" fill="#8e8577"/><g class="head"><ellipse cx="0" cy="-182" rx="${rx}" ry="52" fill="${id === 'phantom' ? '#b7b6ac' : '#b4ada0'}" stroke="#111213" stroke-width="5"/>${hair}<g class="eyes"><ellipse cx="-15" cy="-180" rx="5" ry="6" fill="#151515"/><ellipse cx="15" cy="-180" rx="5" ry="6" fill="#151515"/></g><path class="mouth" d="M-11 -150Q0 -146 11 -150" fill="none" stroke="#39312c" stroke-width="3" stroke-linecap="round"/>${accessorySvg(look)}</g>`;
+}
+export function skinPortrait(id: SkinId, look: Loadout = {}) {
+  return `<svg viewBox="-125 -285 250 315" role="img" aria-label="Character preview">${modelSvg(id, '#aaa69d', look)}</svg>`;
 }
 
 const W = 1600;
@@ -58,9 +73,6 @@ function shade(hex: string, k: number) {
 
 function character(p: PlayerView, seat: Seat, i: number, me: boolean) {
   const skin = SKINS.find((s) => s.id === p.skin) ?? SKINS[0];
-  const cloth = skin.id === 'classic' ? shade(p.color, 0.42) : skin.cloth;
-  const clothHi = skin.id === 'classic' ? shade(p.color, 0.62) : skin.accent;
-  const hair = shade(p.color, 0.22);
   const flip = seat.x > W / 2 ? -1 : 1;
   // Side seats lean toward the table a little
   const lean = seat.back ? 0 : 6 * flip;
@@ -69,22 +81,10 @@ function character(p: PlayerView, seat: Seat, i: number, me: boolean) {
     <ellipse class="spot" cx="0" cy="-120" rx="190" ry="230" fill="url(#spot)"/>
     <rect x="-82" y="-250" width="164" height="250" rx="22" fill="#121314" stroke="#070707" stroke-width="4"/>
     <g class="body" style="--d:${i * 0.7}s"><g transform="skewX(${lean})">
-      <path d="M-96 10 C-96 -72 -64 -118 0 -118 C64 -118 96 -72 96 10 Z" fill="${cloth}" stroke="#070707" stroke-width="5"/>
-      <path d="M-30 -112 L0 -60 L30 -112" fill="none" stroke="${clothHi}" stroke-width="5" stroke-linecap="round"/>
-      <rect x="-15" y="-140" width="30" height="30" fill="#6f6a62"/>
-      <g class="head">
-        <ellipse cx="0" cy="-182" rx="44" ry="52" fill="#b4ada0" stroke="#070707" stroke-width="5"/>
-        <path d="M-46 -186 C-50 -246 50 -250 46 -186 C34 -214 -20 -222 -46 -186 Z" fill="${hair}" stroke="#070707" stroke-width="4"/>
-        <ellipse cx="0" cy="-160" rx="40" ry="20" fill="#000" opacity=".12"/>
-        <g class="eyes">
-          <ellipse cx="-15" cy="-180" rx="5" ry="6.5" fill="#0c0c0c"/>
-          <ellipse cx="15" cy="-180" rx="5" ry="6.5" fill="#0c0c0c"/>
-        </g>
-        <path class="mouth" d="M-11 -150 Q0 -146 11 -150" fill="none" stroke="#2a2522" stroke-width="3.5" stroke-linecap="round"/>
-        ${skinAccessory(skin.id)}
-      </g>
+      ${modelSvg(skin.id, p.color, p.cosmetics)}
       <circle class="turn-ring" cx="0" cy="-182" r="72" fill="none" stroke="#e3ddcf" stroke-width="4" stroke-dasharray="452" stroke-dashoffset="0" transform="rotate(-90 0 -182)"/>
     </g></g>
+    <g class="emote-bubble" transform="translate(0 -305)"><rect x="-31" y="-38" width="62" height="54" rx="18" fill="#e3ddcf" stroke="#292d30" stroke-width="3"/><text y="0" text-anchor="middle" style="font-size:30px"></text></g>
     <g class="plate" transform="translate(0 ${seat.back ? 64 : 48})">
       <rect x="-80" y="-18" width="160" height="34" rx="6" fill="#0d0e0f" stroke="${p.color}" stroke-width="2"/>
       <text x="0" y="6" text-anchor="middle" fill="${p.color}">${escapeXml(p.name)}${me ? ' ·' : ''}</text>
@@ -96,26 +96,34 @@ function escapeXml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]!);
 }
 
-export function sceneSvg(players: PlayerView[], myId: string) {
+export function sceneSvg(players: PlayerView[], myId: string, look: Loadout = {}) {
   const seats = seatsFor(players.length);
   const people = players.map((p, i) => ({ p, seat: seats[i], i }));
   const behind = people.filter((x) => x.seat.back).map((x) => character(x.p, x.seat, x.i, x.p.id === myId)).join('');
   const sides = people.filter((x) => !x.seat.back).map((x) => character(x.p, x.seat, x.i, x.p.id === myId)).join('');
 
+  const wall = look.wallpaper === 'wallpaper-botanical' ? '#24312d' : look.wallpaper === 'wallpaper-artdeco' ? '#2b2c37' : '#111213';
+  const edge = look.table === 'table-walnut' ? '#6c5445' : look.table === 'table-studio' ? '#59696b' : '#2a2c2e';
+  const wood = look.table === 'table-walnut' ? '#514039' : look.table === 'table-studio' ? '#323f44' : '#202224';
+  const light = look.lighting === 'lighting-amber' ? '#eac695' : look.lighting === 'lighting-moon' ? '#a6c4d5' : '#e3ddcf';
+  const pattern = look.wallpaper === 'wallpaper-botanical' ? Array.from({length:18},(_,i)=>`<path d="M${i*100} 0Q${i*100+70} 220 ${i*100} 550 M${i*100} 150q70 -75 50 -110 M${i*100} 310q-70 -75 -50 -110" fill="none" stroke="#748975" stroke-width="3" opacity=".23"/>`).join('') : look.wallpaper === 'wallpaper-artdeco' ? Array.from({length:16},(_,i)=>`<path d="M${i*120} 100l60 -100 60 100 -60 100Z M${i*120} 400l60 -100 60 100 -60 100Z" fill="none" stroke="#a69a7c" stroke-width="3" opacity=".23"/>`).join('') : '';
+  const poster = look.poster === 'poster-signal' ? '<rect x="140" y="120" width="190" height="240" fill="#353b38" stroke="#151515" stroke-width="7"/><path d="M165 250Q190 130 215 250T265 250T310 250" fill="none" stroke="#b9ad8e" stroke-width="6"/><text x="235" y="326" text-anchor="middle" fill="#c8beaa" font-size="22">SIGNAL</text>' : look.poster === 'poster-moon' ? '<rect x="140" y="120" width="190" height="240" fill="#2b3242" stroke="#151515" stroke-width="7"/><circle cx="235" cy="214" r="54" fill="#c4c6b9"/><circle cx="254" cy="199" r="48" fill="#2b3242"/><path d="M160 325L217 270L248 308L286 256L313 325" fill="#616877"/>' : '';
+  const decor = look.decor === 'decor-plant' ? '<g transform="translate(1190 572)"><path d="M-24 0L-16 52H16L24 0Z" fill="#8c7763"/><path d="M0 5V-80M0 -27Q-65 -85 -46 -101Q-3 -97 0 -27M0 -45Q54 -122 63 -100Q65 -53 0 -45" fill="#70836c" stroke="#303d32" stroke-width="4"/></g>' : look.decor === 'decor-lantern' ? `<g transform="translate(1190 554)"><ellipse cy="32" rx="83" ry="57" fill="${light}" opacity=".12"/><rect x="-25" y="-45" width="50" height="92" rx="9" fill="#292a28" stroke="#aaa286" stroke-width="4"/><rect x="-17" y="-26" width="34" height="51" rx="4" fill="${light}"/><path d="M-16 -43V-66Q0 -82 16 -66V-43" fill="none" stroke="#aaa286" stroke-width="5"/></g>` : look.decor === 'decor-tapes' ? '<g transform="translate(1170 598) rotate(-7)"><rect width="113" height="54" rx="5" fill="#8b8b7c" stroke="#151515" stroke-width="4"/><rect x="14" y="13" width="85" height="21" fill="#323738"/><circle cx="32" cy="24" r="8" fill="#beb8a3"/><circle cx="78" cy="24" r="8" fill="#beb8a3"/><path d="M20 45H88" stroke="#bcb6a3" stroke-width="4"/></g>' : '';
   const stripes = Array.from({ length: 34 }, (_, i) => `<line x1="${-200 + i * 60}" y1="-200" x2="${-200 + i * 60}" y2="760"/>`).join('');
 
   return `
   <svg class="scene" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-label="The room">
     <defs>
-      <radialGradient id="spot"><stop offset="0" stop-color="#e3ddcf" stop-opacity=".16"/><stop offset="1" stop-color="#e3ddcf" stop-opacity="0"/></radialGradient>
-      <radialGradient id="lampGlow" cx="50%" cy="0%" r="80%"><stop offset="0" stop-color="#e3ddcf" stop-opacity=".22"/><stop offset="1" stop-color="#e3ddcf" stop-opacity="0"/></radialGradient>
-      <linearGradient id="cone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e3ddcf" stop-opacity=".16"/><stop offset="1" stop-color="#e3ddcf" stop-opacity="0"/></linearGradient>
+      <radialGradient id="spot"><stop offset="0" stop-color="${light}" stop-opacity=".16"/><stop offset="1" stop-color="${light}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="lampGlow" cx="50%" cy="0%" r="80%"><stop offset="0" stop-color="${light}" stop-opacity=".22"/><stop offset="1" stop-color="${light}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="cone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${light}" stop-opacity=".16"/><stop offset="1" stop-color="${light}" stop-opacity="0"/></linearGradient>
       <radialGradient id="vignette" cx="50%" cy="45%" r="75%"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".85"/></radialGradient>
       <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
     </defs>
 
     <g class="layer" data-depth="0.45">
-      <rect x="-400" y="-300" width="2400" height="1500" fill="#111213"/>
+      <rect x="-400" y="-300" width="2400" height="1500" fill="${wall}"/>
+      ${pattern}
       <g stroke="#151617" stroke-width="18">${stripes}</g>
       <rect x="-400" y="760" width="2400" height="500" fill="#0b0c0c"/>
       <line x1="-400" y1="760" x2="2000" y2="760" stroke="#1b1c1d" stroke-width="6"/>
@@ -132,6 +140,7 @@ export function sceneSvg(players: PlayerView[], myId: string) {
         <path class="clock-hand" d="M800 70 L800 46" stroke="#8d9499" stroke-width="3" stroke-linecap="round"/>
         <path d="M800 70 L818 78" stroke="#8d9499" stroke-width="3" stroke-linecap="round"/>
       </g>
+      ${poster}
     </g>
 
     <g class="layer" data-depth="1">
@@ -140,13 +149,16 @@ export function sceneSvg(players: PlayerView[], myId: string) {
       ${behind}
       <g class="sketch">
         <ellipse cx="800" cy="640" rx="620" ry="110" fill="url(#lampGlow)"/>
-        <polygon points="300,560 1300,560 1480,720 120,720" fill="#202224" stroke="#070707" stroke-width="6"/>
-        <polygon points="300,560 1300,560 1320,578 280,578" fill="#2a2c2e"/>
+        <polygon points="300,560 1300,560 1480,720 120,720" fill="${wood}" stroke="#070707" stroke-width="6"/>
+        <polygon points="300,560 1300,560 1320,578 280,578" fill="${edge}"/>
         <rect x="120" y="720" width="1360" height="34" fill="#151617" stroke="#070707" stroke-width="6"/>
         <rect x="180" y="754" width="34" height="140" fill="#101112"/>
         <rect x="1386" y="754" width="34" height="140" fill="#101112"/>
         <ellipse cx="800" cy="676" rx="300" ry="26" fill="#000" opacity=".35"/>
       </g>
+      ${look.table === 'table-walnut' ? '<path d="M340 590Q500 610 610 589 M1060 620Q1220 595 1330 647 M380 685Q480 665 580 688" fill="none" stroke="#826754" stroke-width="3" opacity=".45"/>' : ''}
+      ${decor}
+      ${look.table === 'table-studio' ? '<path d="M380 596H500 M380 620H500 M1100 646H1230" stroke="#92a5a0" stroke-width="5"/><circle cx="1080" cy="644" r="8" fill="#bcab87"/>' : ''}
       ${radioSvg('x="560" y="370" width="480" height="291"')}
       <g class="sketch">
         <path d="M700 150 L900 150 L860 106 L740 106 Z" fill="#1d1e1f" stroke="#070707" stroke-width="5"/>

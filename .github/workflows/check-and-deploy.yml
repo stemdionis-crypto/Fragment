@@ -25,6 +25,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run check
+      - run: npx tsx scripts/check-cosmetics.ts
       - run: npx tsx scripts/check-wallet-auth.ts
       - run: npx tsx scripts/check-practice.ts --prod
       - run: npx tsx scripts/check-economy.ts

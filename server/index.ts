@@ -6,7 +6,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import type { ClientMessage, ServerMessage } from '../shared/protocol';
 import { GameError, Room, type Player } from './room';
 import { translationEngine } from './translate';
-import { identify, profile, buy, equip, profileListeners, walletAccount, bindWallet } from './economy';
+import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet } from './economy';
 import { challenge, verifyChallenge } from './wallet-auth';
 
 // Hosting platforms pass PORT in production; in dev the client expects the server on 2567
@@ -119,6 +119,15 @@ wss.on('connection', (socket: WebSocket, request) => {
           room?.broadcast();
           break;
         }
+        case 'buy_item':
+        case 'equip_item': {
+          if (!accountId) throw new GameError('Profile not connected', 'Профиль не подключён');
+          if (msg.t === 'buy_item') buyItem(accountId, String(msg.item));
+          else equipItem(accountId, String(msg.item));
+          send({ t: 'profile', profile: profile(accountId) });
+          room?.broadcast();
+          break;
+        }
         case 'buy':
         case 'equip': {
           if (!accountId) throw new GameError('Profile not connected', 'Профиль не подключён');
@@ -195,6 +204,7 @@ wss.on('connection', (socket: WebSocket, request) => {
         default: {
           if (!room || !me) return;
           if (msg.t === 'start') room.start(me);
+          else if (msg.t === 'emote') room.emoteFrom(me, String(msg.item));
           else if (msg.t === 'chat') room.chatFrom(me, String(msg.text ?? ''));
           else if (msg.t === 'set') room.setControl(me, String(msg.control), msg.value);
           else if (msg.t === 'ready') room.setReady(me, !!msg.on);

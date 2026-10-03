@@ -1,3 +1,4 @@
+import { COSMETICS, EMOTE_COOLDOWN_MS, EMOTE_DURATION_MS } from '../shared/economy';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { WebSocket } from 'ws';
 import {
@@ -26,6 +27,7 @@ import { detectLang, translate } from './translate';
 import { linesFor } from './bot-lines';
 import { profile, reward } from './economy';
 
+const emoteTimes = new Map<string, number>();
 const SUSPICION_PLAIN = 30;
 const SUSPICION_LEARNED = 20;
 const SUSPICION_WRONG = 20;
@@ -575,10 +577,25 @@ export class Room {
     this.send(p, { t: 'private', info });
   }
 
+  emotes = new Map<string, { id: string; until: number }>();
+  emoteFrom(p: Player, id: string) {
+    if (this.phase !== 'playing' || !p.accountId) return;
+    const item = COSMETICS.find(i => i.id === id && i.category === 'emote');
+    if (!item || !profile(p.accountId).items.includes(id)) throw new GameError('Emote is not owned', 'Эмоция не куплена');
+    const now = Date.now();
+    if (now - (emoteTimes.get(p.accountId) ?? 0) < EMOTE_COOLDOWN_MS) throw new GameError('Wait three seconds between emotes', 'Между эмоциями нужно подождать три секунды');
+    for (const [account, time] of emoteTimes) if (now - time >= EMOTE_COOLDOWN_MS) emoteTimes.delete(account);
+    emoteTimes.set(p.accountId, now);
+    this.emotes.set(p.id, { id, until: now + EMOTE_DURATION_MS });
+    this.broadcast();
+  }
+
   publicState(): PublicState {
     const t = this.trial;
+    const host = this.players.find(p => p.id === this.hostId);
     return {
       code: this.code,
+      roomStyle: host?.accountId ? profile(host.accountId).loadout : undefined,
       practice: this.practice,
       matchmaking: this.matchmaking,
       matchStartsAt: this.matchStartsAt,
@@ -591,6 +608,8 @@ export class Room {
         connected: !!p.socket || !!p.companion,
         bot: p.bot,
         skin: p.accountId ? profile(p.accountId).equipped : 'classic',
+        cosmetics: p.accountId ? profile(p.accountId).loadout : undefined,
+        emote: (this.emotes.get(p.id)?.until ?? 0) > Date.now() ? this.emotes.get(p.id) : undefined,
         ready: this.ready.has(p.id),
         wallet: p.accountId ? profile(p.accountId).wallet : p.wallet,
       })),
