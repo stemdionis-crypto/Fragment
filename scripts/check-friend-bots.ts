@@ -48,7 +48,7 @@ try {
       assert.equal(room.values.get(control.id), control.target, `friend-room bot sets ${kind}`);
     }
   }
-  console.log('ok   friend lobby: 2 humans + bots, host controls, human replacement, all twenty trials');
+  console.log('ok   friend lobby: 2 humans + bots, host controls, human replacement, all fifteen trials');
 } finally {
   room.stopTimer();
 }

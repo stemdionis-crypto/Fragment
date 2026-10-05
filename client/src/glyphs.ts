@@ -48,6 +48,24 @@ const SHAPES: Record<Glyph, string> = {
   lantern: '<path d="M7 8 H17 L16 20 H8 Z"/><path d="M9 8 V5 Q12 2 15 5 V8 M5 20 H19"/><path d="M12 11 Q9.5 14 12 17 Q14.5 14 12 11 Z"/>',
   gear: '<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22 M5 5 L7.2 7.2 M16.8 16.8 L19 19 M19 5 L16.8 7.2 M7.2 16.8 L5 19"/>',
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10 V7 A4 4 0 0 1 16 7 V10"/><circle cx="12" cy="15" r="1"/><path d="M12 16 V18"/>',
+  // Weather reports intercepted by the radio
+  cloud: '<path d="M6 18H18 A3 3 0 0 0 18 12 A6 6 0 0 0 6.5 10 A4 4 0 0 0 6 18Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2V5 M12 19V22 M2 12H5 M19 12H22 M5 5L7 7 M17 17L19 19 M19 5L17 7 M7 17L5 19"/>',
+  rain: '<path d="M5 14H19 Q22 14 20 10 Q19 8 16 8 Q12 3 8 8 Q3 7 3 11 Q3 14 5 14Z M7 17L5 21 M13 17L11 21 M19 17L17 21"/>',
+  snowflake: '<path d="M12 2V22 M3.3 7L20.7 17 M3.3 17L20.7 7 M9 5L12 8L15 5 M9 19L12 16L15 19"/>',
+  lightning: '<path d="M14 2L5 13H11L9 22L20 9H13Z"/>',
+  wind: '<path d="M3 8H16 Q20 8 20 5 Q20 2 17 2 Q15 2 14 4 M2 12H19 Q22 12 22 15 Q22 18 19 18 Q17 18 16 16 M3 16H10 Q13 16 13 19 Q13 22 10 22"/>',
+  umbrella: '<path d="M3 12Q12 1 21 12Z M12 12V19 Q12 22 9 22 Q7 22 7 20"/>',
+  thermometer: '<path d="M10 15V5 A2 2 0 0 1 14 5V15 A4 4 0 1 1 10 15Z M12 9V18"/>',
+  // Parts of the station itself
+  microphone: '<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11A6 6 0 0 0 18 11 M12 17V21 M8 21H16"/>',
+  headphones: '<path d="M4 13V11 A8 8 0 0 1 20 11V13 M4 12H7V20H4Z M17 12H20V20H17Z"/>',
+  record: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3A9 9 0 0 1 21 12 M3 12A9 9 0 0 0 12 21"/>',
+  dial: '<circle cx="12" cy="12" r="9"/><path d="M12 12L17 7 M5 12H6 M18 12H19 M12 5V6"/><circle cx="12" cy="12" r="1"/>',
+  speaker: '<path d="M3 9H7L13 4V20L7 15H3Z M16 9Q20 12 16 15 M18 5Q24 12 18 19"/>',
+  battery: '<rect x="5" y="6" width="15" height="13" rx="2"/><path d="M20 10H22V15H20 M8 12H12 M10 10V14"/>',
+  wire: '<path d="M3 5H8V9 Q8 12 12 12 Q16 12 16 16V19H21 M3 3V7 M21 17V21"/><circle cx="12" cy="12" r="1"/>',
+  switch: '<rect x="3" y="7" width="18" height="10" rx="5"/><circle cx="9" cy="12" r="3"/>',
 };
 
 export function glyphSvg(g: Glyph, color = 'currentColor', size = 28) {

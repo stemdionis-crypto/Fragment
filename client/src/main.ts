@@ -21,6 +21,7 @@ import { SKINS, type ProfileView } from '../../shared/economy';
 import { isCipher, SYMBOL_CIPHERS, HAND_TRIALS } from '../../shared/trial-rules';
 import { connectWallet, initWalletAuth, handleWalletMessage, walletBusy } from './wallet-auth';
 import { glyphSvg } from './glyphs';
+import { trialBanner, trialExample } from './trial-presentation';
 import { Net, saveSession, savedSession } from './net';
 import { radioSvg, shakeNeedle, updateRadio } from './radio';
 import { Camera, sceneSvg, seatsFor } from './scene';
@@ -297,7 +298,6 @@ function mountGame() {
           <div id="sceneHost"></div>
           <div class="bubbles" id="bubbles"></div>
           <div class="turn-banner" id="turnBanner"></div>
-          <div class="trial-intro" id="trialIntro" hidden></div>
         </div>
         <div class="controls">
           <div class="controls-left">
@@ -339,7 +339,6 @@ function mountGame() {
   $('#passBtn').onclick = () => { sfx.pass(); net.send({ t: 'pass' }); };
   sceneKey = '';
   lastTurnId = '';
-  introKey = '';
   lastBubbleId = state!.chat.at(-1)?.id ?? 0;
   $<HTMLFormElement>('#chatForm').onsubmit = (e) => {
     e.preventDefault();
@@ -483,12 +482,11 @@ function updateGame() {
   const tr = s.trial;
   if (tr) {
     $('#hudTrial').innerHTML = `${Array.from({ length: tr.total }, (_, i) => `<span class="step ${i < tr.index ? 'done' : i === tr.index ? 'now' : ''}"></span>`).join('')} <b>${esc(tl(tr.title))}</b>`;
-    $('#prompt').innerHTML = `<span class="eyebrow">${t('trialOf')(tr.index + 1, tr.total)}</span>
-      <span class="trial-name">${esc(tl(tr.title))}</span>
+    $('#prompt').innerHTML = `${trialBanner(tr, lang === 'ru')}
+      <span class="trial-task-label">${lang === 'ru' ? 'ЧТО ДЕЛАТЬ' : 'WHAT TO DO'}</span>
       <span class="task">${esc(tl(tr.task))}</span>
+      ${trialExample(tr, lang === 'ru')}
       <span class="q">${esc(tl(tr.prompt))}</span>${tr.kind === 'code' ? `<div class="code-order">${tr.controls.map((c) => { const owner = s.players.find((p) => p.id === c.ownerId); return `<span class="code-seat ${c.ownerId === myId ? 'mine' : ''}"><b>${esc(owner?.name ?? '?')}${c.ownerId === myId ? ` · ${t('you')}` : owner?.bot ? ` · ${t('bot')}` : ''}</b><span>${esc(tl(c.label))}</span></span>`; }).join('<span class="code-arrow" aria-hidden="true">→</span>')}</div>` : ''}`;
-    if (s.phase === 'playing') maybeShowIntro(tr);
-    else $('#trialIntro').hidden = true;
     if (SYMBOL_CIPHERS.includes(tr.kind)) $('#prompt').insertAdjacentHTML('beforeend', `<div class="cipher-scale"><span class="fine">${lang === 'ru' ? 'Общая шкала · слева направо' : 'Shared scale · left to right'}</span><div class="glyph-row">${tr.controls[0].options.map((g, i) => `<span class="scale-item">${glyphSvg(g as Glyph, '#e3ddcf', 25)}<small>${i + 1}</small></span>`).join('')}</div></div>`);
   }
 
@@ -549,34 +547,6 @@ let lastTurnId = '';
 let lastBubbleId = 0;
 const bubbles = new Map<string, { el: HTMLDivElement; until: number }>(); // by seat id or 'radio'
 const translatedShown = new Set<number>();
-
-// ---------- trial intro: a clear card each time a new trial starts ----------
-
-let introKey = '';
-let introTimer = 0;
-
-function maybeShowIntro(tr: NonNullable<PublicState['trial']>) {
-  if (state?.phase !== 'playing') return;
-  const key = `${tr.index}:${tr.kind}`;
-  if (key === introKey) return;
-  introKey = key;
-  const box = $('#trialIntro');
-  const mine = myControls().map((c) => esc(tl(c.label))).join(' + ');
-  box.innerHTML = `
-    <p class="eyebrow">${t('introTrial')(tr.index + 1, tr.total)}</p>
-    <h2>${esc(tl(tr.title))}</h2>
-    <p class="intro-task">${esc(tl(tr.task))}</p>
-    ${mine ? `<p class="intro-part">${t('yourPart')} <b>${mine}</b></p>` : ''}
-    <button class="primary" id="introOk">${t('gotIt')}</button>`;
-  box.hidden = false;
-  const close = () => {
-    box.hidden = true;
-    clearTimeout(introTimer);
-  };
-  box.querySelector<HTMLButtonElement>('#introOk')!.onclick = close;
-  clearTimeout(introTimer);
-  introTimer = window.setTimeout(close, 14000);
-}
 
 function seatOf(id: string) {
   const i = state!.players.findIndex((p) => p.id === id);

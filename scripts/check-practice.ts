@@ -74,4 +74,4 @@ for (const kind of TRIAL_KINDS) {
     });
   } finally { testRoom.stopTimer(); }
 }
-console.log('ok   all twenty rules with production companions and public clue privacy');
+console.log('ok   all fifteen rules with production companions and public clue privacy');

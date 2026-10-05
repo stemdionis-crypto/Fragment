@@ -72,7 +72,7 @@ const en = {
   inviteCopied: 'Invite link copied',
   howItWorks: 'How it works',
   rules: [
-    'The radio sets you <b>five trials randomly selected from twenty</b>, each one different: describe a hidden item, put a code together, find what went missing, decode a distorted signal… The pictures change too: signs, everyday objects, animals and radio-room relics. Each of you holds only <b>part of what is needed</b>.',
+    'A match has <b>five trials of increasing difficulty</b>, drawn from fifteen. The first teaches you to exchange clues; later trials add one new rule at a time. Every trial brings a fresh set of pictures.',
     'Share your clues in the chat, <b>in turns</b>: up to three messages, then the floor passes on. There is no turn timer; you can pass early.',
     '<b>The radio reads every message.</b> The names of the items (“cat”, “candle”, “star”) and numbers turn into static and make it suspicious. Even misspelled or in another alphabet.',
     'So <b>describe</b> instead of naming: not “cat” but “the one who purrs”, not “clock” but “what ticks on the wall”.',
@@ -189,7 +189,7 @@ const ru: Dict = {
   inviteCopied: 'Ссылка скопирована',
   howItWorks: 'Как играть',
   rules: [
-    'Радио устроит вам <b>пять случайных испытаний из двадцати</b>, каждый раз разные: опиши загаданное, собери код, найди пропажу, расшифруй изменённый сигнал… Меняются и картинки: знаки, предметы, звери и находки из радиорубки. У каждого из вас только <b>часть того, что нужно</b>.',
+    'В матче <b>пять испытаний по нарастающей сложности</b> из пятнадцати. Первое учит обмениваться подсказками, затем постепенно добавляются новые правила. В каждом испытании свой набор картинок.',
     'Делитесь подсказками в чате. Пишут <b>по очереди</b>: до трёх сообщений, потом ход переходит дальше. Таймера хода нет; можно передать слово раньше.',
     '<b>Радио читает каждое сообщение.</b> Названия того, что на картинках («кот», «свеча», «звезда»), и числа оно глушит помехами, и его подозрение растёт. Даже если написать с ошибкой или латиницей.',
     'Поэтому <b>описывайте</b>, а не называйте: не «кот», а «тот, кто мурлычет», не «часы», а «то, что тикает на стене».',

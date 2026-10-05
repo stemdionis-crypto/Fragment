@@ -15,14 +15,15 @@ When you open it, your team receives a **Fragment**: a record of the language yo
 
 ## Trials
 
-A game is **five trials**, selected randomly without repetition from **twenty** rules.
-Four picture sets and private clues are regenerated for each match. The first four
-trials use distinct sets, including new radio-room relics. Every player owns
+A game is **five progressively harder trials** drawn from a catalogue of **fifteen** rules.
+The first is always the direct clue exchange. Each later chapter draws one of its rules.
+Six picture sets and private clues are regenerated for each match; all five
+trials use distinct sets, including weather and radio-station equipment. Every player owns
 one control and must confirm their own answer. The shared rule is visible to all;
 private clues belong to neighbours or are distributed across the team's hands.
 
 See [the complete trial catalogue](TRIALS.md). The pool contains four original
-trials, four new card-comparison trials, six numeric ciphers and six picture-scale
+trials, four card-comparison trials, one numeric cipher and six picture-scale
 ciphers. The latter reuse the controls but change how clues become answers.
 `npm run check` verifies unique solutions and distributed information for every
 rule with three and four players.

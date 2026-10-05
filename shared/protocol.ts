@@ -9,6 +9,8 @@ export const ITEM_SETS = {
   objects: ['candle', 'cup', 'clock', 'knife', 'book', 'coin', 'feather', 'bottle'],
   animals: ['cat', 'owl', 'fish', 'spider', 'crow', 'snake', 'rabbit', 'moth'],
   relics: ['antenna', 'cassette', 'bell', 'hourglass', 'compass', 'lantern', 'gear', 'lock'],
+  weather: ['cloud', 'sun', 'rain', 'snowflake', 'lightning', 'wind', 'umbrella', 'thermometer'],
+  station: ['microphone', 'headphones', 'record', 'dial', 'speaker', 'battery', 'wire', 'switch'],
 } as const;
 export type ItemSet = keyof typeof ITEM_SETS;
 export type Glyph = (typeof ITEM_SETS)[ItemSet][number];
@@ -25,7 +27,7 @@ export interface L {
 // The right setting of your control is known to someone else.
 export type TrialKind = 'tuning' | 'frequency' | 'code' | 'missing'
   | 'common' | 'duplicate' | 'rare' | 'crowd'
-  | 'mirror' | 'echo' | 'countdown' | 'amplifier' | 'half' | 'balance'
+  | 'echo'
   | 'next' | 'previous' | 'opposite' | 'reflection' | 'pairs' | 'leap';
 
 // A control's value: an item picture, or a digit 0–9

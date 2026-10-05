@@ -1,6 +1,6 @@
 import type { Glyph, TrialKind, Value } from './protocol';
 
-export const NUMBER_CIPHERS: TrialKind[] = ['mirror', 'echo', 'countdown', 'amplifier', 'half', 'balance'];
+export const NUMBER_CIPHERS: TrialKind[] = ['echo'];
 export const SYMBOL_CIPHERS: TrialKind[] = ['next', 'previous', 'opposite', 'reflection', 'pairs', 'leap'];
 export const HAND_TRIALS: TrialKind[] = ['missing', 'common', 'duplicate', 'rare', 'crowd'];
 export const isCipher = (kind: TrialKind) => NUMBER_CIPHERS.includes(kind) || SYMBOL_CIPHERS.includes(kind);
@@ -9,14 +9,7 @@ export const isCipher = (kind: TrialKind) => NUMBER_CIPHERS.includes(kind) || SY
 export function decodeClue(kind: TrialKind, value: Value, options: Value[]): Value {
   if (NUMBER_CIPHERS.includes(kind)) {
     if (typeof value !== 'number') throw new Error('Numeric clue required');
-    switch (kind) {
-      case 'mirror': return 9 - value;
-      case 'echo': return (value + 1) % 10;
-      case 'countdown': return (value + 9) % 10;
-      case 'amplifier': return (value * 2) % 10;
-      case 'half': return value / 2;
-      case 'balance': return (value + 5) % 10;
-    }
+    return (value + 1) % 10;
   }
   if (SYMBOL_CIPHERS.includes(kind)) {
     const i = options.indexOf(value), n = options.length;
