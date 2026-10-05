@@ -14,14 +14,17 @@
     "typecheck": "tsc -p server --noEmit && tsc -p client --noEmit",
     "bots": "tsx scripts/bots.ts",
     "e2e": "tsx scripts/e2e.ts",
-    "check": "tsx scripts/check-trials.ts && tsx scripts/check-listener.ts"
+    "check": "tsx scripts/check-trials.ts && tsx scripts/check-listener.ts",
+    "db:migrate": "tsx scripts/migrate.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
+    "pg": "^8.23.1",
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.7.0",
+    "@types/pg": "^8.23.1",
     "@types/ws": "^8.5.12",
     "concurrently": "^9.0.1",
     "tsx": "^4.19.0",
