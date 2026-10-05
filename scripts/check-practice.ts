@@ -12,9 +12,9 @@ const room = new Room('TEST', true, 'ru');
 const human = room.addPlayer('Tester', '#c9c4b8', socket);
 room.addCompanions();
 room.addCompanions();
-assert.equal(room.players.length, 3, 'exactly two companions');
+assert.equal(room.players.length, 4, 'exactly three companions');
 assert.equal(room.hostId, human.id, 'human remains host');
-assert.equal(room.publicState().players.filter((p) => p.bot && p.connected).length, 2);
+assert.equal(room.publicState().players.filter((p) => p.bot && p.connected).length, 3);
 assert.throws(() => room.resume(room.players[1].id, socket), /Cannot resume a bot/);
 room.start(human);
 room.stopTimer();
@@ -31,7 +31,7 @@ try {
     human.lastChat = 0;
     room.chatFrom(human, '…');
     botTick(Date.now() + 5000);
-    assert.equal(room.ready.size, 2, 'both bots set their controls and confirm');
+    assert.equal(room.ready.size, 3, 'all bots set their controls and confirm');
     const control = trial.controls.find((c) => c.ownerId === human.id)!;
     room.setControl(human, control.id, control.target);
     room.setReady(human, true);
@@ -41,7 +41,7 @@ try {
   }
   assert.ok(room.fragment);
   room.again(human);
-  assert.equal(room.players.length, 3, 'companions remain for replay');
+  assert.equal(room.players.length, 4, 'companions remain for replay');
   room.start(human);
   room.stopTimer();
   assert.equal(room.phase, 'playing');
@@ -68,7 +68,7 @@ for (const kind of TRIAL_KINDS) {
     testRoom.turnId = player.id;
     testRoom.chatFrom(player, '…');
     (testRoom as unknown as { tickCompanions(now: number): void }).tickCompanions(Date.now() + 5000);
-    assert.equal(testRoom.ready.size, 2, `companions confirm ${kind}`);
+    assert.equal(testRoom.ready.size, 3, `companions confirm ${kind}`);
     testRoom.trial!.controls.filter(c => c.ownerId !== player.id).forEach(c => {
       assert.equal(testRoom.values.get(c.id), c.target, `companion sets ${kind}`);
     });

@@ -2,7 +2,7 @@
   "name": "fragment",
   "private": true,
   "version": "0.1.0",
-  "description": "A 3-4 player puzzle where an old radio listens to everything you say.",
+  "description": "A four-player puzzle where an old radio listens to everything you say.",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -14,7 +14,7 @@
     "typecheck": "tsc -p server --noEmit && tsc -p client --noEmit",
     "bots": "tsx scripts/bots.ts",
     "e2e": "tsx scripts/e2e.ts",
-    "check": "tsx scripts/check-trials.ts && tsx scripts/check-listener.ts",
+    "check": "tsx scripts/check-trials.ts && tsx scripts/check-listener.ts && tsx scripts/check-friend-bots.ts --prod",
     "db:migrate": "tsx scripts/migrate.ts"
   },
   "dependencies": {

@@ -40,6 +40,14 @@ const RU: Record<Glyph, string> = {
   snake: 'та, что шипит и ползает',
   rabbit: 'тот, кто прыгает и любит морковку',
   moth: 'тот, кто ночью летит на лампу',
+  antenna: 'то, что ловит далёкие станции',
+  cassette: 'коробочка с двумя катушками',
+  bell: 'то, что звенит у двери',
+  hourglass: 'песок, который меряет время',
+  compass: 'стрелка, которая ищет север',
+  lantern: 'свет, который можно нести',
+  gear: 'зубчатое колесо',
+  lock: 'железная скважина на двери',
 };
 const EN: Record<Glyph, string> = {
   triangle: 'a roof', circle: 'a wheel', square: 'a window', cross: 'a plus', star: 'what goes on top of a Christmas tree',
@@ -48,6 +56,9 @@ const EN: Record<Glyph, string> = {
   coin: 'small change in your pocket', feather: 'what falls off a bird', bottle: 'what you pour water into', cat: 'the one who purrs',
   owl: 'the night bird that hoots', fish: 'the one in the aquarium', spider: 'the one who weaves a web', crow: 'the black bird that caws',
   snake: 'the one that hisses and crawls', rabbit: 'the one who hops and loves carrots', moth: 'the one that flies to the lamp at night',
+  antenna: 'a wire catching distant stations', cassette: 'a box with two reels', bell: 'what rings at the door',
+  hourglass: 'sand measuring time', compass: 'the needle that finds north', lantern: 'a carried light',
+  gear: 'a toothed wheel', lock: 'a metal clasp on a door',
 };
 // Numbers without number words
 const DIGITS_RU = [

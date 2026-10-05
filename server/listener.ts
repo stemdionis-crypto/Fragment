@@ -44,6 +44,15 @@ const CATEGORIES: Record<string, Matcher> = {
     prefix: ['рыб', 'паук', 'паучо', 'ворон', 'змея', 'змей', 'змеи', 'змею', 'кролик', 'кролич', 'мотыл', 'бабочк'],
     words: ['рыбка', 'паучок', 'ворона', 'кролик', 'мотылек', 'бабочка', 'spider', 'rabbit', 'kitten'],
   },
+  relics: {
+    exact: ['antenna', 'antennas', 'aerial', 'aerials', 'cassette', 'cassettes', 'tape', 'tapes', 'bell', 'bells',
+      'hourglass', 'hourglasses', 'compass', 'compasses', 'lantern', 'lanterns', 'gear', 'gears', 'lock', 'locks',
+      'антенна', 'антенны', 'кассета', 'кассеты', 'колокол', 'колокола', 'компас', 'компаса', 'фонарь', 'фонаря',
+      'шестерня', 'шестерни', 'замок', 'замка'],
+    prefix: ['антенн', 'кассет', 'колокол', 'колоколь', 'песочн', 'компас', 'фонар', 'шестер', 'замоч'],
+    words: ['антенна', 'кассета', 'колокол', 'компас', 'фонарь', 'шестерня', 'замок',
+      'antenna', 'cassette', 'hourglass', 'compass', 'lantern'],
+  },
   numbers: {
     exact: [
       'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'first', 'second', 'third', 'fourth', 'fifth',

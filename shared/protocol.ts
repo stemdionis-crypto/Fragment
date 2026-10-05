@@ -1,11 +1,14 @@
 // Messages and types shared by the server and the client.
 import type { ProfileView, RewardView, SkinId, Loadout } from './economy';
+export type LadderMetric = 'speed' | 'signal' | 'games';
+export interface LadderEntry { name: string; wallet: string; value: number; }
 
 // Item pictures, in sets of 8. A trial uses one set.
 export const ITEM_SETS = {
   signs: ['triangle', 'circle', 'square', 'cross', 'star', 'moon', 'eye', 'key'],
   objects: ['candle', 'cup', 'clock', 'knife', 'book', 'coin', 'feather', 'bottle'],
   animals: ['cat', 'owl', 'fish', 'spider', 'crow', 'snake', 'rabbit', 'moth'],
+  relics: ['antenna', 'cassette', 'bell', 'hourglass', 'compass', 'lantern', 'gear', 'lock'],
 } as const;
 export type ItemSet = keyof typeof ITEM_SETS;
 export type Glyph = (typeof ITEM_SETS)[ItemSet][number];
@@ -30,13 +33,12 @@ export type Value = Glyph | number;
 
 export const PLAYER_COLORS = ['#c9c4b8', '#8d9499', '#7d93a3', '#a8655a', '#86906c', '#8f7d91', '#a8946a', '#6d7f96'] as const;
 
-export const MIN_PLAYERS = 3;
+export const MIN_PLAYERS = 4;
 export const MAX_PLAYERS = 4;
 export const MAX_ATTEMPTS = 3; // per trial
 export const TRIALS_PER_GAME = 5;
 export const ROUND_SECONDS = 10 * 60;
 export const CHAT_MAX = 140;
-export const TURN_SECONDS = 30;
 export const TURN_MESSAGES = 3;
 
 export type Phase = 'lobby' | 'playing' | 'won' | 'lost';
@@ -116,7 +118,7 @@ export interface PublicState {
   retunes: number;
   learned: string[]; // words the radio has learned to understand
   turnId: string; // whose turn it is to speak
-  turnEndsAt: number;
+  turnEndsAt: number; // turn marker, no per-turn deadline
   turnMessagesLeft: number;
   chat: ChatMessage[];
   fragment?: FragmentRecord;
@@ -142,14 +144,17 @@ export type ClientMessage =
   | { t: 'wallet_proof'; signature: string }
   | { t: 'wallet_use'; accept: boolean }
   | { t: 'identify'; token?: string }
+  | { t: 'leaderboard'; metric: LadderMetric }
   | { t: 'buy_item'; item: string }
   | { t: 'equip_item'; item: string }
   | { t: 'buy'; skin: string }
   | { t: 'equip'; skin: string }
-  | { t: 'match'; name: string; color: string }
+  | { t: 'match'; name: string; color: string; lang?: Lang }
   | { t: 'leave' }
   | { t: 'create'; name: string; color: string; bot?: boolean; practice?: boolean; lang?: Lang }
   | { t: 'join'; code: string; name: string; color: string; bot?: boolean }
+  | { t: 'add_bot' }
+  | { t: 'remove_bot'; playerId: string }
   | { t: 'resume'; code: string; playerId: string }
   | { t: 'start' }
   | { t: 'chat'; text: string }
@@ -164,6 +169,7 @@ export type ServerMessage =
   | { t: 'wallet_conflict'; profile: ProfileView }
   | { t: 'wallet_verified'; restored: boolean }
   | { t: 'profile'; profile: ProfileView; token?: string }
+  | { t: 'leaderboard'; metric: LadderMetric; entries: LadderEntry[] }
   | { t: 'reward'; reward: RewardView }
   | { t: 'left' }
   | { t: 'joined'; playerId: string; code: string }

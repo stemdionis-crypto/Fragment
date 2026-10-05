@@ -31,6 +31,7 @@ jobs:
       - run: npx tsx scripts/check-economy.ts
         env:
           FRAGMENT_TEST_WORK: ${{ runner.temp }}
+      - run: npx tsx scripts/check-upgrade.ts
       - run: npm run build
 
   deploy:

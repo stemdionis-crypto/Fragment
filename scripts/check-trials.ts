@@ -46,6 +46,10 @@ let varied = 0;
 for (let i = 0; i < 500; i++) if (new Set(trialSequence(5).map((p) => p.kind)).size === 5) varied++;
 failed ||= varied !== 500;
 console.log(`${varied === 500 ? 'ok  ' : 'FAIL'} every game has 5 different trials (${varied}/500)`);
+for (let i = 0; i < 500; i++) {
+  const sequence = trialSequence(5);
+  assert.equal(new Set(sequence.slice(0, 4).map((trial) => trial.set)).size, 4, 'first four trials use distinct picture sets');
+}
 assert.equal(TRIAL_KINDS.length, 20);
 assert.equal(new Set(TRIAL_KINDS).size, 20);
 const seen = new Set<string>();

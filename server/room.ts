@@ -9,7 +9,6 @@ import {
   ROUND_SECONDS,
   TRIALS_PER_GAME,
   TURN_MESSAGES,
-  TURN_SECONDS,
   type ChatMessage,
   type FragmentRecord,
   type L,
@@ -24,13 +23,14 @@ import { Listener } from './listener';
 import { generateTrial, trialSequence, type Trial, type TrialPlan } from './puzzle';
 import { detectLang, translate } from './translate';
 import { linesFor } from './bot-lines';
-import { profile, reward } from './economy';
+import { profile, reward, recordMatch } from './economy';
 
 const SUSPICION_PLAIN = 30;
 const SUSPICION_LEARNED = 20;
 const SUSPICION_WRONG = 20;
 const SUSPICION_AFTER_RETUNE = 25;
 const CHAT_COOLDOWN_MS = 600;
+const MIN_MATCH_HUMANS = 2;
 // Test bots may peek at their own answer, but only on a development server
 const DEV = !process.argv.includes('--prod');
 
@@ -141,17 +141,20 @@ export class Room {
   updateMatchmaking() {
     if (!this.matchmaking || this.phase !== 'lobby') return;
     const connected = this.players.filter((p) => p.socket && !p.bot);
-    if (connected.length < MIN_PLAYERS) {
+    if (connected.length < MIN_MATCH_HUMANS) {
       if (this.matchTimer) clearTimeout(this.matchTimer);
       this.matchTimer = null;
       this.matchStartsAt = 0;
     } else if (!this.matchTimer) {
-      this.matchStartsAt = Date.now() + 8000;
+      this.matchStartsAt = Date.now() + 12000;
       this.matchTimer = setTimeout(() => {
         this.matchTimer = null;
         this.matchStartsAt = 0;
         const host = this.players.find((p) => p.id === this.hostId && p.socket);
-        if (this.phase === 'lobby' && host && this.players.filter((p) => p.socket && !p.bot).length >= MIN_PLAYERS) this.start(host);
+        if (this.phase === 'lobby' && host && this.players.filter((p) => p.socket && !p.bot).length >= MIN_MATCH_HUMANS) {
+          this.fillBots();
+          this.start(host);
+        }
         this.broadcast();
       }, 8000);
     }
@@ -167,17 +170,40 @@ export class Room {
   constructor(public code: string, public practice = false, private botLang: Lang = 'ru') {}
 
   addCompanions() {
-    if (!this.practice || this.phase !== 'lobby' || this.players.some((p) => p.companion)) return;
-    const names = this.botLang === 'ru' ? ['Эхо', 'Ива'] : ['Echo', 'Wren'];
-    names.forEach((name, i) => this.players.push({
-      id: randomUUID(), name, color: PLAYER_COLORS[i + 1], socket: null,
-      bot: true, companion: true, lastChat: 0,
-    }));
+    if (!this.practice || this.phase !== 'lobby') return;
+    this.fillBots();
+  }
+
+  private fillBots() {
+    while (this.players.length < MAX_PLAYERS) this.insertBot();
+    this.broadcast();
+  }
+
+  private insertBot() {
+    const names = this.botLang === 'ru' ? ['Эхо', 'Ива', 'Тень'] : ['Echo', 'Wren', 'Shade'];
+    const name = names.find((candidate) => !this.players.some((p) => p.name === candidate)) ?? `Bot ${this.players.length + 1}`;
+    this.players.push({ id: randomUUID(), name, color: PLAYER_COLORS[this.players.length], socket: null,
+      bot: true, companion: true, lastChat: 0 });
+  }
+
+  addBot(by: Player) {
+    if (this.phase !== 'lobby' || this.practice || this.matchmaking || by.id !== this.hostId) throw new GameError('Only the host can add bots in a friend lobby', 'Добавлять ботов в комнате друзей может только ведущий');
+    if (this.players.filter((p) => p.socket && !p.bot).length < 2) throw new GameError('Invite one friend before adding bots', 'Сначала пригласите хотя бы одного друга');
+    if (this.players.length >= MAX_PLAYERS) throw new GameError('The room is full', 'Комната заполнена');
+    this.insertBot();
+    this.broadcast();
+  }
+
+  removeBot(by: Player, playerId: string) {
+    if (this.phase !== 'lobby' || this.practice || this.matchmaking || by.id !== this.hostId) throw new GameError('Only the host can remove bots in a friend lobby', 'Убирать ботов в комнате друзей может только ведущий');
+    const index = this.players.findIndex((p) => p.id === playerId && p.companion);
+    if (index < 0) throw new GameError('Bot not found', 'Бот не найден');
+    this.players.splice(index, 1);
     this.broadcast();
   }
 
   private tickCompanions(now: number) {
-    if (!this.practice || !this.trial || !this.players.some((p) => p.socket)) return;
+    if (!this.trial || !this.players.some((p) => p.socket)) return;
     const trial = this.trial;
     if (this.humanSpoke && now - this.trialStartedAt >= 3000) {
       for (const p of this.players.filter((p) => p.companion)) {
@@ -203,8 +229,14 @@ export class Room {
 
   // ---------- players ----------
 
-  addPlayer(name: string, color: string, socket: WebSocket, bot = false) {
+  addPlayer(name: string, color: string, socket: WebSocket, bot = false, accountId?: string) {
     if (this.phase !== 'lobby') throw new GameError('This room has already started', 'Эта комната уже начала игру');
+    if (accountId && this.players.some((p) => p.accountId === accountId)) throw new GameError('This wallet is already in the room', 'Этот кошелёк уже находится в комнате');
+    if (this.players.length >= MAX_PLAYERS && !this.practice && !this.matchmaking) {
+      let botIndex = -1;
+      for (let i = this.players.length - 1; i >= 0; i--) if (this.players[i].companion) { botIndex = i; break; }
+      if (botIndex >= 0) this.players.splice(botIndex, 1);
+    }
     if (this.players.length >= MAX_PLAYERS) throw new GameError('The room is full', 'Комната заполнена');
     const p: Player = {
       id: randomUUID(),
@@ -212,6 +244,7 @@ export class Room {
       color: (PLAYER_COLORS as readonly string[]).includes(color) ? color : PLAYER_COLORS[this.players.length],
       socket,
       bot: bot && DEV,
+      accountId,
       lastChat: 0,
     };
     this.players.push(p);
@@ -331,7 +364,9 @@ export class Room {
 
   private giveTurn(p: Player) {
     this.turnId = p.id;
-    this.turnEndsAt = Date.now() + TURN_SECONDS * 1000;
+    // A turn lasts until the player passes or uses all three messages.
+    // This timestamp remains a unique turn marker for companions and test bots.
+    this.turnEndsAt = Date.now();
     this.turnMessagesLeft = TURN_MESSAGES;
     this.fx('turn');
   }
@@ -470,6 +505,7 @@ export class Room {
       retunes: this.retunes,
       wrong: this.wrong,
     };
+    this.recordParticipants(true);
     const rewarded = new Set<string>();
     for (const p of this.players) {
       if (!p.accountId || p.bot || rewarded.has(p.accountId) || (p.roundMessages ?? 0) < 2) continue;
@@ -487,6 +523,7 @@ export class Room {
     this.stopTimer();
     this.phase = 'lost';
     this.lostReason = reason;
+    this.recordParticipants(false);
     this.radio(
       reason === 'time'
         ? b('…time is up. I keep your voices.', '…время вышло. Ваши голоса остаются у меня.')
@@ -495,12 +532,23 @@ export class Room {
     this.broadcast();
   }
 
+  private recordParticipants(won: boolean) {
+    const seen = new Set<string>();
+    const seconds = Math.round((Date.now() - this.startedAt) / 1000);
+    for (const p of this.players) {
+      if (!p.accountId || p.bot || seen.has(p.accountId)) continue;
+      seen.add(p.accountId);
+      try { recordMatch(p.accountId, this.roundId, won, seconds, p.name, this.practice); }
+      catch { this.send(p, { t: 'error', message: 'Match statistics could not be saved', ru: 'Не удалось сохранить статистику матча' }); }
+    }
+  }
+
   private tick() {
     if (this.phase !== 'playing') return this.stopTimer();
     const now = Date.now();
     if (now >= this.endsAt) return this.lose('time');
     const speaker = this.players.find((p) => p.id === this.turnId);
-    if (now >= this.turnEndsAt || !(speaker?.socket || speaker?.companion)) this.nextTurn();
+    if (!(speaker?.socket || speaker?.companion)) this.nextTurn();
     this.tickCompanions(now);
     this.ticks++;
     if (this.ticks % 3 === 0 && this.suspicion > 0) this.suspicion = Math.max(0, this.suspicion - 1);

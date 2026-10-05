@@ -39,6 +39,15 @@ const SHAPES: Record<Glyph, string> = {
   snake: '<path d="M3.5 19 Q6 14.5 9.5 17 T15 15 T19 9.5"/><path d="M17.5 8.5 Q19.5 5.5 21.5 7.5 Q21 10 19 10"/><path d="M21.5 7.5 L23 7"/>',
   rabbit: '<path d="M9.5 9.5 Q7.5 2 9.5 2.5 Q11.5 3 11 9 M14.5 9.5 Q16.5 2 14.5 2.5 Q12.5 3 13 9"/><circle cx="12" cy="14" r="5.5"/><circle cx="10" cy="13" r="0.8"/><circle cx="14" cy="13" r="0.8"/><path d="M11.2 15.6 L12 16.3 L12.8 15.6"/>',
   moth: '<path d="M12 8 Q5 2.5 3.5 9 Q4 13.5 12 12 Q20 13.5 20.5 9 Q19 2.5 12 8 Z"/><path d="M12 12 Q7 13 6.5 17.5 Q9.5 18.5 12 14 Q14.5 18.5 17.5 17.5 Q17 13 12 12 Z"/><path d="M12 7 V18.5 M11 6.5 L9.5 4 M13 6.5 L14.5 4"/>',
+  // objects found in and around the radio room
+  antenna: '<path d="M12 21 V9 M7 21 H17 M8 15 L12 9 L16 15"/><circle cx="12" cy="6" r="2"/><path d="M5 5 Q2 9 5 13 M19 5 Q22 9 19 13"/>',
+  cassette: '<rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/><path d="M10 12 H14 M6 17 H18"/>',
+  bell: '<path d="M6 16 H18 L16.5 13 V9 A4.5 4.5 0 0 0 7.5 9 V13 Z"/><path d="M5 16 H19 M10 19 Q12 21.5 14 19"/>',
+  hourglass: '<path d="M6 3 H18 M6 21 H18 M7 3 C7 8 10 9 12 12 C14 9 17 8 17 3 M7 21 C7 16 10 15 12 12 C14 15 17 16 17 21"/><path d="M10 17 H14"/>',
+  compass: '<circle cx="12" cy="12" r="9"/><path d="M15 9 L13 13 L9 15 L11 11 Z"/><path d="M12 3 V5 M21 12 H19 M12 21 V19 M3 12 H5"/>',
+  lantern: '<path d="M7 8 H17 L16 20 H8 Z"/><path d="M9 8 V5 Q12 2 15 5 V8 M5 20 H19"/><path d="M12 11 Q9.5 14 12 17 Q14.5 14 12 11 Z"/>',
+  gear: '<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22 M5 5 L7.2 7.2 M16.8 16.8 L19 19 M19 5 L16.8 7.2 M7.2 16.8 L5 19"/>',
+  lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10 V7 A4 4 0 0 1 16 7 V10"/><circle cx="12" cy="15" r="1"/><path d="M12 16 V18"/>',
 };
 
 export function glyphSvg(g: Glyph, color = 'currentColor', size = 28) {

@@ -18,6 +18,27 @@
 /* Settings stay available in the menu, lobby and during a round. */
 .settings-launcher { position: static; flex: 0 0 auto; margin-left: auto; background: var(--panel); }
 .shop-launcher { position: static; flex: 0 0 auto; background: var(--panel); }
+.profile-launcher { position: static; flex: 0 0 auto; background: var(--panel); }
+.home-account { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.quickstart, .game-guide { border: 1px solid #746953; border-radius: 10px; background: #29271f; padding: 12px 14px; color: var(--bone); }
+.quickstart p, .game-guide p { margin: 5px 0 0; line-height: 1.5; }
+.game-guide { width: 300px; max-width: 100%; }
+.game-guide[hidden] { display: none; }
+.profile-dialog { width: min(650px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); overflow: auto; background: var(--panel); color: var(--text); border: 1px solid var(--line-2); border-radius: 14px; padding: 22px; }
+.profile-dialog::backdrop { background: #030405cc; }
+.profile-tabs, .profile-metrics { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.profile-tabs button[aria-pressed="true"], .profile-metrics button[aria-pressed="true"] { background: var(--bone); color: var(--bg); }
+.profile-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.profile-stats > div { display: grid; gap: 5px; padding: 14px; border: 1px solid var(--line); border-radius: 9px; }
+.profile-stats b { font: 24px var(--font-type); color: var(--bone); }
+.profile-stats span, .inventory-item span { color: var(--muted); font-size: 12px; }
+.inventory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.inventory-item { display: grid; gap: 5px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; }
+.ladder-list { padding-left: 22px; }
+.ladder-list li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.ladder-list li > span { display: inline-flex; flex-wrap: wrap; gap: 8px; width: calc(100% - 65px); }
+.ladder-list small { color: var(--muted); }
+.ladder-list b { color: var(--bone); }
 .shop-dialog { width: min(660px, calc(100vw - 24px)); }
 .skin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .skin-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px; text-align: center; background: var(--bg-2); }
@@ -327,6 +348,13 @@ h2 {
   background: var(--bg-2);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+.remove-bot {
+  margin-left: auto;
+  padding: 2px 9px;
+  min-width: 28px;
+  font-size: 19px;
+  line-height: 1;
 }
 .player.away {
   opacity: 0.45;
