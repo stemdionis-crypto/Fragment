@@ -1,0 +1,440 @@
+{
+  "Catalogs": {
+    "Fragment": {
+      "Items": {
+        "fragment_classic": {
+          "ItemID": "fragment_classic",
+          "CatalogID": "Fragment",
+          "DisplayName": "Stranger",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_operator": {
+          "ItemID": "fragment_operator",
+          "CatalogID": "Fragment",
+          "DisplayName": "Masked Goblin",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_wanderer": {
+          "ItemID": "fragment_wanderer",
+          "CatalogID": "Fragment",
+          "DisplayName": "Gamer",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_phantom": {
+          "ItemID": "fragment_phantom",
+          "CatalogID": "Fragment",
+          "DisplayName": "Shadow Figure",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_head-none": {
+          "ItemID": "fragment_head-none",
+          "CatalogID": "Fragment",
+          "DisplayName": "No headwear",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_headphones": {
+          "ItemID": "fragment_headphones",
+          "CatalogID": "Fragment",
+          "DisplayName": "Studio headphones",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_beanie": {
+          "ItemID": "fragment_beanie",
+          "CatalogID": "Fragment",
+          "DisplayName": "Knitted beanie",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_beret": {
+          "ItemID": "fragment_beret",
+          "CatalogID": "Fragment",
+          "DisplayName": "Archivist beret",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_face-none": {
+          "ItemID": "fragment_face-none",
+          "CatalogID": "Fragment",
+          "DisplayName": "Original skin face",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_mask-skull": {
+          "ItemID": "fragment_mask-skull",
+          "CatalogID": "Fragment",
+          "DisplayName": "Bone mask",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_mask-plague": {
+          "ItemID": "fragment_mask-plague",
+          "CatalogID": "Fragment",
+          "DisplayName": "Plague doctor",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_mask-oni": {
+          "ItemID": "fragment_mask-oni",
+          "CatalogID": "Fragment",
+          "DisplayName": "Demon mask",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_mask-welder": {
+          "ItemID": "fragment_mask-welder",
+          "CatalogID": "Fragment",
+          "DisplayName": "Welding mask",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_mask-respirator": {
+          "ItemID": "fragment_mask-respirator",
+          "CatalogID": "Fragment",
+          "DisplayName": "Respirator",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_glasses": {
+          "ItemID": "fragment_glasses",
+          "CatalogID": "Fragment",
+          "DisplayName": "Round glasses",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_scarf": {
+          "ItemID": "fragment_scarf",
+          "CatalogID": "Fragment",
+          "DisplayName": "Traveller scarf",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_table-default": {
+          "ItemID": "fragment_table-default",
+          "CatalogID": "Fragment",
+          "DisplayName": "Old table",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_table-walnut": {
+          "ItemID": "fragment_table-walnut",
+          "CatalogID": "Fragment",
+          "DisplayName": "Walnut table",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_table-studio": {
+          "ItemID": "fragment_table-studio",
+          "CatalogID": "Fragment",
+          "DisplayName": "Studio desk",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_wallpaper-default": {
+          "ItemID": "fragment_wallpaper-default",
+          "CatalogID": "Fragment",
+          "DisplayName": "Dark stripes",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_wallpaper-botanical": {
+          "ItemID": "fragment_wallpaper-botanical",
+          "CatalogID": "Fragment",
+          "DisplayName": "Botanical pattern",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_wallpaper-artdeco": {
+          "ItemID": "fragment_wallpaper-artdeco",
+          "CatalogID": "Fragment",
+          "DisplayName": "Airwave geometry",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_lighting-default": {
+          "ItemID": "fragment_lighting-default",
+          "CatalogID": "Fragment",
+          "DisplayName": "Night light",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_lighting-amber": {
+          "ItemID": "fragment_lighting-amber",
+          "CatalogID": "Fragment",
+          "DisplayName": "Warm amber",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_lighting-moon": {
+          "ItemID": "fragment_lighting-moon",
+          "CatalogID": "Fragment",
+          "DisplayName": "Moonlit airwaves",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_poster-default": {
+          "ItemID": "fragment_poster-default",
+          "CatalogID": "Fragment",
+          "DisplayName": "Old portrait",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_poster-signal": {
+          "ItemID": "fragment_poster-signal",
+          "CatalogID": "Fragment",
+          "DisplayName": "Signal poster",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_poster-moon": {
+          "ItemID": "fragment_poster-moon",
+          "CatalogID": "Fragment",
+          "DisplayName": "Moon expedition",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_decor-none": {
+          "ItemID": "fragment_decor-none",
+          "CatalogID": "Fragment",
+          "DisplayName": "Clear desk",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_decor-lantern": {
+          "ItemID": "fragment_decor-lantern",
+          "CatalogID": "Fragment",
+          "DisplayName": "Little lantern",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_decor-plant": {
+          "ItemID": "fragment_decor-plant",
+          "CatalogID": "Fragment",
+          "DisplayName": "Plant",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_decor-tapes": {
+          "ItemID": "fragment_decor-tapes",
+          "CatalogID": "Fragment",
+          "DisplayName": "Archive tapes",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_victory-default": {
+          "ItemID": "fragment_victory-default",
+          "CatalogID": "Fragment",
+          "DisplayName": "Quiet victory",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_victory-sparks": {
+          "ItemID": "fragment_victory-sparks",
+          "CatalogID": "Fragment",
+          "DisplayName": "Airwave sparks",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_victory-rings": {
+          "ItemID": "fragment_victory-rings",
+          "CatalogID": "Fragment",
+          "DisplayName": "Signal waves",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        },
+        "fragment_victory-stars": {
+          "ItemID": "fragment_victory-stars",
+          "CatalogID": "Fragment",
+          "DisplayName": "Constellation",
+          "IsStackable": true,
+          "IsTradable": false,
+          "Tags": [
+            "fragment",
+            "cosmetic"
+          ],
+          "Weight": 0
+        }
+      }
+    }
+  }
+}

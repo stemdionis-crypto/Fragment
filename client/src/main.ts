@@ -1,3 +1,4 @@
+import { platformLogin, platformReward } from './idos';
 import './style.css';
 import {
   CHAT_MAX,
@@ -99,7 +100,7 @@ function mountHome() {
         <h1 class="title">Fragment</h1>
         <p class="lead">${t('lead')}</p>
         ${import.meta.env.VITE_DEMO_MODE === 'true' ? `<p class="fine demo-note">${lang === 'ru' ? 'Демо концепции · Прогресс временный и может сброситься после перезапуска сервера.' : 'Concept demo · Progress is temporary and may reset when the server restarts.'}</p>` : ''}
-        <div class="home-account"><button id="wallet-home"></button></div>
+        <div class="home-account"><button id="idos-login">iDos · Войти / Sign in</button><button id="wallet-home"></button></div>
         <p id="wallet-hint" class="fine"></p>
 
         <label for="name">${t('yourName')}</label>
@@ -831,7 +832,8 @@ net.onMessage = (m) => {
       updateHomeWallet();
       break;
     case 'reward':
-      toast(`+${m.reward.amount} ${lang === 'ru' ? 'Сигнала' : 'Signal'} · ${lang === 'ru' ? 'Баланс' : 'Balance'}: ${m.reward.balance}`);
+      if (m.reward.receipt) void platformReward(m.reward.receipt, message => net.send(message)).catch(() => toast(lang === 'ru' ? 'Награда iDos ожидает активации FRAG или подтверждения' : 'iDos reward awaits FRAG activation or confirmation'));
+      if (m.reward.amount > 0) toast(`+${m.reward.amount} ${lang === 'ru' ? 'FRAG' : 'FRAG'} · ${lang === 'ru' ? 'Баланс' : 'Balance'}: ${m.reward.balance}`);
       break;
     case 'left':
       saveSession(null);
@@ -945,3 +947,5 @@ document.addEventListener('click', (event) => {
 render();
 net.connect();
 requestAnimationFrame(frame);
+
+document.addEventListener('click', e => { if ((e.target as HTMLElement).closest('#idos-login')) platformLogin(); });

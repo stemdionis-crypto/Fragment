@@ -1,0 +1,1404 @@
+{
+  "Stores": {
+    "fragment": {
+      "StoreID": "fragment",
+      "Identity": {
+        "DisplayName": "Fragment"
+      },
+      "Availability": {
+        "Schedule": {
+          "Mode": "Always",
+          "IsActive": false
+        }
+      },
+      "Layout": {
+        "Sections": {
+          "cosmetics": {
+            "SectionID": "cosmetics",
+            "Slots": {
+              "fragment_operator": {
+                "SlotID": "fragment_operator",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_operator"
+                }
+              },
+              "fragment_wanderer": {
+                "SlotID": "fragment_wanderer",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_wanderer"
+                }
+              },
+              "fragment_phantom": {
+                "SlotID": "fragment_phantom",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_phantom"
+                }
+              },
+              "fragment_headphones": {
+                "SlotID": "fragment_headphones",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_headphones"
+                }
+              },
+              "fragment_beanie": {
+                "SlotID": "fragment_beanie",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_beanie"
+                }
+              },
+              "fragment_beret": {
+                "SlotID": "fragment_beret",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_beret"
+                }
+              },
+              "fragment_mask-skull": {
+                "SlotID": "fragment_mask-skull",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_mask-skull"
+                }
+              },
+              "fragment_mask-plague": {
+                "SlotID": "fragment_mask-plague",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_mask-plague"
+                }
+              },
+              "fragment_mask-oni": {
+                "SlotID": "fragment_mask-oni",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_mask-oni"
+                }
+              },
+              "fragment_mask-welder": {
+                "SlotID": "fragment_mask-welder",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_mask-welder"
+                }
+              },
+              "fragment_mask-respirator": {
+                "SlotID": "fragment_mask-respirator",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_mask-respirator"
+                }
+              },
+              "fragment_glasses": {
+                "SlotID": "fragment_glasses",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_glasses"
+                }
+              },
+              "fragment_scarf": {
+                "SlotID": "fragment_scarf",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_scarf"
+                }
+              },
+              "fragment_table-walnut": {
+                "SlotID": "fragment_table-walnut",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_table-walnut"
+                }
+              },
+              "fragment_table-studio": {
+                "SlotID": "fragment_table-studio",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_table-studio"
+                }
+              },
+              "fragment_wallpaper-botanical": {
+                "SlotID": "fragment_wallpaper-botanical",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_wallpaper-botanical"
+                }
+              },
+              "fragment_wallpaper-artdeco": {
+                "SlotID": "fragment_wallpaper-artdeco",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_wallpaper-artdeco"
+                }
+              },
+              "fragment_lighting-amber": {
+                "SlotID": "fragment_lighting-amber",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_lighting-amber"
+                }
+              },
+              "fragment_lighting-moon": {
+                "SlotID": "fragment_lighting-moon",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_lighting-moon"
+                }
+              },
+              "fragment_poster-signal": {
+                "SlotID": "fragment_poster-signal",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_poster-signal"
+                }
+              },
+              "fragment_poster-moon": {
+                "SlotID": "fragment_poster-moon",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_poster-moon"
+                }
+              },
+              "fragment_decor-lantern": {
+                "SlotID": "fragment_decor-lantern",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_decor-lantern"
+                }
+              },
+              "fragment_decor-plant": {
+                "SlotID": "fragment_decor-plant",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_decor-plant"
+                }
+              },
+              "fragment_decor-tapes": {
+                "SlotID": "fragment_decor-tapes",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_decor-tapes"
+                }
+              },
+              "fragment_victory-sparks": {
+                "SlotID": "fragment_victory-sparks",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_victory-sparks"
+                }
+              },
+              "fragment_victory-rings": {
+                "SlotID": "fragment_victory-rings",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_victory-rings"
+                }
+              },
+              "fragment_victory-stars": {
+                "SlotID": "fragment_victory-stars",
+                "Rotation": {
+                  "Mode": "Fixed",
+                  "OfferID": "fragment_victory-stars"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "StoreOffers": {
+    "fragment_operator": {
+      "OfferID": "fragment_operator",
+      "Identity": {
+        "DisplayName": "Masked Goblin"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 20
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_operator",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_wanderer": {
+      "OfferID": "fragment_wanderer",
+      "Identity": {
+        "DisplayName": "Gamer"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 60
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_wanderer",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_phantom": {
+      "OfferID": "fragment_phantom",
+      "Identity": {
+        "DisplayName": "Shadow Figure"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 120
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_phantom",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_headphones": {
+      "OfferID": "fragment_headphones",
+      "Identity": {
+        "DisplayName": "Studio headphones"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 30
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_headphones",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_beanie": {
+      "OfferID": "fragment_beanie",
+      "Identity": {
+        "DisplayName": "Knitted beanie"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 25
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_beanie",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_beret": {
+      "OfferID": "fragment_beret",
+      "Identity": {
+        "DisplayName": "Archivist beret"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 40
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_beret",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_mask-skull": {
+      "OfferID": "fragment_mask-skull",
+      "Identity": {
+        "DisplayName": "Bone mask"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 45
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_mask-skull",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_mask-plague": {
+      "OfferID": "fragment_mask-plague",
+      "Identity": {
+        "DisplayName": "Plague doctor"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 60
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_mask-plague",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_mask-oni": {
+      "OfferID": "fragment_mask-oni",
+      "Identity": {
+        "DisplayName": "Demon mask"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 75
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_mask-oni",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_mask-welder": {
+      "OfferID": "fragment_mask-welder",
+      "Identity": {
+        "DisplayName": "Welding mask"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 50
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_mask-welder",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_mask-respirator": {
+      "OfferID": "fragment_mask-respirator",
+      "Identity": {
+        "DisplayName": "Respirator"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 40
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_mask-respirator",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_glasses": {
+      "OfferID": "fragment_glasses",
+      "Identity": {
+        "DisplayName": "Round glasses"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 20
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_glasses",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_scarf": {
+      "OfferID": "fragment_scarf",
+      "Identity": {
+        "DisplayName": "Traveller scarf"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 35
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_scarf",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_table-walnut": {
+      "OfferID": "fragment_table-walnut",
+      "Identity": {
+        "DisplayName": "Walnut table"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 40
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_table-walnut",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_table-studio": {
+      "OfferID": "fragment_table-studio",
+      "Identity": {
+        "DisplayName": "Studio desk"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 60
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_table-studio",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_wallpaper-botanical": {
+      "OfferID": "fragment_wallpaper-botanical",
+      "Identity": {
+        "DisplayName": "Botanical pattern"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 40
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_wallpaper-botanical",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_wallpaper-artdeco": {
+      "OfferID": "fragment_wallpaper-artdeco",
+      "Identity": {
+        "DisplayName": "Airwave geometry"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 60
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_wallpaper-artdeco",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_lighting-amber": {
+      "OfferID": "fragment_lighting-amber",
+      "Identity": {
+        "DisplayName": "Warm amber"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 30
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_lighting-amber",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_lighting-moon": {
+      "OfferID": "fragment_lighting-moon",
+      "Identity": {
+        "DisplayName": "Moonlit airwaves"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 40
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_lighting-moon",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_poster-signal": {
+      "OfferID": "fragment_poster-signal",
+      "Identity": {
+        "DisplayName": "Signal poster"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 25
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_poster-signal",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_poster-moon": {
+      "OfferID": "fragment_poster-moon",
+      "Identity": {
+        "DisplayName": "Moon expedition"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 35
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_poster-moon",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_decor-lantern": {
+      "OfferID": "fragment_decor-lantern",
+      "Identity": {
+        "DisplayName": "Little lantern"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 35
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_decor-lantern",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_decor-plant": {
+      "OfferID": "fragment_decor-plant",
+      "Identity": {
+        "DisplayName": "Plant"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 25
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_decor-plant",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_decor-tapes": {
+      "OfferID": "fragment_decor-tapes",
+      "Identity": {
+        "DisplayName": "Archive tapes"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 30
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_decor-tapes",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_victory-sparks": {
+      "OfferID": "fragment_victory-sparks",
+      "Identity": {
+        "DisplayName": "Airwave sparks"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 50
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_victory-sparks",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_victory-rings": {
+      "OfferID": "fragment_victory-rings",
+      "Identity": {
+        "DisplayName": "Signal waves"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 60
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_victory-rings",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    },
+    "fragment_victory-stars": {
+      "OfferID": "fragment_victory-stars",
+      "Identity": {
+        "DisplayName": "Constellation"
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 75
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "Item",
+                "CatalogID": "Fragment",
+                "ItemID": "fragment_victory-stars",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Limits": {
+          "TotalCap": 1
+        }
+      }
+    }
+  }
+}

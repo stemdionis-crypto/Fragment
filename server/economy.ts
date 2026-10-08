@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join, resolve } from 'node:path';
 import { SKINS, COSMETICS, DEFAULT_ITEMS, DEFAULT_LOADOUT, type ProfileView, type RewardView, type SkinId } from '../shared/economy';
 
-interface Account extends ProfileView { id: string; token: string; rounds: string[]; completedRounds: string[]; day: string; earnedToday: number; publicName?: string; }
+interface Account extends ProfileView { receipt?: string; id: string; token: string; rounds: string[]; completedRounds: string[]; day: string; earnedToday: number; publicName?: string; }
 const directory = resolve(process.env.FRAGMENT_DATA_DIR || '.data');
 const file = join(directory, 'profiles.json');
 const accounts = new Map<string, Account>();
@@ -51,7 +51,7 @@ export function identify(token?: string) {
 }
 export function profile(id: string): ProfileView {
   const a = accounts.get(id)!;
-  return { balance: a.balance, owned: [...a.owned], equipped: a.equipped, wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalSignalEarned: a.totalSignalEarned, wallet: a.wallet, items: [...a.items], loadout: { ...a.loadout } };
+  return { platform: a.platform, balance: a.balance, owned: [...a.owned], equipped: a.equipped, wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalSignalEarned: a.totalSignalEarned, wallet: a.wallet, items: [...a.items], loadout: { ...a.loadout } };
 }
 export function recordMatch(id: string, round: string, won: boolean, seconds: number, name: string, practice: boolean) {
   const a = accounts.get(id)!;
@@ -85,43 +85,65 @@ export function bindWallet(id: string, address: string) {
 }
 export function buy(id: string, skinId: string) {
   const a = accounts.get(id)!;
+  if (a.platform) throw new Error('Use iDos for platform inventory / Используйте инвентарь iDos');
   const skin = SKINS.find((s) => s.id === skinId);
   if (!skin) throw new Error('Unknown skin / Неизвестный скин');
   if (a.owned.includes(skin.id)) return;
-  if (a.balance < skin.price) throw new Error('Not enough Signal / Недостаточно Сигнала');
+  if (a.balance < skin.price) throw new Error('Not enough FRAG / Недостаточно FRAG');
   change(a, () => { a.balance -= skin.price; a.owned.push(skin.id); });
 }
 export function equip(id: string, skin: string) {
   const a = accounts.get(id)!;
+  if (a.platform) throw new Error('Use iDos for platform inventory / Используйте инвентарь iDos');
   if (!a.owned.includes(skin as SkinId)) throw new Error('Skin is not owned / Скин не куплен');
   change(a, () => { a.equipped = skin as SkinId; });
 }
 export function reward(id: string, round: string, practice: boolean): RewardView {
   const a = accounts.get(id)!;
-  if (a.rounds.includes(round)) return { amount: 0, balance: a.balance };
+  if (a.platform && !a.platform.ready) return { amount: 0, balance: 0 };
+  if (a.rounds.includes(round)) return { amount: 0, balance: a.balance, receipt: a.platform ? a.receipt : undefined };
   return change(a, () => {
     const day = new Date().toISOString().slice(0, 10);
     if (a.day !== day) { a.day = day; a.earnedToday = 0; }
     const amount = Math.max(0, Math.min(practice ? 10 : 25, 100 - a.earnedToday));
-    a.balance += amount;
+    if (!a.platform) a.balance += amount;
     a.totalSignalEarned += amount;
     a.earnedToday += amount;
     a.rounds.push(round);
-    return { amount, balance: a.balance };
+    return { amount: a.platform ? 0 : amount, balance: a.balance, receipt: a.platform ? a.receipt : undefined };
   });
 }
 
 export function buyItem(id: string, itemId: string) {
   const a = accounts.get(id)!;
+  if (a.platform) throw new Error('Use iDos for platform inventory / Используйте инвентарь iDos');
   const item = COSMETICS.find(i => i.id === itemId);
   if (!item) throw new Error('Unknown item / Неизвестный предмет');
   if (a.items.includes(itemId)) return;
-  if (a.balance < item.price) throw new Error('Not enough Signal / Недостаточно Сигнала');
+  if (a.balance < item.price) throw new Error('Not enough FRAG / Недостаточно FRAG');
   change(a, () => { a.balance -= item.price; a.items.push(itemId); });
 }
 export function equipItem(id: string, itemId: string) {
   const a = accounts.get(id)!;
+  if (a.platform) throw new Error('Use iDos for platform inventory / Используйте инвентарь iDos');
   const item = COSMETICS.find(i => i.id === itemId);
   if (!item || !a.items.includes(itemId)) throw new Error('Item is not owned / Предмет не куплен');
   change(a, () => { a.loadout[item.category as keyof typeof a.loadout] = itemId; });
+}
+
+export function syncPlatform(userId: string, state: Pick<ProfileView, 'owned' | 'items' | 'equipped' | 'loadout'> & { stats?: { wins: number; gamesPlayed: number; fastestSeconds: number | null; totalEarned: number } }, balance: string, ready: boolean) {
+  let a = [...accounts.values()].find(a => a.platform?.userId === userId);
+  if (!a) { a = identify(); a.platform = { userId, balance, ready }; a.receipt = randomBytes(32).toString('hex'); }
+  const account = a;
+  change(account, () => { Object.assign(account, { owned: state.owned, items: state.items, equipped: state.equipped, loadout: state.loadout });
+    if (state.stats) { account.wins = Math.max(account.wins,state.stats.wins); account.gamesPlayed = Math.max(account.gamesPlayed,state.stats.gamesPlayed); account.totalSignalEarned = Math.max(account.totalSignalEarned,state.stats.totalEarned); if (state.stats.fastestSeconds !== null) account.fastestSeconds = Math.min(account.fastestSeconds ?? Infinity,state.stats.fastestSeconds); }
+    account.platform = { userId, balance, ready }; account.balance = 0; });
+  return account;
+}
+export function platformReceipt(key: string) {
+  const a = [...accounts.values()].find(a => a.platform && a.receipt === key);
+  if (!a) return null;
+  const day = new Date().toISOString().slice(0,10);
+  return { userId: a.platform!.userId, ready: a.platform!.ready, day, earned: a.day === day ? a.earnedToday : 0,
+    wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalEarned: a.totalSignalEarned };
 }

@@ -15,10 +15,13 @@
     "bots": "tsx scripts/bots.ts",
     "e2e": "tsx scripts/e2e.ts",
     "check": "tsx scripts/check-trials.ts && tsx scripts/check-listener.ts && tsx scripts/check-friend-bots.ts --prod",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "check:idos": "tsx scripts/check-idos.ts",
+    "check:idos:live": "node scripts/check-idos-live.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
+    "@idosgames/core": "0.21.2",
     "pg": "^8.23.1",
     "ws": "^8.18.0"
   },
