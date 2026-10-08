@@ -6,7 +6,7 @@ import { HAND_TRIALS, decodeClue } from '../shared/trial-rules';
 //   - pooled together, the table knows every answer; alone, nobody does
 //   npm run check
 import { ITEM_SETS, type ItemSet } from '../shared/protocol';
-import { TRIAL_KINDS, generateTrial, solveFromKnowledge, trialSequence } from '../server/puzzle';
+import { TRIAL_CHAPTERS, TRIAL_KINDS, generateTrial, solveFromKnowledge, trialSequence } from '../server/puzzle';
 
 const RUNS = 800;
 let failed = false;
@@ -46,25 +46,26 @@ let varied = 0;
 for (let i = 0; i < 500; i++) if (new Set(trialSequence(5).map((p) => p.kind)).size === 5) varied++;
 failed ||= varied !== 500;
 console.log(`${varied === 500 ? 'ok  ' : 'FAIL'} every game has 5 different trials (${varied}/500)`);
-assert.equal(TRIAL_KINDS.length, 20);
-assert.equal(new Set(TRIAL_KINDS).size, 20);
+for (let i = 0; i < 500; i++) {
+  const sequence = trialSequence(5);
+  assert.equal(sequence[0].kind, 'tuning', 'first trial introduces direct clue exchange');
+  assert.equal(new Set(sequence.map((trial) => trial.set)).size, 5, 'every trial uses a distinct picture set');
+  sequence.forEach((trial, index) => assert.ok(TRIAL_CHAPTERS[index].includes(trial.kind), `trial ${index + 1} belongs to its difficulty chapter`));
+}
+assert.equal(TRIAL_KINDS.length, 15);
+assert.equal(new Set(TRIAL_KINDS).size, 15);
 const seen = new Set<string>();
 for (let i = 0; i < 500; i++) trialSequence(5).forEach(t => seen.add(t.kind));
-assert.equal(seen.size, 20, 'all trials can be selected');
-assert.throws(() => trialSequence(21));
+assert.equal(seen.size, 15, 'all trials can be selected');
+assert.throws(() => trialSequence(6));
 assert.throws(() => trialSequence(0));
 const digits = [0,1,2,3,4,5,6,7,8,9];
-const expected = {
-  mirror: [9,8,7,6,5,4,3,2,1,0], echo: [1,2,3,4,5,6,7,8,9,0],
-  countdown: [9,0,1,2,3,4,5,6,7,8], amplifier: [0,2,4,6,8,0,2,4,6,8],
-  balance: [5,6,7,8,9,0,1,2,3,4],
-};
+const expected = { echo: [1,2,3,4,5,6,7,8,9,0] };
 for (const [kind, outputs] of Object.entries(expected)) {
   digits.forEach((d, i) => assert.equal(decodeClue(kind as typeof TRIAL_KINDS[number], d, digits), outputs[i]));
 }
-[0,2,4,6,8].forEach((d,i) => assert.equal(decodeClue('half',d,digits),i));
 const scale = ITEM_SETS[sets[0]];
 const positions = { next: [1,2,3,4,5,6,7,0], previous: [7,0,1,2,3,4,5,6], opposite: [4,5,6,7,0,1,2,3], reflection: [7,6,5,4,3,2,1,0], pairs: [1,0,3,2,5,4,7,6], leap: [2,3,4,5,6,7,0,1] };
 for (const [kind, indices] of Object.entries(positions)) scale.forEach((v,i) => assert.equal(decodeClue(kind as typeof TRIAL_KINDS[number], v, scale),scale[indices[i]]));
-console.log('ok   twenty-trial pool, selection coverage and independent cipher examples');
+console.log('ok   fifteen-trial progression, selection coverage and independent cipher examples');
 process.exit(failed ? 1 : 0);

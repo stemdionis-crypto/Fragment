@@ -137,6 +137,11 @@ function tone(freq: number, seconds: number, volume: number, type: OscillatorTyp
 
 export const sfx = {
   key: () => tone(180, 0.08, 0.08, 'square'),
+  dial: () => { tone(440, 0.06, 0.045, 'triangle'); tone(660, 0.08, 0.025, 'sine', 0.04); },
+  send: () => { tone(260, 0.09, 0.035, 'triangle'); staticBurst(0.07, 0.025, 2800); },
+  confirm: () => { tone(392, 0.16, 0.05, 'sine'); tone(587, 0.22, 0.04, 'sine', 0.08); },
+  pass: () => { tone(440, 0.12, 0.035, 'triangle'); tone(330, 0.18, 0.035, 'triangle', 0.08); },
+  hurry: () => { tone(220, 0.15, 0.03, 'sine'); tone(220, 0.15, 0.03, 'sine', 0.24); },
   turn: () => {
     tone(330, 0.12, 0.05, 'triangle');
     staticBurst(0.12, 0.05, 3000);

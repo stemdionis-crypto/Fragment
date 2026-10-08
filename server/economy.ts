@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join, resolve } from 'node:path';
 import { SKINS, COSMETICS, DEFAULT_ITEMS, DEFAULT_LOADOUT, type ProfileView, type RewardView, type SkinId } from '../shared/economy';
 
-interface Account extends ProfileView { id: string; token: string; rounds: string[]; day: string; earnedToday: number; }
+interface Account extends ProfileView { id: string; token: string; rounds: string[]; completedRounds: string[]; day: string; earnedToday: number; publicName?: string; }
 const directory = resolve(process.env.FRAGMENT_DATA_DIR || '.data');
 const file = join(directory, 'profiles.json');
 const accounts = new Map<string, Account>();
@@ -20,6 +20,10 @@ if (existsSync(file)) {
     }
     account.items = [...new Set([...DEFAULT_ITEMS, ...(account.items ?? []).filter(id => COSMETICS.some(i => i.id === id))])];
     account.loadout = { ...DEFAULT_LOADOUT, ...account.loadout };
+    account.gamesPlayed ??= account.wins ?? 0;
+    account.fastestSeconds ??= null;
+    account.totalSignalEarned ??= 0;
+    account.completedRounds ??= [...account.rounds];
     for (const [slot, id] of Object.entries(account.loadout)) {
       if (!COSMETICS.some(i => i.id === id && i.category === slot) || !account.items.includes(id)) delete account.loadout[slot as keyof typeof account.loadout];
     }
@@ -40,14 +44,33 @@ function change<T>(account: Account, fn: () => T): T {
 export function identify(token?: string) {
   const known = typeof token === 'string' ? [...accounts.values()].find((a) => a.token === token) : undefined;
   if (known) return known;
-  const account: Account = { id: randomUUID(), token: randomBytes(32).toString('hex'), balance: 0, owned: ['classic'], equipped: 'classic', items: [...DEFAULT_ITEMS], loadout: { ...DEFAULT_LOADOUT }, wins: 0, rounds: [], day: '', earnedToday: 0 };
+  const account: Account = { id: randomUUID(), token: randomBytes(32).toString('hex'), balance: 0, owned: ['classic'], equipped: 'classic', items: [...DEFAULT_ITEMS], loadout: { ...DEFAULT_LOADOUT }, wins: 0, gamesPlayed: 0, fastestSeconds: null, totalSignalEarned: 0, completedRounds: [], rounds: [], day: '', earnedToday: 0 };
   accounts.set(account.id, account);
   try { persist(); } catch (error) { accounts.delete(account.id); throw error; }
   return account;
 }
 export function profile(id: string): ProfileView {
   const a = accounts.get(id)!;
-  return { balance: a.balance, owned: [...a.owned], equipped: a.equipped, wins: a.wins, wallet: a.wallet, items: [...a.items], loadout: { ...a.loadout } };
+  return { balance: a.balance, owned: [...a.owned], equipped: a.equipped, wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalSignalEarned: a.totalSignalEarned, wallet: a.wallet, items: [...a.items], loadout: { ...a.loadout } };
+}
+export function recordMatch(id: string, round: string, won: boolean, seconds: number, name: string, practice: boolean) {
+  const a = accounts.get(id)!;
+  if (a.completedRounds.includes(round)) return;
+  change(a, () => {
+    a.completedRounds.push(round);
+    a.gamesPlayed++;
+    if (won) a.wins++;
+    a.publicName = name.trim().slice(0, 16);
+    if (won && !practice && (a.fastestSeconds === null || seconds < a.fastestSeconds)) a.fastestSeconds = seconds;
+  });
+}
+export type LadderMetric = 'speed' | 'signal' | 'games';
+export function leaderboard(metric: LadderMetric) {
+  return [...accounts.values()]
+    .filter((a) => a.wallet && (metric !== 'speed' || a.fastestSeconds !== null))
+    .sort((a, b) => metric === 'speed' ? (a.fastestSeconds ?? Infinity) - (b.fastestSeconds ?? Infinity) : metric === 'signal' ? b.totalSignalEarned - a.totalSignalEarned : b.gamesPlayed - a.gamesPlayed)
+    .slice(0, 20)
+    .map((a) => ({ name: a.publicName || `${a.wallet!.slice(0, 4)}…${a.wallet!.slice(-4)}`, wallet: `${a.wallet!.slice(0, 4)}…${a.wallet!.slice(-4)}`, value: metric === 'speed' ? a.fastestSeconds! : metric === 'signal' ? a.totalSignalEarned : a.gamesPlayed }));
 }
 export function walletAccount(address: string) {
   return [...accounts.values()].find((a) => a.wallet === address);
@@ -81,8 +104,8 @@ export function reward(id: string, round: string, practice: boolean): RewardView
     if (a.day !== day) { a.day = day; a.earnedToday = 0; }
     const amount = Math.max(0, Math.min(practice ? 10 : 25, 100 - a.earnedToday));
     a.balance += amount;
+    a.totalSignalEarned += amount;
     a.earnedToday += amount;
-    a.wins++;
     a.rounds.push(round);
     return { amount, balance: a.balance };
   });

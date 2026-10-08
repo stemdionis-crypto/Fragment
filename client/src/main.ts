@@ -3,7 +3,6 @@ import {
   CHAT_MAX,
   MIN_PLAYERS,
   PLAYER_COLORS,
-  TURN_SECONDS,
   type ChatMessage,
   type FragmentRecord,
   type Glyph,
@@ -17,10 +16,12 @@ import { sfx, unlockAudio, setSoundscape } from './audio';
 import { settings } from './settings';
 import { initSettingsUI, placeSettingsButton } from './settings-ui';
 import { initShop, placeShopButton, handleShopMessage } from './shop';
-import { SKINS } from '../../shared/economy';
+import { initProfileUI, placeProfileButton, handleProfileMessage } from './profile-ui';
+import { SKINS, type ProfileView } from '../../shared/economy';
 import { isCipher, SYMBOL_CIPHERS, HAND_TRIALS } from '../../shared/trial-rules';
 import { connectWallet, initWalletAuth, handleWalletMessage, walletBusy } from './wallet-auth';
 import { glyphSvg } from './glyphs';
+import { trialBanner, trialExample } from './trial-presentation';
 import { Net, saveSession, savedSession } from './net';
 import { radioSvg, shakeNeedle, updateRadio } from './radio';
 import { Camera, sceneSvg, seatsFor } from './scene';
@@ -35,6 +36,7 @@ let myId = '';
 let mounted: 'home' | 'lobby' | 'game' | null = null;
 let lastChatId = -1;
 let wallet = '';
+let account: ProfileView | null = null;
 
 const app = document.getElementById('app')!;
 
@@ -144,12 +146,12 @@ function mountHome() {
     if (!canPlayOnline()) return;
     savePrefs(nameInput.value, chosen);
     $<HTMLButtonElement>('#match').disabled = true;
-    net.send({ t: 'match', name: nameInput.value, color: chosen });
+    net.send({ t: 'match', name: nameInput.value, color: chosen, lang });
   };
   $('#create').onclick = () => {
     if (!canPlayOnline()) return;
     savePrefs(nameInput.value, chosen);
-    net.send({ t: 'create', name: nameInput.value, color: chosen });
+    net.send({ t: 'create', name: nameInput.value, color: chosen, lang });
   };
   const join = () => {
     if (!canPlayOnline()) return;
@@ -201,6 +203,7 @@ function playerChip(p: PlayerView) {
     ${p.id === state?.hostId ? `<span class="tag">${t('host')}</span>` : ''}
     ${p.id === myId ? `<span class="tag">${t('you')}</span>` : ''}
     ${p.bot ? `<span class="tag">${t('bot')}</span>` : ''}
+    ${p.bot && state?.phase === 'lobby' && !state.practice && !state.matchmaking && state.hostId === myId ? `<button class="remove-bot" data-bot-id="${p.id}" title="${t('removeBot')}" aria-label="${t('removeBot')}: ${esc(p.name)}">×</button>` : ''}
     ${p.skin && p.skin !== 'classic' ? `<span class="tag">${SKINS.find((s) => s.id === p.skin)?.name[lang] ?? ''}</span>` : ''}
     ${p.wallet ? `<span class="tag wallet" title="${p.wallet}">◎ ${shortAddr(p.wallet)}</span>` : ''}
   </li>`;
@@ -217,12 +220,15 @@ function mountLobby() {
         <ul id="players" class="players"></ul>
         <div class="lobby-actions">
           <button id="start" class="primary">${t('turnOn')}</button>
+          <button id="addBot">${t('addBot')}</button>
         </div>
         <p id="startHint" class="fine"></p>
+        <p id="botHint" class="fine">${t('friendBotsHint')}</p>
         <button id="home">${state!.matchmaking ? t('cancelSearch') : t('mainMenu')}</button>
       </div>
       <div class="lobby-rules">
         <h2>${t('howItWorks')}</h2>
+        ${!account || account.gamesPlayed < 3 ? `<div class="quickstart"><p class="eyebrow">${lang === 'ru' ? 'ПЕРВЫЕ ШАГИ' : 'FIRST STEPS'}</p><p>${lang === 'ru' ? '1. Посмотрите карточку «Вы знаете»: это подсказка для другого игрока. 2. В свой ход опишите её намёком, не называя предмет или число. 3. По подсказке команды выставьте свой пульт и нажмите «Я уверен». Ход можно передать вручную; таймера хода нет.' : '1. Read “You know”: that clue belongs to another player. 2. On your turn, describe it without naming the item or number. 3. Set your own control using the team’s clue, then press “I’m sure”. You can pass your turn; turns have no countdown.'}</p></div>` : ''}
         <ol>${t('rules').map((r) => `<li>${r}</li>`).join('')}</ol>
       </div>
     </section>`;
@@ -236,6 +242,7 @@ function mountLobby() {
     }
   };
   $('#start').onclick = () => net.send({ t: 'start' });
+  $('#addBot').onclick = () => net.send({ t: 'add_bot' });
   $('#home').onclick = () => {
     net.send({ t: 'leave' });
   };
@@ -247,8 +254,16 @@ function updateLobby() {
   if (!state) return;
   $('#codeBtn').textContent = state.code;
   $('#players').innerHTML = state.players.map(playerChip).join('');
+  app.querySelectorAll<HTMLButtonElement>('.remove-bot').forEach((button) => {
+    button.onclick = () => net.send({ t: 'remove_bot', playerId: button.dataset.botId! });
+  });
   const isHost = state.hostId === myId;
   const enough = state.players.length >= MIN_PLAYERS;
+  const canManageBots = isHost && !state.practice && !state.matchmaking;
+  const addBot = $<HTMLButtonElement>('#addBot');
+  addBot.hidden = !canManageBots;
+  addBot.disabled = state.players.length >= MIN_PLAYERS || state.players.filter((p) => !p.bot && p.connected).length < 2;
+  $('#botHint').hidden = state.practice || state.matchmaking;
   const start = $<HTMLButtonElement>('#start');
   start.hidden = !isHost || state.matchmaking;
   start.disabled = !enough;
@@ -283,11 +298,11 @@ function mountGame() {
           <div id="sceneHost"></div>
           <div class="bubbles" id="bubbles"></div>
           <div class="turn-banner" id="turnBanner"></div>
-          <div class="trial-intro" id="trialIntro" hidden></div>
         </div>
         <div class="controls">
           <div class="controls-left">
             <div class="prompt" id="prompt"></div>
+            <div class="game-guide" id="gameGuide" aria-live="polite"></div>
             <div class="suspicion" aria-label="Suspicion">
               <span>${t('attention')}</span>
               <div class="bar"><div id="susBar"></div></div>
@@ -320,16 +335,16 @@ function mountGame() {
       <div id="overlay" hidden></div>
     </section>`;
 
-  $('#readyBtn').onclick = () => net.send({ t: 'ready', on: !me()?.ready });
-  $('#passBtn').onclick = () => net.send({ t: 'pass' });
+  $('#readyBtn').onclick = () => { sfx.confirm(); net.send({ t: 'ready', on: !me()?.ready }); };
+  $('#passBtn').onclick = () => { sfx.pass(); net.send({ t: 'pass' }); };
   sceneKey = '';
   lastTurnId = '';
-  introKey = '';
   lastBubbleId = state!.chat.at(-1)?.id ?? 0;
   $<HTMLFormElement>('#chatForm').onsubmit = (e) => {
     e.preventDefault();
     const input = $<HTMLInputElement>('#chatInput');
     if (!input.value.trim()) return;
+    sfx.send();
     net.send({ t: 'chat', text: input.value });
     input.value = '';
   };
@@ -374,7 +389,7 @@ function renderMyControls() {
     b.onclick = () => {
       const raw = b.dataset.value!;
       const value: Value = /^\d$/.test(raw) ? Number(raw) : (raw as Glyph);
-      sfx.key();
+      sfx.dial();
       // Show it right away; the server confirms
       if (priv) priv.mine[b.dataset.control!] = value;
       renderMyControls();
@@ -467,12 +482,11 @@ function updateGame() {
   const tr = s.trial;
   if (tr) {
     $('#hudTrial').innerHTML = `${Array.from({ length: tr.total }, (_, i) => `<span class="step ${i < tr.index ? 'done' : i === tr.index ? 'now' : ''}"></span>`).join('')} <b>${esc(tl(tr.title))}</b>`;
-    $('#prompt').innerHTML = `<span class="eyebrow">${t('trialOf')(tr.index + 1, tr.total)}</span>
-      <span class="trial-name">${esc(tl(tr.title))}</span>
+    $('#prompt').innerHTML = `${trialBanner(tr, lang === 'ru')}
+      <span class="trial-task-label">${lang === 'ru' ? 'ЧТО ДЕЛАТЬ' : 'WHAT TO DO'}</span>
       <span class="task">${esc(tl(tr.task))}</span>
+      ${trialExample(tr, lang === 'ru')}
       <span class="q">${esc(tl(tr.prompt))}</span>${tr.kind === 'code' ? `<div class="code-order">${tr.controls.map((c) => { const owner = s.players.find((p) => p.id === c.ownerId); return `<span class="code-seat ${c.ownerId === myId ? 'mine' : ''}"><b>${esc(owner?.name ?? '?')}${c.ownerId === myId ? ` · ${t('you')}` : owner?.bot ? ` · ${t('bot')}` : ''}</b><span>${esc(tl(c.label))}</span></span>`; }).join('<span class="code-arrow" aria-hidden="true">→</span>')}</div>` : ''}`;
-    if (s.phase === 'playing') maybeShowIntro(tr);
-    else $('#trialIntro').hidden = true;
     if (SYMBOL_CIPHERS.includes(tr.kind)) $('#prompt').insertAdjacentHTML('beforeend', `<div class="cipher-scale"><span class="fine">${lang === 'ru' ? 'Общая шкала · слева направо' : 'Shared scale · left to right'}</span><div class="glyph-row">${tr.controls[0].options.map((g, i) => `<span class="scale-item">${glyphSvg(g as Glyph, '#e3ddcf', 25)}<small>${i + 1}</small></span>`).join('')}</div></div>`);
   }
 
@@ -484,6 +498,7 @@ function updateGame() {
     $('#myControls').dataset.key = panelKey;
   }
   renderReady();
+  updateGuide();
 
   $('#gamePlayers').innerHTML = s.players
     .map(
@@ -502,6 +517,28 @@ function updateGame() {
   updateOverlay();
 }
 
+function updateGuide() {
+  const box = app.querySelector<HTMLElement>('#gameGuide');
+  if (!box) return;
+  if (state?.phase !== 'playing' || !state.trial) { box.hidden = true; return; }
+  const games = account?.gamesPlayed ?? 0;
+  if (games >= 3) { box.hidden = true; return; }
+  box.hidden = false;
+  const isMine = state.turnId === myId;
+  const ownSet = myControls().every(c => priv?.mine[c.id] != null);
+  const hand = !!priv?.hand?.length;
+  const text = games === 0
+    ? !ownSet && isMine ? hand
+      ? (lang === 'ru' ? 'Сравните свои картинки с картинками команды и опишите их намёками. Затем выберите общий ответ по правилу испытания.' : 'Compare your pictures with the team’s, describe them indirectly, then choose the shared answer using the trial rule.')
+      : (lang === 'ru' ? 'Сначала опишите в чате карточку «Вы знаете» для соседа. Когда получите подсказку для своего пульта, выберите ответ ниже.' : 'First describe your “You know” card for a teammate. When you receive a clue for your own control, choose an answer below.')
+    : !ownSet ? (lang === 'ru' ? 'Слушайте подсказки команды и выставьте свой пульт. Во время чужого хода можно менять ответ.' : 'Listen to your team and set your own control. You may adjust it during another player’s turn.')
+    : !me()?.ready ? (lang === 'ru' ? 'Пульт выставлен. Если уверены в ответе, нажмите «Я уверен». Радио проверит всех вместе.' : 'Your control is set. If confident, press “I’m sure”. The radio checks everyone together.')
+    : (lang === 'ru' ? 'Вы готовы. Дождитесь команды; ответ можно изменить до общей проверки.' : 'You are ready. Wait for the team; you can change your answer before the shared check.')
+    : !ownSet ? (lang === 'ru' ? 'Вы знаете ответ соседа, а свой узнаете от команды. Не называйте точное слово: радио слушает.' : 'You know a teammate’s answer; your team knows yours. Avoid exact words: the radio listens.')
+    : (lang === 'ru' ? 'Сверьте ответ с подсказками команды и подтвердите его кнопкой «Я уверен».' : 'Check your answer against the team’s clues, then confirm with “I’m sure”.');
+  box.innerHTML = `<span class="eyebrow">${lang === 'ru' ? 'ПОДСКАЗКА' : 'TIP'}</span><p>${text}</p>`;
+}
+
 // ---------- scene, camera, turns ----------
 
 let camera: Camera | null = null;
@@ -510,34 +547,6 @@ let lastTurnId = '';
 let lastBubbleId = 0;
 const bubbles = new Map<string, { el: HTMLDivElement; until: number }>(); // by seat id or 'radio'
 const translatedShown = new Set<number>();
-
-// ---------- trial intro: a clear card each time a new trial starts ----------
-
-let introKey = '';
-let introTimer = 0;
-
-function maybeShowIntro(tr: NonNullable<PublicState['trial']>) {
-  if (state?.phase !== 'playing') return;
-  const key = `${tr.index}:${tr.kind}`;
-  if (key === introKey) return;
-  introKey = key;
-  const box = $('#trialIntro');
-  const mine = myControls().map((c) => esc(tl(c.label))).join(' + ');
-  box.innerHTML = `
-    <p class="eyebrow">${t('introTrial')(tr.index + 1, tr.total)}</p>
-    <h2>${esc(tl(tr.title))}</h2>
-    <p class="intro-task">${esc(tl(tr.task))}</p>
-    ${mine ? `<p class="intro-part">${t('yourPart')} <b>${mine}</b></p>` : ''}
-    <button class="primary" id="introOk">${t('gotIt')}</button>`;
-  box.hidden = false;
-  const close = () => {
-    box.hidden = true;
-    clearTimeout(introTimer);
-  };
-  box.querySelector<HTMLButtonElement>('#introOk')!.onclick = close;
-  clearTimeout(introTimer);
-  introTimer = window.setTimeout(close, 14000);
-}
 
 function seatOf(id: string) {
   const i = state!.players.findIndex((p) => p.id === id);
@@ -647,10 +656,7 @@ function updateTurnUi() {
 }
 
 function updateTurnRing() {
-  if (!state || state.phase !== 'playing') return;
-  const left = Math.max(0, state.turnEndsAt - Date.now()) / (TURN_SECONDS * 1000);
-  const ring = app.querySelector<SVGCircleElement>('.seat.active .turn-ring');
-  if (ring) ring.setAttribute('stroke-dashoffset', String(2 * Math.PI * ring.r.baseVal.value * (1 - left)));
+  // The active seat stays highlighted; there is no countdown on a player's turn.
 }
 
 function fragmentArt(f: FragmentRecord) {
@@ -799,6 +805,7 @@ function render() {
     if (mounted !== 'home') mountHome();
     placeSettingsButton();
     placeShopButton();
+    placeProfileButton();
     return;
   }
   if (state.phase === 'lobby') {
@@ -810,14 +817,17 @@ function render() {
   }
   placeSettingsButton();
   placeShopButton();
+  placeProfileButton();
 }
 
 net.onMessage = (m) => {
   handleShopMessage(m);
+  handleProfileMessage(m);
   void handleWalletMessage(m);
   switch (m.t) {
     case 'profile':
       wallet = m.profile.wallet ?? '';
+      account = m.profile;
       updateHomeWallet();
       break;
     case 'reward':
@@ -878,6 +888,7 @@ net.onStatus = (online) => {
 // ---------- loops ----------
 
 let boilSeed = 1;
+let lastUrgency = -1;
 setInterval(() => {
   if (settings.reducedMotion) return;
   document.getElementById('boilNoise')?.setAttribute('seed', String((boilSeed = (boilSeed % 4) + 1)));
@@ -902,6 +913,10 @@ function frame(t: number) {
       el.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
       el.classList.toggle('low', left <= 60);
     }
+    if (left > 0 && left <= 60 && left % 30 === 0 && lastUrgency !== left) {
+      lastUrgency = left;
+      sfx.hurry();
+    }
   }
   requestAnimationFrame(frame);
 }
@@ -913,6 +928,7 @@ function tMatchCountdown(startsAt: number) {
 unlockAudio();
 initSettingsUI();
 initShop((message) => net.send(message));
+initProfileUI((message) => net.send(message));
 initWalletAuth((message) => net.send(message), (message, error) => {
   toast(esc(message), error ? 'error' : '');
   window.dispatchEvent(new CustomEvent('fragment:wallet-notice', { detail: message }));

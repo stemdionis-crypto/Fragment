@@ -27,7 +27,16 @@ export interface Trial {
   hands?: Record<string, Glyph[]>; // "Missing": the items each player holds
 }
 
-export const TRIAL_KINDS: TrialKind[] = ['tuning', 'frequency', 'code', 'missing', 'common', 'duplicate', 'rare', 'crowd', ...NUMBER_CIPHERS, ...SYMBOL_CIPHERS];
+// One trial from each chapter. The first is always a direct clue exchange;
+// later chapters introduce sets, then a single transformation at a time.
+export const TRIAL_CHAPTERS: readonly (readonly TrialKind[])[] = [
+  ['tuning'],
+  ['missing', 'frequency', 'code'],
+  ['common', 'next', 'echo'],
+  ['duplicate', 'previous', 'pairs', 'crowd'],
+  ['rare', 'leap', 'opposite', 'reflection'],
+];
+export const TRIAL_KINDS: TrialKind[] = TRIAL_CHAPTERS.flat();
 
 function shuffle<T>(arr: readonly T[]): T[] {
   const a = [...arr];
@@ -78,8 +87,8 @@ function tuningTrial(set: ItemSet, players: string[]): Trial {
       both('…I can almost hear you. Tune me in.', '…я почти слышу вас. Настройте меня.'),
     ]),
     task: both(
-      'Each of you has a knob with pictures. Where your knob must point, your neighbour knows; where theirs must point, you know. Explain it without naming the picture, set your knob and press “I’m sure”.',
-      'У каждого своя ручка с картинками. Куда повернуть вашу, знает сосед, а вы знаете, куда повернуть его. Объясните друг другу, не называя картинку, выставьте свою ручку и нажмите «Я уверен».',
+      'Describe the picture on your “You know” card without naming it. A teammate will describe yours. Select that picture on your knob, then press “I’m sure”.',
+      'Опишите картинку в блоке «Вы знаете», не называя её. Напарник так же подскажет вашу. Выберите её на своём пульте и нажмите «Я уверен».',
     ),
     ...circle(players, controls),
   };
@@ -102,8 +111,8 @@ function frequencyTrial(players: string[]): Trial {
       both('…a number. Say it without saying it.', '…число. Скажите его, не говоря.'),
     ]),
     task: both(
-      'Catch the station: each of you has a wheel with one digit. Your neighbour knows your digit, you know theirs. The radio hears numbers, so explain them differently: “as many as days in a week”. Set your digit and press “I’m sure”.',
-      'Поймайте волну: у каждого своё колесо с одной цифрой. Вашу цифру знает сосед, а вы знаете его. Цифры радио слышит, поэтому объясняйте иначе: «сколько дней в неделе». Выставьте свою цифру и нажмите «Я уверен».',
+      'Describe your teammate’s digit without saying a number. Listen for your own digit, select it and confirm.',
+      'Опишите цифру напарника, не называя число. Узнайте свою цифру по его подсказке, выберите её и подтвердите.',
     ),
     ...circle(players, controls),
   };
@@ -137,8 +146,8 @@ function codeTrial(set: ItemSet, players: string[]): Trial {
       both('…I am locked. You each hold a link of my code.', '…я заперт. У каждого из вас звено моего кода.'),
     ]),
     task: both(
-      'The code is a chain of pictures, and each of you is responsible for one place in it. What stands in your place, your neighbour knows; you know what stands in theirs. Explain it, set your picture and press “I’m sure”.',
-      'Код — это цепочка картинок, каждый отвечает за своё место в ней. Что стоит на вашем месте, знает сосед, а вы знаете, что на месте соседа. Объясните, выставьте свою картинку и нажмите «Я уверен».',
+      'Each player owns one position in the code. Describe your teammate’s picture; listen for the picture in your position. Select it and confirm.',
+      'У каждого своё место в коде. Опишите картинку напарника и выслушайте подсказку для своего места. Выберите картинку и подтвердите.',
     ),
     ...circle(players, controls),
   };
@@ -169,8 +178,8 @@ function missingTrial(set: ItemSet, players: string[]): Trial {
       both('…one is missing. I can feel the empty place.', '…одного не хватает. Я чувствую пустое место.'),
     ]),
     task: both(
-      'One of the eight pictures has gone missing. Each of you has a few of the others. Tell each other what you have and find the one nobody has. Everyone votes on their own: it counts only if you all choose the same.',
-      'Из восьми картинок одна пропала. У каждого есть несколько оставшихся. Расскажите, что у вас есть, и найдите ту, которой нет ни у кого. Каждый голосует сам: засчитается, только если все выберут одно и то же.',
+      'Compare everyone’s cards. Which picture is missing from all hands? Each player selects that picture and confirms.',
+      'Сравните карточки всех игроков. Какой картинки нет ни у кого? Каждый выбирает её и подтверждает ответ.',
     ),
     controls: players.map((p, i) => ({ id: `vote${i}`, ownerId: p, label: both('Your vote', 'Ваш голос'), options: items, target: lost })),
     knows: Object.fromEntries(players.map((p) => [p, []])),
@@ -181,16 +190,11 @@ function missingTrial(set: ItemSet, players: string[]): Trial {
 // ---------- building a game ----------
 
 const CIPHERS: Partial<Record<TrialKind, { title: L; rule: L }>> = {
-  mirror: { title: both('Mirror', 'Зеркало'), rule: both('Subtract the clue digit from nine.', 'Вычтите цифру подсказки из девяти.') },
   echo: { title: both('Echo', 'Эхо сигнала'), rule: both('Move one digit forward. After nine comes zero.', 'Сдвиньте цифру на шаг вперёд. После девяти идёт ноль.') },
-  countdown: { title: both('Countdown', 'Обратный отсчёт'), rule: both('Move one digit backward. Before zero comes nine.', 'Сдвиньте цифру на шаг назад. Перед нулём идёт девять.') },
-  amplifier: { title: both('Amplifier', 'Усилитель'), rule: both('Double the clue digit and keep only the last digit.', 'Удвойте цифру подсказки и оставьте только последнюю цифру результата.') },
-  half: { title: both('Half signal', 'Полусигнал'), rule: both('Divide the even clue digit by two.', 'Разделите чётную цифру подсказки пополам.') },
-  balance: { title: both('Counterweight', 'Противовес'), rule: both('Add five to the clue digit and keep only the last digit.', 'Прибавьте к цифре подсказки пять и оставьте последнюю цифру результата.') },
   next: { title: both('Next station', 'Следующая станция'), rule: both('Choose the picture one step to the right of the clue on the shared scale. The scale wraps around.', 'Выберите картинку справа от подсказки на общей шкале. После последней идёт первая.') },
   previous: { title: both('Return signal', 'Обратный сигнал'), rule: both('Choose the picture one step to the left of the clue on the shared scale. Before the first comes the last.', 'Выберите картинку слева от подсказки на общей шкале. Перед первой идёт последняя.') },
   opposite: { title: both('Opposite pole', 'Другой полюс'), rule: both('Move four pictures to the right of the clue on the eight-picture scale, wrapping around.', 'От картинки подсказки отсчитайте четыре шага вправо по шкале. После последней идёт первая.') },
-  reflection: { title: both('Reflected scale', 'Отражение'), rule: both('Reflect the clue position across the scale: the first swaps with the last, the second with the second-to-last.', 'Отразите место подсказки на шкале: первая меняется с последней, вторая — с предпоследней.') },
+  reflection: { title: both('Reflected scale', 'Отражение'), rule: both('Find the clue picture on the scale. Count the same number of places from the other end: first becomes last, second becomes second-to-last.', 'Найдите подсказку на шкале. Отсчитайте столько же мест с другого края: первая станет последней, вторая — предпоследней.') },
   pairs: { title: both('Paired keys', 'Парные ключи'), rule: both('The scale is split into adjacent pairs. Choose the other picture in your clue’s pair.', 'Шкала разбита на соседние пары. Выберите другую картинку из пары, в которой находится подсказка.') },
   leap: { title: both('Signal jump', 'Скачок сигнала'), rule: both('Move two pictures to the right of the clue on the shared scale, wrapping around.', 'От картинки подсказки сделайте два шага вправо по шкале. После последней идёт первая.') },
 };
@@ -200,15 +204,15 @@ function cipherTrial(kind: TrialKind, set: ItemSet, players: string[]): Trial {
   const options: Value[] = numeric ? [0,1,2,3,4,5,6,7,8,9] : shuffle(itemsOf(set));
   const definition = CIPHERS[kind]!;
   const controls = players.map((_, i) => {
-    const clue = pick(kind === 'half' ? [0,2,4,6,8] : options);
+    const clue = pick(options);
     return { id: `cipher${i}`, label: both(`Receiver ${i + 1}`, `Приёмник ${i + 1}`), options: [...options], clue, target: decodeClue(kind, clue, options) };
   });
   return {
     kind, set: numeric ? undefined : set, title: definition.title,
     prompt: both('…I changed the signal. Work out what reaches your receiver.', '…я изменил сигнал. Разберитесь, что придёт в ваш приёмник.'),
     task: both(
-      `${definition.rule.en} Your neighbour knows your input clue. Describe their clue, listen to yours, apply the rule, and set your own result. Confirm when ready.`,
-      `${definition.rule.ru} Исходную подсказку для вас знает сосед. Опишите его подсказку, выслушайте свою, примените правило и выставьте у себя результат. Затем нажмите «Я уверен».`,
+      `${definition.rule.en} Describe your teammate’s clue. Apply this rule to the clue they give you and select the result.`,
+      `${definition.rule.ru} Опишите подсказку напарника. К полученной от него подсказке примените это правило и выберите результат.`,
     ),
     ...circle(players, controls),
   };
@@ -234,7 +238,7 @@ function collectionTrial(kind: TrialKind, set: ItemSet, players: string[]): Tria
   return {
     kind, set, title: definition.title,
     prompt: both('…compare your evidence. None of you sees the whole picture.', '…сравните свои улики. Никто из вас не видит всей картины.'),
-    task: both(`${definition.task.en} Describe your cards without naming them directly. Compare all hands, choose the same answer and confirm together.`, `${definition.task.ru} Опишите свои карточки, не называя картинки прямо. Сравните наборы, выберите общий ответ и подтвердите вместе.`),
+    task: both(`${definition.task.en} Compare all cards, select that picture and confirm together.`, `${definition.task.ru} Сравните карточки, выберите эту картинку и подтвердите ответ вместе.`),
     controls: players.map((p, i) => ({ id: `vote${i}`, ownerId: p, label: both('Your vote', 'Ваш голос'), options: [...items], target })),
     knows: Object.fromEntries(players.map((p) => [p, []])),
     hands: Object.fromEntries(shuffle(players).map((p, i) => [p, shuffle(hands[i])])),
@@ -262,13 +266,13 @@ export interface TrialPlan {
   set: ItemSet;
 }
 
-// Sample without replacement; shuffle both challenges and picture sets.
+// Sample a progressively harder five-trial route from the fifteen-trial catalogue.
 export function trialSequence(count: number): TrialPlan[] {
-  if (!Number.isInteger(count) || count < 1 || count > TRIAL_KINDS.length) throw new Error('Invalid trial count');
-  const sets = shuffle(Object.keys(ITEM_SETS) as ItemSet[]);
-  return shuffle(TRIAL_KINDS)
-    .slice(0, count)
-    .map((kind, i) => ({ kind, set: sets[i % sets.length] }));
+  if (!Number.isInteger(count) || count < 1 || count > TRIAL_CHAPTERS.length) throw new Error('Invalid trial count');
+  const openingSet = pick<ItemSet>(['objects', 'animals']);
+  const sets = [openingSet, ...shuffle((Object.keys(ITEM_SETS) as ItemSet[]).filter((set) => set !== openingSet))];
+  return TRIAL_CHAPTERS.slice(0, count)
+    .map((chapter, i) => ({ kind: pick(chapter), set: sets[i % sets.length] }));
 }
 
 // ---------- what the whole table knows (used by the tests and the test bots) ----------

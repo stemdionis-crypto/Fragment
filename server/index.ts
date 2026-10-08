@@ -6,7 +6,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import type { ClientMessage, ServerMessage } from '../shared/protocol';
 import { GameError, Room, type Player } from './room';
 import { translationEngine } from './translate';
-import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet } from './economy';
+import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet, leaderboard } from './economy';
 import { challenge, verifyChallenge } from './wallet-auth';
 
 // Hosting platforms pass PORT in production; in dev the client expects the server on 2567
@@ -119,6 +119,11 @@ wss.on('connection', (socket: WebSocket, request) => {
           room?.broadcast();
           break;
         }
+        case 'leaderboard': {
+          if (!['speed', 'signal', 'games'].includes(msg.metric)) return;
+          send({ t: 'leaderboard', metric: msg.metric, entries: leaderboard(msg.metric) });
+          break;
+        }
         case 'buy_item':
         case 'equip_item': {
           if (!accountId) throw new GameError('Profile not connected', 'Профиль не подключён');
@@ -146,11 +151,10 @@ wss.on('connection', (socket: WebSocket, request) => {
             break;
           }
           const available = [...rooms.values()].filter((r) => r.matchmaking && r.phase === 'lobby' && r.players.length > 0 && r.players.length < 4);
-          room = available[Math.floor(Math.random() * available.length)] ?? new Room(newCode());
+          room = available[Math.floor(Math.random() * available.length)] ?? new Room(newCode(), false, msg.lang === 'en' ? 'en' : 'ru');
           room.matchmaking = true;
           rooms.set(room.code, room);
-          me = room.addPlayer(msg.name, msg.color, socket);
-          me.accountId = accountId || undefined;
+          me = room.addPlayer(msg.name, msg.color, socket, false, accountId);
           send({ t: 'joined', playerId: me.id, code: room.code });
           room.updateMatchmaking();
           break;
@@ -167,8 +171,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           if (room && me) throw new GameError('Already in a room', 'Вы уже в комнате');
           room = new Room(newCode(), msg.practice === true, msg.lang === 'en' ? 'en' : 'ru');
           rooms.set(room.code, room);
-          me = room.addPlayer(msg.name, msg.color, socket, !!msg.bot);
-          me.accountId = accountId || undefined;
+          me = room.addPlayer(msg.name, msg.color, socket, !!msg.bot, accountId || undefined);
           if (room.practice) room.addCompanions();
           send({ t: 'joined', playerId: me.id, code: room.code });
           room.broadcast();
@@ -180,12 +183,21 @@ wss.on('connection', (socket: WebSocket, request) => {
           const r = rooms.get(String(msg.code).toUpperCase().trim());
           if (!r) throw new GameError('No room with this code', 'Комнаты с таким кодом нет');
           if (r.practice) throw new GameError('This is a solo practice room', 'Это комната для одиночной тренировки');
-          me = r.addPlayer(msg.name, msg.color, socket, !r.matchmaking && !!msg.bot);
-          me.accountId = accountId || undefined;
+          me = r.addPlayer(msg.name, msg.color, socket, !r.matchmaking && !!msg.bot, accountId);
           room = r;
           send({ t: 'joined', playerId: me.id, code: r.code });
           r.broadcast();
           r.updateMatchmaking();
+          break;
+        }
+        case 'add_bot': {
+          if (!room || !me) throw new GameError('Join a friend room first', 'Сначала войдите в комнату друзей');
+          room.addBot(me);
+          break;
+        }
+        case 'remove_bot': {
+          if (!room || !me) throw new GameError('Join a friend room first', 'Сначала войдите в комнату друзей');
+          room.removeBot(me, String(msg.playerId));
           break;
         }
         case 'resume': {

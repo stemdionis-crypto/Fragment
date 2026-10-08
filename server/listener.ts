@@ -44,6 +44,25 @@ const CATEGORIES: Record<string, Matcher> = {
     prefix: ['рыб', 'паук', 'паучо', 'ворон', 'змея', 'змей', 'змеи', 'змею', 'кролик', 'кролич', 'мотыл', 'бабочк'],
     words: ['рыбка', 'паучок', 'ворона', 'кролик', 'мотылек', 'бабочка', 'spider', 'rabbit', 'kitten'],
   },
+  relics: {
+    exact: ['antenna', 'antennas', 'aerial', 'aerials', 'cassette', 'cassettes', 'tape', 'tapes', 'bell', 'bells',
+      'hourglass', 'hourglasses', 'compass', 'compasses', 'lantern', 'lanterns', 'gear', 'gears', 'lock', 'locks',
+      'антенна', 'антенны', 'кассета', 'кассеты', 'колокол', 'колокола', 'компас', 'компаса', 'фонарь', 'фонаря',
+      'шестерня', 'шестерни', 'замок', 'замка'],
+    prefix: ['антенн', 'кассет', 'колокол', 'колоколь', 'песочн', 'компас', 'фонар', 'шестер', 'замоч'],
+    words: ['антенна', 'кассета', 'колокол', 'компас', 'фонарь', 'шестерня', 'замок',
+      'antenna', 'cassette', 'hourglass', 'compass', 'lantern'],
+  },
+  weather: {
+    exact: ['cloud', 'clouds', 'sun', 'sunny', 'rain', 'snow', 'snowflake', 'snowflakes', 'lightning', 'wind', 'umbrella', 'umbrellas', 'thermometer', 'thermometers'],
+    prefix: ['облак', 'туч', 'солнц', 'дожд', 'снеж', 'снег', 'молни', 'ветер', 'ветр', 'зонт', 'термометр', 'градусник'],
+    words: ['облако', 'солнце', 'дождь', 'снежинка', 'молния', 'ветер', 'зонтик', 'термометр', 'lightning', 'umbrella'],
+  },
+  station: {
+    exact: ['microphone', 'microphones', 'headphones', 'headset', 'record', 'records', 'vinyl', 'dial', 'dials', 'speaker', 'speakers', 'battery', 'batteries', 'wire', 'wires', 'switch', 'switches'],
+    prefix: ['микрофон', 'наушник', 'пластинк', 'винил', 'диск', 'циферблат', 'динамик', 'батарейк', 'провод', 'переключател', 'тумблер'],
+    words: ['микрофон', 'наушники', 'пластинка', 'динамик', 'батарейка', 'провод', 'переключатель', 'headphones', 'microphone'],
+  },
   numbers: {
     exact: [
       'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'first', 'second', 'third', 'fourth', 'fifth',

@@ -1,6 +1,6 @@
 # 📻 Fragment
 
-**A 3–4 player puzzle where an old radio listens to everything you say.**
+**A four-player puzzle where an old radio listens to everything you say.**
 
 Each player holds one fragment of the radio's code: the *signs*, their *order*, the *tones* of the keys, or the
 *rule* that distorts it. Nobody can open it alone. You can only talk through the chat, and the radio reads every
@@ -15,22 +15,24 @@ When you open it, your team receives a **Fragment**: a record of the language yo
 
 ## Trials
 
-A game is **five trials**, selected randomly without repetition from **twenty** rules.
-Picture sets and private clues are regenerated for each match. Every player owns
+A game is **five progressively harder trials** drawn from a catalogue of **fifteen** rules.
+The first is always the direct clue exchange. Each later chapter draws one of its rules.
+Six picture sets and private clues are regenerated for each match; all five
+trials use distinct sets, including weather and radio-station equipment. Every player owns
 one control and must confirm their own answer. The shared rule is visible to all;
 private clues belong to neighbours or are distributed across the team's hands.
 
 See [the complete trial catalogue](TRIALS.md). The pool contains four original
-trials, four new card-comparison trials, six numeric ciphers and six picture-scale
+trials, four card-comparison trials, one numeric cipher and six picture-scale
 ciphers. The latter reuse the controls but change how clues become answers.
 `npm run check` verifies unique solutions and distributed information for every
 rule with three and four players.
 
-Players speak **in turns** (3 messages or 30 seconds), and the camera follows whoever holds the floor.
+Players speak **in turns** (up to 3 messages, with no per-turn countdown), and the camera follows whoever holds the floor. A player can pass early; the ten-minute match limit still applies.
 
 ## How a round works
 
-1. 3–4 players join a room with a 4-letter code.
+1. Four players join a room with a 4-letter code. In a private room, two friends can fill empty seats with bots.
 2. The server hands out the fragments. Each player only ever receives their own piece.
 3. Players talk in the chat. The **Listener** checks every message:
    - plain words (tones, signs, numbers, order words, in English and Russian) become `▓▓▓` static and raise the radio's suspicion;
@@ -69,6 +71,13 @@ round and account. Purchases and ownership are checked on the server; equipping
 a skin broadcasts the character's appearance to the whole room.
 
 Profiles are persisted in `.data/profiles.json` (override `FRAGMENT_DATA_DIR`).
+The profile menu now shows completed matches, wins, fastest multiplayer win,
+lifetime Signal earned, balance and owned cosmetics. A wallet-linked leaderboard
+has separate speed, lifetime Signal and matches tabs. New players see a short
+walkthrough in the lobby and contextual hints during their first three matches.
+The free Render demo still uses temporary storage; these statistics and wallet
+links can disappear after a restart. A durable external database is required
+before treating the hosted rankings or profiles as permanent.
 The shop is available only in the main menu. A separate **Sign in with wallet**
 button links or restores your profile.
 The browser keeps a device access token. Link a wallet by signing
@@ -107,16 +116,22 @@ NFTs. The free hosted demo can reset its temporary profile data after a restart.
 ### Finding teammates
 
 **Find a random match** gathers real players in public waiting rooms, separate
-from private friend rooms and solo practice. Once three players join, an
-eight-second countdown allows a fourth to join before the game starts
-automatically. Leaving below three cancels the countdown. **Cancel search**
+from private friend rooms and solo practice. Once two players join, a
+twelve-second countdown lets more people join; bots fill empty seats before
+the four-player game starts. Leaving below two cancels the countdown. **Cancel search**
 returns to the menu. Matchmaking currently runs within one server process;
 players need access to the same hosted server to meet online.
+
+In a private code room, the host can add bots after a second human joins, remove
+them in the lobby, and start once all four seats are filled. A friend who joins
+an already full lobby replaces a bot automatically. Solo practice uses one human
+and three bots; bots do not receive Signal rewards.
 
 ### Sound and display
 
 The Settings button is available on every screen. Audio includes an original
-procedural ambient drone, radio hiss, and action cues. Music tension follows the
+procedural ambient drone, radio hiss, and action cues for the dial, chat,
+confirmation, passing a turn and the final minute. Music tension follows the
 radio's suspicion. Master, music, ambience, and effect volumes can be adjusted
 independently; audio begins after a click or key press and pauses in hidden tabs
 by default. Settings also include Russian/English, camera movement, reduced

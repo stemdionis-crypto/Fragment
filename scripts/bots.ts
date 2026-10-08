@@ -40,6 +40,18 @@ const RU: Record<Glyph, string> = {
   snake: 'та, что шипит и ползает',
   rabbit: 'тот, кто прыгает и любит морковку',
   moth: 'тот, кто ночью летит на лампу',
+  antenna: 'то, что ловит далёкие станции',
+  cassette: 'коробочка с двумя катушками',
+  bell: 'то, что звенит у двери',
+  hourglass: 'песок, который меряет время',
+  compass: 'стрелка, которая ищет север',
+  lantern: 'свет, который можно нести',
+  gear: 'зубчатое колесо',
+  lock: 'железная скважина на двери',
+  cloud: 'то, что закрывает небо серой пеленой', sun: 'яркий источник тепла над нами', rain: 'вода, падающая с неба', snowflake: 'ледяной узор, падающий зимой',
+  lightning: 'яркая вспышка во время грозы', wind: 'то, что качает деревья', umbrella: 'то, что раскрывают над головой в непогоду', thermometer: 'прибор, который показывает температуру',
+  microphone: 'то, во что говорят на сцене', headphones: 'то, что надевают на уши для музыки', record: 'чёрная виниловая вещь с музыкой', dial: 'регулятор, который поворачивают пальцами',
+  speaker: 'коробка, из которой звучит музыка', battery: 'маленький источник питания', wire: 'тонкий шнур, по которому идёт ток', switch: 'то, чем включают свет',
 };
 const EN: Record<Glyph, string> = {
   triangle: 'a roof', circle: 'a wheel', square: 'a window', cross: 'a plus', star: 'what goes on top of a Christmas tree',
@@ -48,6 +60,13 @@ const EN: Record<Glyph, string> = {
   coin: 'small change in your pocket', feather: 'what falls off a bird', bottle: 'what you pour water into', cat: 'the one who purrs',
   owl: 'the night bird that hoots', fish: 'the one in the aquarium', spider: 'the one who weaves a web', crow: 'the black bird that caws',
   snake: 'the one that hisses and crawls', rabbit: 'the one who hops and loves carrots', moth: 'the one that flies to the lamp at night',
+  antenna: 'a wire catching distant stations', cassette: 'a box with two reels', bell: 'what rings at the door',
+  hourglass: 'sand measuring time', compass: 'the needle that finds north', lantern: 'a carried light',
+  gear: 'a toothed wheel', lock: 'a metal clasp on a door',
+  cloud: 'a grey veil across the sky', sun: 'the bright source of warmth above us', rain: 'water falling from the sky', snowflake: 'a tiny ice pattern falling in winter',
+  lightning: 'a bright flash during a storm', wind: 'what makes trees sway', umbrella: 'what you open over your head in bad weather', thermometer: 'what shows the temperature',
+  microphone: 'what a singer speaks into', headphones: 'what you wear over your ears for music', record: 'a black vinyl thing that holds music', dial: 'the regulator you turn with your fingers',
+  speaker: 'a box that plays sound', battery: 'a small power source', wire: 'a thin cord that carries electricity', switch: 'what you use to turn on a light',
 };
 // Numbers without number words
 const DIGITS_RU = [
