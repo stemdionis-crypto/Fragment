@@ -1,3 +1,4 @@
+import { platformIdentity } from './idos';
 import type { ClientMessage, ServerMessage } from '../../shared/protocol';
 
 const SESSION_KEY = 'fragment.session';
@@ -42,12 +43,19 @@ export class Net {
   connect() {
     const ws = new WebSocket(serverUrl());
     this.ws = ws;
-    ws.onopen = () => {
+    ws.onopen = async () => {
       this.retry = 0;
       this.onStatus(true);
       let token: string | undefined;
       try { token = localStorage.getItem('fragment.profile-token') ?? undefined; } catch { /* guest profile */ }
-      ws.send(JSON.stringify({ t: 'identify', token } satisfies ClientMessage));
+      try {
+        const identity = await platformIdentity();
+        if (ws !== this.ws || ws.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify(identity ?? { t: 'identify', token } satisfies ClientMessage));
+      } catch {
+        this.onMessage({ t: 'error', message: 'Sign in to iDos again', ru: 'Войдите в iDos снова' });
+        return;
+      }
       const s = savedSession();
       if (s) ws.send(JSON.stringify({ t: 'resume', code: s.code, playerId: s.playerId } satisfies ClientMessage));
       this.queue.splice(0).forEach((m) => ws.send(m));

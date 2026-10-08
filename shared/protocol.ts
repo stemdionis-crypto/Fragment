@@ -142,6 +142,7 @@ export interface PrivateInfo {
 }
 
 export type ClientMessage =
+  | { t: 'idos_identify'; userId: string; ticket: string }
   | { t: 'wallet_challenge'; address: string }
   | { t: 'wallet_proof'; signature: string }
   | { t: 'wallet_use'; accept: boolean }

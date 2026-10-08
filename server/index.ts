@@ -7,6 +7,8 @@ import type { ClientMessage, ServerMessage } from '../shared/protocol';
 import { GameError, Room, type Player } from './room';
 import { translationEngine } from './translate';
 import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet, leaderboard } from './economy';
+import { platformSnapshot, type PlatformSession } from './idos';
+import { syncPlatform, platformReceipt } from './economy';
 import { challenge, verifyChallenge } from './wallet-auth';
 
 // Hosting platforms pass PORT in production; in dev the client expects the server on 2567
@@ -26,6 +28,12 @@ function newCode() {
 // In production the same server also serves the built client
 const MIME: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
 const http = createServer((req, res) => {
+  if (req.url?.startsWith('/api/idos/receipt/')) {
+    const key = req.url.slice('/api/idos/receipt/'.length);
+    const receipt = /^[a-f0-9]{64}$/.test(key) ? platformReceipt(key) : null;
+    res.setHeader('Cache-Control', 'no-store'); res.setHeader('Content-Type', 'application/json');
+    return res.writeHead(receipt ? 200 : 404).end(JSON.stringify(receipt ?? { error: 'not_found' }));
+  }
   if (req.url === '/health') return res.end('ok');
   if (!existsSync(DIST)) return res.writeHead(404).end('Client not built. Run `npm run dev` for development.');
   const path = normalize(decodeURIComponent((req.url ?? '/').split('?')[0])).replace(/^([/\\])+/, '');
@@ -35,12 +43,14 @@ const http = createServer((req, res) => {
   createReadStream(file).pipe(res);
 });
 
-const wss = new WebSocketServer({ server: http });
+const wss = new WebSocketServer({ server: http, maxPayload: 16384 });
 
 wss.on('connection', (socket: WebSocket, request) => {
   let room: Room | null = null;
   let me: Player | null = null;
   let accountId = '';
+  let platformSession: PlatformSession | null = null;
+  let messageQueue = Promise.resolve();
   let walletProof: ReturnType<typeof challenge> | null = null;
   let pendingWallet: { address: string; expiresAt: number } | null = null;
   let lastChallenge = 0;
@@ -56,6 +66,8 @@ wss.on('connection', (socket: WebSocket, request) => {
   profileListeners.add(onProfile);
 
   socket.on('message', (data) => {
+    messageQueue = messageQueue.then(async () => {
+    if (socket.readyState !== socket.OPEN) return;
     let msg: ClientMessage;
     try {
       msg = JSON.parse(String(data));
@@ -64,6 +76,19 @@ wss.on('connection', (socket: WebSocket, request) => {
     }
     try {
       switch (msg.t) {
+        case 'idos_identify': {
+          if (room && platformSession?.userId !== msg.userId) throw new GameError('Leave the room before switching accounts', 'Выйдите из комнаты перед сменой аккаунта');
+          const session = { userId: msg.userId, ticket: msg.ticket };
+          const snapshot = await platformSnapshot(session);
+          if (socket.readyState !== socket.OPEN) return;
+          platformSession = session;
+          const account = syncPlatform(msg.userId, snapshot, snapshot.balance, snapshot.ready);
+          accountId = account.id;
+          send({ t: 'profile', profile: profile(accountId) });
+          if (me) me.accountId = accountId;
+          room?.broadcast();
+          break;
+        }
         case 'wallet_challenge': {
           walletProof = null;
           pendingWallet = null;
@@ -127,6 +152,7 @@ wss.on('connection', (socket: WebSocket, request) => {
         case 'buy_item':
         case 'equip_item': {
           if (!accountId) throw new GameError('Profile not connected', 'Профиль не подключён');
+          if (platformSession) throw new GameError('Use the iDos shop', 'Используйте магазин iDos');
           if (msg.t === 'buy_item') buyItem(accountId, String(msg.item));
           else equipItem(accountId, String(msg.item));
           send({ t: 'profile', profile: profile(accountId) });
@@ -136,6 +162,7 @@ wss.on('connection', (socket: WebSocket, request) => {
         case 'buy':
         case 'equip': {
           if (!accountId) throw new GameError('Profile not connected', 'Профиль не подключён');
+          if (platformSession) throw new GameError('Use the iDos shop', 'Используйте магазин iDos');
           if (msg.t === 'buy') buy(accountId, msg.skin);
           else equip(accountId, msg.skin);
           send({ t: 'profile', profile: profile(accountId) });
@@ -230,6 +257,7 @@ wss.on('connection', (socket: WebSocket, request) => {
     } catch (e) {
       send({ t: 'error', message: (e as Error).message, ru: e instanceof GameError ? e.ru : undefined });
     }
+    }).catch(() => { if (socket.readyState === socket.OPEN) send({ t: 'error', message: 'Request failed', ru: 'Не удалось выполнить запрос' }); });
   });
 
   socket.on('close', () => {

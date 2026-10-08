@@ -32,6 +32,7 @@ jobs:
         env:
           FRAGMENT_TEST_WORK: ${{ runner.temp }}
       - run: npx tsx scripts/check-upgrade.ts
+      - run: npx tsx scripts/check-idos.ts
       - run: npm run build
 
   deploy:

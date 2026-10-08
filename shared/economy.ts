@@ -5,8 +5,8 @@ export const SKINS = [
   { id: 'phantom', name: { ru: 'Тёмный человек', en: 'Shadow Figure' }, price: 120, cloth: '#444b61', accent: '#a6b6c7' },
 ] as const;
 export type SkinId = typeof SKINS[number]['id'];
-export interface ProfileView { balance: number; owned: SkinId[]; equipped: SkinId; wins: number; gamesPlayed: number; fastestSeconds: number | null; totalSignalEarned: number; wallet?: string; items: string[]; loadout: Loadout; }
-export interface RewardView { amount: number; balance: number; }
+export interface ProfileView { platform?: { userId: string; balance: string; ready: boolean }; balance: number; owned: SkinId[]; equipped: SkinId; wins: number; gamesPlayed: number; fastestSeconds: number | null; totalSignalEarned: number; wallet?: string; items: string[]; loadout: Loadout; }
+export interface RewardView { receipt?: string; amount: number; balance: number; }
 
 export type CosmeticSlot = 'head' | 'face' | 'table' | 'wallpaper' | 'lighting' | 'poster' | 'decor' | 'victory';
 export type Loadout = Partial<Record<CosmeticSlot, string>>;

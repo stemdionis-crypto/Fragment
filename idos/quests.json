@@ -1,0 +1,658 @@
+{
+  "Cycles": {
+    "fragment_daily": {
+      "CycleID": "fragment_daily",
+      "DisplayName": "Fragment match rewards",
+      "Schedule": {
+        "Mode": "Cyclic",
+        "IsActive": false,
+        "Cyclic": {
+          "Reset": "Daily",
+          "IntervalSeconds": 86400
+        }
+      }
+    }
+  },
+  "Quests": {
+    "fragment_reward_1": {
+      "QuestID": "fragment_reward_1",
+      "Identity": {
+        "DisplayName": "Fragment reward 1"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 5
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_2": {
+      "QuestID": "fragment_reward_2",
+      "Identity": {
+        "DisplayName": "Fragment reward 2"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 10
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_3": {
+      "QuestID": "fragment_reward_3",
+      "Identity": {
+        "DisplayName": "Fragment reward 3"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 15
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_4": {
+      "QuestID": "fragment_reward_4",
+      "Identity": {
+        "DisplayName": "Fragment reward 4"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 20
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_5": {
+      "QuestID": "fragment_reward_5",
+      "Identity": {
+        "DisplayName": "Fragment reward 5"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 25
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_6": {
+      "QuestID": "fragment_reward_6",
+      "Identity": {
+        "DisplayName": "Fragment reward 6"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 30
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_7": {
+      "QuestID": "fragment_reward_7",
+      "Identity": {
+        "DisplayName": "Fragment reward 7"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 35
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_8": {
+      "QuestID": "fragment_reward_8",
+      "Identity": {
+        "DisplayName": "Fragment reward 8"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 40
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_9": {
+      "QuestID": "fragment_reward_9",
+      "Identity": {
+        "DisplayName": "Fragment reward 9"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 45
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_10": {
+      "QuestID": "fragment_reward_10",
+      "Identity": {
+        "DisplayName": "Fragment reward 10"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 50
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_11": {
+      "QuestID": "fragment_reward_11",
+      "Identity": {
+        "DisplayName": "Fragment reward 11"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 55
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_12": {
+      "QuestID": "fragment_reward_12",
+      "Identity": {
+        "DisplayName": "Fragment reward 12"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 60
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_13": {
+      "QuestID": "fragment_reward_13",
+      "Identity": {
+        "DisplayName": "Fragment reward 13"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 65
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_14": {
+      "QuestID": "fragment_reward_14",
+      "Identity": {
+        "DisplayName": "Fragment reward 14"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 70
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_15": {
+      "QuestID": "fragment_reward_15",
+      "Identity": {
+        "DisplayName": "Fragment reward 15"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 75
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_16": {
+      "QuestID": "fragment_reward_16",
+      "Identity": {
+        "DisplayName": "Fragment reward 16"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 80
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_17": {
+      "QuestID": "fragment_reward_17",
+      "Identity": {
+        "DisplayName": "Fragment reward 17"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 85
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_18": {
+      "QuestID": "fragment_reward_18",
+      "Identity": {
+        "DisplayName": "Fragment reward 18"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 90
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_19": {
+      "QuestID": "fragment_reward_19",
+      "Identity": {
+        "DisplayName": "Fragment reward 19"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 95
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fragment_reward_20": {
+      "QuestID": "fragment_reward_20",
+      "Identity": {
+        "DisplayName": "Fragment reward 20"
+      },
+      "Linking": {
+        "CycleIDs": [
+          "fragment_daily"
+        ]
+      },
+      "Objectives": {
+        "verified": {
+          "Source": "ServerApi",
+          "MetricID": "fragment_verified_daily",
+          "AggregationMethod": "Maximum",
+          "TargetValue": 100
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "CryptoCurrency",
+                "CurrencyID": "Main",
+                "Amount": 5
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
