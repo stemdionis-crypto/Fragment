@@ -1336,3 +1336,49 @@ body.reduced-motion .victory-preview i, body.reduced-motion .victory-particles i
 
 #overlay .fragment-card { position: relative; z-index: 1; }
 .victory-particles { z-index: 0; }
+
+/* Profile and wardrobe */
+.profile-dialog { width: min(1040px, calc(100vw - 24px)); box-sizing: border-box; padding: 26px; background: linear-gradient(145deg,#222729,#15191b); }
+.account-banner { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-top:22px; padding:20px 24px; border:1px solid #53584e; border-radius:12px; background:linear-gradient(110deg,#333c35,#202728); }
+.account-banner h3 { font:28px var(--font-type); margin:0 0 6px; color:var(--bone); }
+.account-banner p { margin:0; color:var(--muted); font-size:12px; overflow-wrap:anywhere; }
+.account-balance { display:grid; text-align:right; flex-shrink:0; gap:4px; }
+.account-balance b { font:30px var(--font-type); color:var(--bone); }
+.account-balance span { font-size:12px; color:var(--muted); }
+.profile-tabs { padding-bottom:16px; border-bottom:1px solid var(--line-2); }
+.profile-tabs button { flex:1; padding:12px; }
+.account-overview { display:grid; grid-template-columns:230px 1fr; gap:24px; align-items:center; }
+.account-portrait { background:radial-gradient(ellipse at center,#454a42,#202526); border:1px solid var(--line-2); border-radius:12px; overflow:hidden; text-align:center; }
+.account-portrait svg { display:block; width:100%; height:270px; }
+.account-portrait span { display:block; padding:12px; border-top:1px solid var(--line); font-family:var(--font-type); }
+.profile-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.profile-stats > div { background:#1c2122; min-width:0; }
+.profile-stats b { overflow-wrap:anywhere; }
+.account-links { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:22px; }
+.account-links > div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; padding:14px; border:1px solid var(--line); border-radius:8px; font-size:13px; }
+.account-links span { color:var(--muted); }
+.account-storage { padding-top:14px; border-top:1px solid var(--line); margin-top:22px; }
+.inventory-filters { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 18px; }
+.inventory-filters button { font-size:12px; border-radius:999px; padding:8px 13px; }
+.inventory-filters button[aria-pressed='true'] { background:#45524a; border-color:#a5b4a5; color:var(--white); }
+.wardrobe-layout { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:22px; align-items:start; }
+.inventory-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.collection-card { display:grid; gap:6px; min-width:0; text-align:left; padding:10px; border-radius:10px; background:#1c2123; }
+.collection-card.selected { border-color:#c6b994; background:#30372f; box-shadow:inset 0 0 0 1px #c6b994; }
+.collection-art { height:125px; overflow:hidden; border-radius:6px; background:radial-gradient(ellipse,#41483e,#242a2b); }
+.collection-art svg { height:100%; width:100%; display:block; }
+.collection-art .victory-preview { font-size:55px; }
+.collection-slot { color:var(--muted); font-size:10px; }
+.collection-card strong { font-size:13px; line-height:1.3; }
+.collection-state { color:#b8c8b5; font-size:10px; }
+.inventory-detail { position:sticky; top:0; padding:16px; border:1px solid var(--line-2); border-radius:12px; background:#1a2021; }
+.inventory-big-art { height:240px; overflow:hidden; border-radius:8px; background:radial-gradient(ellipse,#495244,#252d2d); }
+.inventory-big-art svg { width:100%; height:100%; display:block; }
+.inventory-detail h3 { font-family:var(--font-type); font-size:22px; margin:6px 0; }
+.inventory-detail .eyebrow { margin:16px 0 0; }
+.inventory-detail button { width:100%; margin-top:10px; }
+.inventory-feedback { color:var(--rust); font-size:12px; overflow-wrap:anywhere; }
+.inventory-feedback:empty { display:none; }
+.inventory-empty { grid-column:1/-1; padding:24px; color:var(--muted); border:1px dashed var(--line-2); border-radius:10px; }
+@media(max-width:760px) { .profile-dialog { padding:16px; } .account-overview { grid-template-columns:150px 1fr; gap:14px; } .account-portrait svg { height:210px; } .profile-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .wardrobe-layout { grid-template-columns:minmax(0,1fr) 240px; gap:12px; } .inventory-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .inventory-big-art { height:200px; } }
+@media(max-width:540px) { .account-overview { grid-template-columns:1fr; } .account-portrait { max-width:220px; width:100%; margin:auto; } .account-links { grid-template-columns:1fr; } .account-banner { padding:16px; } .account-banner h3 { font-size:23px; } .wardrobe-layout { display:flex; flex-direction:column-reverse; } .inventory-detail { position:static; width:100%; box-sizing:border-box; } .inventory-big-art { height:170px; } .inventory-grid { width:100%; grid-template-columns:repeat(2,minmax(0,1fr)); } }
