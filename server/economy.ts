@@ -51,7 +51,7 @@ export function identify(token?: string) {
 }
 export function profile(id: string): ProfileView {
   const a = accounts.get(id)!;
-  return { platform: a.platform, balance: a.balance, owned: [...a.owned], equipped: a.equipped, wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalSignalEarned: a.totalSignalEarned, wallet: a.wallet, items: [...a.items], loadout: { ...a.loadout } };
+  return { nickname: a.nickname, platform: a.platform, balance: a.balance, owned: [...a.owned], equipped: a.equipped, wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalSignalEarned: a.totalSignalEarned, wallet: a.wallet, items: [...a.items], loadout: { ...a.loadout } };
 }
 export function recordMatch(id: string, round: string, won: boolean, seconds: number, name: string, practice: boolean) {
   const a = accounts.get(id)!;
@@ -60,7 +60,7 @@ export function recordMatch(id: string, round: string, won: boolean, seconds: nu
     a.completedRounds.push(round);
     a.gamesPlayed++;
     if (won) a.wins++;
-    a.publicName = name.trim().slice(0, 16);
+    a.publicName = a.nickname || name.trim().slice(0, 16);
     if (won && !practice && (a.fastestSeconds === null || seconds < a.fastestSeconds)) a.fastestSeconds = seconds;
   });
 }
@@ -146,4 +146,14 @@ export function platformReceipt(key: string) {
   const day = new Date().toISOString().slice(0,10);
   return { userId: a.platform!.userId, ready: a.platform!.ready, day, earned: a.day === day ? a.earnedToday : 0,
     wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalEarned: a.totalSignalEarned };
+}
+
+export function setNickname(id: string, value: string) {
+  if (typeof value !== 'string') throw new Error('Invalid nickname / Неверный ник');
+  const nickname = value.trim().normalize('NFC');
+  if (!nickname || nickname.length > 16 || /[\u0000-\u001f\u007f]/u.test(nickname)) throw new Error('Use 1–16 characters / Введите от 1 до 16 символов');
+  const a = accounts.get(id);
+  if (!a || (!a.platform && !a.wallet)) throw new Error('Sign in first / Сначала войдите в аккаунт');
+  change(a, () => { a.nickname = nickname; a.publicName = nickname; });
+  return nickname;
 }
