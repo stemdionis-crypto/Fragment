@@ -829,6 +829,11 @@ net.onMessage = (m) => {
     case 'profile':
       wallet = m.profile.wallet ?? '';
       account = m.profile;
+      if (m.profile.nickname) {
+        savePrefs(m.profile.nickname, prefs().color);
+        const input = document.querySelector<HTMLInputElement>('#name');
+        if (input) input.value = m.profile.nickname;
+      }
       updateHomeWallet();
       break;
     case 'reward':
