@@ -330,7 +330,7 @@ function mountGame() {
           <p class="listen-hint">${t('listenHint')}</p>
           <form class="chat-form" id="chatForm" autocomplete="off">
             <input id="chatInput" maxlength="${CHAT_MAX}" placeholder="${t('speakCarefully')}" />
-            <button class="primary" id="sendBtn">${t('send')}</button>
+            <button type="submit" class="primary" id="sendBtn">${t('send')}</button>
             <button type="button" class="ghost" id="passBtn" title="${t('passTitle')}">${t('pass')}</button>
           </form>
         </div>
@@ -347,10 +347,10 @@ function mountGame() {
   $<HTMLFormElement>('#chatForm').onsubmit = (e) => {
     e.preventDefault();
     const input = $<HTMLInputElement>('#chatInput');
-    if (!input.value.trim()) return;
-    sfx.send();
+    if (!input.value.trim() || state?.turnId !== myId) return;
     net.send({ t: 'chat', text: input.value });
     input.value = '';
+    try { sfx.send(); } catch { /* Audio must not block chat. */ }
   };
   bindLangSwitch();
   renderMine();
@@ -646,8 +646,9 @@ function updateTurnUi() {
   const speaker = s.players.find((p) => p.id === s.turnId);
   const mine = s.turnId === myId && s.phase === 'playing';
   const input = $<HTMLInputElement>('#chatInput');
-  input.disabled = !mine;
+  input.disabled = false;
   $<HTMLButtonElement>('#sendBtn').disabled = !mine;
+  $<HTMLButtonElement>('#sendBtn').textContent = mine ? t('send') : (lang === 'ru' ? 'Ждём своего хода' : 'Waiting for your turn');
   $('#passBtn').hidden = !mine;
   input.placeholder = mine ? t('yourTurnLeft')(s.turnMessagesLeft) : speaker ? t('hasFloor')(speaker.name) : t('speakCarefully');
   const banner = $('#turnBanner');
