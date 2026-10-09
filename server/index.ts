@@ -6,7 +6,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import type { ClientMessage, ServerMessage } from '../shared/protocol';
 import { GameError, Room, type Player } from './room';
 import { translationEngine } from './translate';
-import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet, leaderboard } from './economy';
+import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet, leaderboard, setNickname } from './economy';
 import { platformSnapshot, type PlatformSession } from './idos';
 import { syncPlatform, platformReceipt } from './economy';
 import { challenge, verifyChallenge } from './wallet-auth';
@@ -87,6 +87,11 @@ wss.on('connection', (socket: WebSocket, request) => {
           send({ t: 'profile', profile: profile(accountId) });
           if (me) me.accountId = accountId;
           room?.broadcast();
+          break;
+        }
+        case 'set_nickname': {
+          if (room) throw new GameError('Leave the room before changing your nickname', 'Выйдите из комнаты перед сменой ника');
+          setNickname(accountId, msg.nickname);
           break;
         }
         case 'wallet_challenge': {
@@ -181,7 +186,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           room = available[Math.floor(Math.random() * available.length)] ?? new Room(newCode(), false, msg.lang === 'en' ? 'en' : 'ru');
           room.matchmaking = true;
           rooms.set(room.code, room);
-          me = room.addPlayer(msg.name, msg.color, socket, false, accountId);
+          me = room.addPlayer(profile(accountId).nickname || msg.name, msg.color, socket, false, accountId);
           send({ t: 'joined', playerId: me.id, code: room.code });
           room.updateMatchmaking();
           break;
@@ -210,7 +215,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           const r = rooms.get(String(msg.code).toUpperCase().trim());
           if (!r) throw new GameError('No room with this code', 'Комнаты с таким кодом нет');
           if (r.practice) throw new GameError('This is a solo practice room', 'Это комната для одиночной тренировки');
-          me = r.addPlayer(msg.name, msg.color, socket, !r.matchmaking && !!msg.bot, accountId);
+          me = r.addPlayer(profile(accountId).nickname || msg.name, msg.color, socket, !r.matchmaking && !!msg.bot, accountId);
           room = r;
           send({ t: 'joined', playerId: me.id, code: r.code });
           r.broadcast();
