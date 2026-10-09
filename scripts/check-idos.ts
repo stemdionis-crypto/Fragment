@@ -23,6 +23,9 @@ runInNewContext(readFileSync(new URL('../idos/cloud-code.js', import.meta.url),'
 }});
 assert.throws(()=>handlers.fragmentEquip({id:'phantom'},{UserID:'player'}),/not owned/);
 handlers.fragmentEquip({id:'operator'},{UserID:'player'});
+handlers.fragmentNickname({nickname:'Golden Signal'},{UserID:'player'});
+assert.equal((handlers.fragmentProfile({}, {UserID:'player'}) as {nickname:string}).nickname,'Golden Signal');
+assert.throws(()=>handlers.fragmentNickname({nickname:'\n'},{UserID:'player'}),/1–16/);
 assert.equal((handlers.fragmentProfile({}, {UserID:'player'}) as {equipped:string}).equipped,'operator');
 assert.throws(()=>handlers.fragmentMatch({receipt:'a'.repeat(64)},{UserID:'other'}),/not active/);
 handlers.fragmentMatch({receipt:'a'.repeat(64)},{UserID:'player'});

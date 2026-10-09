@@ -11,6 +11,8 @@ services:
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     envVars:
+      - key: FRAGMENT_SIGNALS_ENABLED
+        value: "true"
       - key: NODE_VERSION
         value: 22.16.0
       - key: FRAGMENT_DATA_DIR

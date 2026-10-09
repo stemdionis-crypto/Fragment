@@ -844,8 +844,8 @@ net.onMessage = (m) => {
       updateHomeWallet();
       break;
     case 'reward':
-      if (m.reward.receipt) void platformReward(m.reward.receipt, message => net.send(message)).catch(() => toast(lang === 'ru' ? 'Награда iDos ожидает активации FRAG или подтверждения' : 'iDos reward awaits FRAG activation or confirmation'));
-      if (m.reward.amount > 0) toast(`+${m.reward.amount} ${lang === 'ru' ? 'FRAG' : 'FRAG'} · ${lang === 'ru' ? 'Баланс' : 'Balance'}: ${m.reward.balance}`);
+      if (m.reward.receipt) void platformReward(m.reward.receipt, message => net.send(message)).catch(() => toast(lang === 'ru' ? 'Награда в Сигналах ожидает активации или подтверждения' : 'Signals reward awaits activation or confirmation'));
+      if (m.reward.amount > 0) toast(`+${m.reward.amount} ${lang === 'ru' ? 'Сигналов' : 'Signals'} · ${lang === 'ru' ? 'Баланс' : 'Balance'}: ${m.reward.balance}`);
       break;
     case 'left':
       saveSession(null);

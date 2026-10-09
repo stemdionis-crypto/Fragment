@@ -1,5 +1,5 @@
 
-import type { UserInventoryState, CurrencyDefinitions } from '@idosgames/core';
+import type { UserInventoryState, CurrencyDefinitions, GetUserQuestStateResponse } from '@idosgames/core';
 import { SKINS, COSMETICS, DEFAULT_ITEMS, DEFAULT_LOADOUT, type Loadout } from '../shared/economy';
 const TITLE = '49HLIN0J';
 export interface PlatformSession { userId: string; ticket: string }
@@ -25,13 +25,15 @@ export function inventoryLook(inventory: UserInventoryState, saved: { equipped?:
 }
 export async function platformSnapshot(session: PlatformSession) {
   const inventory = await platformCall<UserInventoryState>(session, 'User', 'GetInventory');
-  const cloud = await platformCall<{ Error?: unknown; FunctionResult?: { equipped?: string; loadout?: Loadout; stats?: { wins: number; gamesPlayed: number; fastestSeconds: number | null; totalEarned: number } } }>(session, 'CloudCode', 'Execute', { FunctionName: 'fragmentProfile' });
+  const cloud = await platformCall<{ Error?: unknown; FunctionResult?: { nickname?: string; equipped?: string; loadout?: Loadout; stats?: { wins: number; gamesPlayed: number; fastestSeconds: number | null; totalSignalsEarned: number } } }>(session, 'CloudCode', 'Execute', { FunctionName: 'fragmentProfile' });
   if (cloud.Error || !cloud.FunctionResult) throw new Error('iDos profile service unavailable / Профиль iDos недоступен');
   const currencies = await platformCall<CurrencyDefinitions>(session, 'Title', 'GetCurrencyDefinitions');
-  const main = currencies.CryptoCurrencies?.Main;
-  const mint = process.env.FRAGMENT_FRAG_MINT;
-  const ready = Boolean(mint && process.env.FRAGMENT_IDOS_ECONOMY_ENABLED === 'true' && main?.DisplayName === 'FRAG' &&
-    main.Networks?.some(n => n.NetworkID === 'solana' && n.ContractAddress === mint));
-
-  return { stats: cloud.FunctionResult.stats, ...inventoryLook(inventory, cloud.FunctionResult), balance: ready ? inventory.CryptoCurrencies?.Main?.Amount ?? '0' : '0', ready };
+  const ready = process.env.FRAGMENT_SIGNALS_ENABLED === 'true' && currencies.VirtualCurrencies?.SI?.Status === 'Active';
+  const signals = inventory.VirtualCurrencies?.SI?.Amount ?? 0;
+  const quests = ready ? await platformCall<GetUserQuestStateResponse>(session, 'Quest', 'GetUserQuestState') : null;
+  const cycle = quests?.State?.Cycles?.fragment_signals_daily;
+  const today = new Date().toISOString().slice(0, 10);
+  const earnedToday = cycle?.CycleStartUtc?.slice(0, 10) === today ? Math.max(0, ...Object.values(cycle.Quests ?? {}).map(q => q.Objectives?.verified?.CurrentValue ?? 0)) : 0;
+  if (!Number.isSafeInteger(Number(signals)) || Number(signals) < 0) throw new Error('Invalid Signals balance');
+  return { nickname: cloud.FunctionResult.nickname, earnedToday: Math.min(50, earnedToday), stats: cloud.FunctionResult.stats, ...inventoryLook(inventory, cloud.FunctionResult), balance: ready ? String(signals) : '0', ready };
 }

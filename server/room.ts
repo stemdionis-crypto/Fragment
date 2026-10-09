@@ -514,14 +514,6 @@ export class Room {
       wrong: this.wrong,
     };
     this.recordParticipants(true);
-    const rewarded = new Set<string>();
-    for (const p of this.players) {
-      if (!p.accountId || p.bot || rewarded.has(p.accountId) || (p.roundMessages ?? 0) < 2) continue;
-      if (!this.practice && Date.now() - this.startedAt < 60_000) continue;
-      rewarded.add(p.accountId);
-      try { this.send(p, { t: 'reward', reward: reward(p.accountId, this.roundId, this.practice) }); }
-      catch { this.send(p, { t: 'error', message: 'Reward could not be saved', ru: 'Не удалось сохранить награду' }); }
-    }
     this.radio(pick(VOICE.open));
     this.fx('open');
     this.broadcast();
@@ -543,11 +535,16 @@ export class Room {
   private recordParticipants(won: boolean) {
     const seen = new Set<string>();
     const seconds = Math.round((Date.now() - this.startedAt) / 1000);
+    const humanAccounts = new Set(this.players.filter(p => !p.bot && p.socket && (p.roundMessages ?? 0) >= 2 && p.accountId).map(p => p.accountId));
     for (const p of this.players) {
       if (!p.accountId || p.bot || seen.has(p.accountId)) continue;
       seen.add(p.accountId);
       try { recordMatch(p.accountId, this.roundId, won, seconds, p.name, this.practice); }
       catch { this.send(p, { t: 'error', message: 'Match statistics could not be saved', ru: 'Не удалось сохранить статистику матча' }); }
+      if (!this.practice && seconds >= 60 && humanAccounts.size >= 2 && humanAccounts.has(p.accountId)) {
+        try { this.send(p, { t: 'reward', reward: reward(p.accountId, this.roundId, false, won) }); }
+        catch { this.send(p, { t: 'error', message: 'Reward could not be saved', ru: 'Не удалось сохранить награду' }); }
+      }
     }
   }
 

@@ -7,7 +7,7 @@ import type { ClientMessage, ServerMessage } from '../shared/protocol';
 import { GameError, Room, type Player } from './room';
 import { translationEngine } from './translate';
 import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet, leaderboard, setNickname } from './economy';
-import { platformSnapshot, type PlatformSession } from './idos';
+import { platformSnapshot, platformCall, type PlatformSession } from './idos';
 import { syncPlatform, platformReceipt } from './economy';
 import { challenge, verifyChallenge } from './wallet-auth';
 
@@ -84,6 +84,10 @@ wss.on('connection', (socket: WebSocket, request) => {
           platformSession = session;
           const account = syncPlatform(msg.userId, snapshot, snapshot.balance, snapshot.ready);
           accountId = account.id;
+          if (account.nickname && !snapshot.nickname) {
+            const saved = await platformCall<{ Error?: unknown }>(session, 'CloudCode', 'Execute', { FunctionName: 'fragmentNickname', FunctionParameter: { nickname: account.nickname } });
+            if (saved.Error) throw new Error('Nickname could not be saved in iDos');
+          }
           send({ t: 'profile', profile: profile(accountId) });
           if (me) me.accountId = accountId;
           room?.broadcast();
@@ -91,6 +95,12 @@ wss.on('connection', (socket: WebSocket, request) => {
         }
         case 'set_nickname': {
           if (room) throw new GameError('Leave the room before changing your nickname', 'Выйдите из комнаты перед сменой ника');
+          if (platformSession) {
+            const nickname = typeof msg.nickname === 'string' ? msg.nickname.trim().normalize('NFC') : '';
+            if (!nickname || nickname.length > 16 || /[\u0000-\u001f\u007f]/u.test(nickname)) throw new GameError('Use 1–16 characters', 'Введите от 1 до 16 символов');
+            const saved = await platformCall<{ Error?: unknown }>(platformSession, 'CloudCode', 'Execute', { FunctionName: 'fragmentNickname', FunctionParameter: { nickname } });
+            if (saved.Error) throw new GameError('Nickname could not be saved', 'Не удалось сохранить ник');
+          }
           setNickname(accountId, msg.nickname);
           break;
         }

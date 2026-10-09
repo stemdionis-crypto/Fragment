@@ -3,7 +3,14 @@ var fragmentItems = [{"id":"head-none","slot":"head","free":true},{"id":"headpho
 
 function check(result) { if (!result.Success) throw new Error('Platform operation rejected'); return result.Data; }
 function fragmentSaved() { var d=check(server.GetUserCustomData()); var r=d.ReadOnly && d.ReadOnly.fragment_profile; return r && r.Value ? JSON.parse(r.Value) : { equipped:'classic',loadout:{} }; }
-handlers.fragmentProfile = function(args,context) { var saved=fragmentSaved(); var d=check(server.GetUserCustomData()); var r=d.ReadOnly && d.ReadOnly.fragment_stats; if(r && r.Value) saved.stats=JSON.parse(r.Value); return saved; };
+handlers.fragmentProfile = function(args,context) { var saved=fragmentSaved(); var d=check(server.GetUserCustomData()); var r=d.ReadOnly && d.ReadOnly.fragment_signal_stats; if(r && r.Value) saved.stats=JSON.parse(r.Value); else { var old=d.ReadOnly && d.ReadOnly.fragment_stats; if(old && old.Value) { saved.stats=JSON.parse(old.Value); saved.stats.totalSignalsEarned=0; } } return saved; };
+handlers.fragmentNickname = function(args,context) {
+  var nickname=args && typeof args.nickname==='string' ? args.nickname.trim() : '';
+  if(!nickname || nickname.length>16 || /[\u0000-\u001f\u007f]/.test(nickname)) throw new Error('Use 1–16 characters');
+  var saved=fragmentSaved(); saved.nickname=nickname;
+  check(server.SetUserCustomData('ReadOnly','fragment_profile',JSON.stringify(saved)));
+  return {nickname:nickname};
+};
 handlers.fragmentEquip = function(args,context) {
   var id=args && args.id;
   var skin=fragmentSkins.filter(function(i){return i.id===id;})[0];
@@ -24,10 +31,10 @@ handlers.fragmentMatch = function(args,context) {
   var response=check(server.HttpRequest({Method:'GET',Url:'https://fragment-demo.onrender.com/api/idos/receipt/'+args.receipt}));
   if (!response.Ok || response.BodyTooLarge) throw new Error('Match confirmation unavailable');
   var receipt=JSON.parse(response.Body);
-  if (receipt.userId!==context.UserID || !receipt.ready || receipt.day!==new Date().toISOString().slice(0,10)) throw new Error('FRAG rewards are not active');
-  if (!Number.isInteger(receipt.earned) || receipt.earned<0 || receipt.earned>100) throw new Error('Invalid reward amount');
+  if (receipt.userId!==context.UserID || !receipt.ready || receipt.day!==new Date().toISOString().slice(0,10)) throw new Error('Signals rewards are not active');
+  if (!Number.isInteger(receipt.earned) || receipt.earned<0 || receipt.earned>50) throw new Error('Invalid reward amount');
   // Maximum aggregation is replay-safe: a repeat cannot add another reward.
-  check(server.AddQuestProgress('fragment_verified_daily',receipt.earned));
-  check(server.SetUserCustomData('ReadOnly','fragment_stats',JSON.stringify({wins:receipt.wins,gamesPlayed:receipt.gamesPlayed,fastestSeconds:receipt.fastestSeconds,totalEarned:receipt.totalEarned})));
+  check(server.AddQuestProgress('fragment_signals_verified_daily',receipt.earned));
+  check(server.SetUserCustomData('ReadOnly','fragment_signal_stats',JSON.stringify({wins:receipt.wins,gamesPlayed:receipt.gamesPlayed,fastestSeconds:receipt.fastestSeconds,totalSignalsEarned:receipt.totalSignalsEarned})));
   return {verified:true,earned:receipt.earned};
 };

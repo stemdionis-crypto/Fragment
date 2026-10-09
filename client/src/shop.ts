@@ -1,5 +1,5 @@
-import { platformAction, platformPrices, refreshPlatformShop } from './idos';
-import { SKINS, COSMETICS, CATEGORY_NAMES, type CosmeticCategory, type ProfileView } from '../../shared/economy';
+import { platformAction, platformPrices, refreshPlatformShop, signalPackages, buySignalPackage } from './idos';
+import { SKINS, COSMETICS, CATEGORY_NAMES, SIGNAL_TOPUPS_ENABLED, type CosmeticCategory, type ProfileView } from '../../shared/economy';
 import type { ClientMessage, ServerMessage } from '../../shared/protocol';
 import { lang } from './i18n';
 import { skinPortrait, sceneSvg } from './scene';
@@ -16,8 +16,8 @@ const sections = ['characters', 'accessories', 'room', 'victory'];
 const sectionNames: Record<string, string[]> = { characters: ['Персонажи','Characters'], accessories: ['Аксессуары','Accessories'], room: ['Комната','Room'], victory: ['Победа','Victory'] };
 const inSection = (category: CosmeticCategory) => section === 'accessories' ? ['head','face'].includes(category) : section === 'room' ? ['table','wallpaper','lighting','poster','decor'].includes(category) : category === 'victory';
 const words = () => lang === 'ru'
-  ? { shop: 'Магазин', currency: 'FRAG', buy: 'Купить', equip: 'Надеть', equipped: 'Надет', owned: 'В коллекции', close: 'Закрыть', balance: 'Баланс', note: 'Победа с ботами: 10 FRAG. С людьми: 25, если партия длится от минуты. Для награды отправьте хотя бы два сообщения. Лимит: 100 FRAG в сутки (UTC). Косметика не даёт преимуществ.', saved: 'Профиль сохраняется на сервере. Этот браузер хранит ключ доступа: при очистке данных доступ потеряется. Это игровые очки, пока не токен Solana.', reward: 'Последняя награда' }
-  : { shop: 'Shop', currency: 'FRAG', buy: 'Buy', equip: 'Equip', equipped: 'Equipped', owned: 'Owned', close: 'Close', balance: 'Balance', note: 'Bot win: 10 FRAG. Human win: 25 if the match lasts at least a minute. Send at least two messages to qualify. Daily cap: 100 FRAG (UTC). Cosmetics give no gameplay advantage.', saved: 'Your profile is stored on the server. This browser holds its access key; clearing browser data loses access. These are game points, not a Solana token yet.', reward: 'Latest reward' };
+  ? { shop: 'Магазин', currency: 'Сигналов', buy: 'Купить', equip: 'Надеть', equipped: 'Надет', owned: 'В коллекции', close: 'Закрыть', balance: 'Баланс', note: '10 за победу с людьми, 3 за поражение при полноценном участии. С ботами: 0. От минуты, два сообщения, минимум два человека. Лимит: 50 Сигналов в сутки (UTC).' , saved: 'Профиль сохраняется на сервере. Этот браузер хранит ключ доступа: при очистке данных доступ потеряется. Это игровые очки, пока не токен Solana.', reward: 'Последняя награда' }
+  : { shop: 'Shop', currency: 'Signals', buy: 'Buy', equip: 'Equip', equipped: 'Equipped', owned: 'Owned', close: 'Close', balance: 'Balance', note: 'Human win: 10, qualifying loss: 3, bots: 0. At least a minute, two messages, two participating people. Daily UTC cap: 50 Signals.' , saved: 'Your profile is stored on the server. This browser holds its access key; clearing browser data loses access. These are game points, not a Solana token yet.', reward: 'Latest reward' };
 
 export function placeShopButton() {
   const slot = document.querySelector('.home-account');
@@ -30,15 +30,8 @@ export function placeShopButton() {
 }
 function render() {
   const w = words();
-  if (account?.platform) w.note = lang === 'ru' ? 'Награды за подтверждённые победы: 10 FRAG в тренировке, 25 с людьми; максимум 100 FRAG в день. Выплаты доступны после активации FRAG и при наличии средств в пуле наград iDos.' : 'Verified wins: 10 FRAG in practice, 25 with people; daily max 100. Payouts require FRAG activation and a funded iDos reward pool.';
-  w.saved = lang === 'ru'
-    ? account?.wallet ? 'Профиль сохранён на сервере и привязан к кошельку. Его можно восстановить на другом устройстве. FRAG в демо является тестовыми игровыми очками.' : 'Профиль сохраняется на сервере. Привяжите кошелёк, чтобы восстановить прогресс после очистки браузера или на другом устройстве. FRAG в демо является тестовыми игровыми очками.'
-    : account?.wallet ? 'Profile saved on the server and linked to your wallet. Restore it on another device. Demo FRAG is currently game points.' : 'Profile saved on the server. Link a wallet to restore progress on another device or after clearing browser data. Demo FRAG is currently game points.';
-  launcher.textContent = `${w.shop} · ${account?.platform?.balance ?? account?.balance ?? 0} ${w.currency}`;
-  if (import.meta.env.VITE_DEMO_MODE === 'true' && !account?.platform) w.saved = lang === 'ru'
-    ? 'Это демо: баланс, скины и привязка кошелька могут сброситься после перезапуска сервера. FRAG — тестовые игровые очки.'
-    : 'Demo: balance, skins and wallet links may reset when the server restarts. FRAG is test game points.';
-  if (account?.platform) w.saved = account.platform.ready ? 'iDos · FRAG · Инвентарь хранится в аккаунте платформы / Inventory is stored in your platform account.' : 'iDos · FRAG ещё не подключён. Покупки и выплаты ожидают активации / FRAG purchases and payouts await activation.';
+  launcher.textContent = `${w.shop} · ${account?.balance ?? 0} ${w.currency}`;
+  w.saved = lang === 'ru' ? 'Сигналы нельзя вывести, передать или обменять обратно на FRAG. Платформенный баланс хранится в iDos после активации; гостевой прогресс — на сервере.' : 'Signals cannot be withdrawn, transferred or exchanged back to FRAG. Platform balance is stored in iDos after activation; guest progress is stored on the server.';
   if (!dialog.open) return;
   const list = section === 'characters' ? SKINS : COSMETICS.filter(i => inSection(i.category));
   if (!list.some(i => i.id === selected)) selected = list[0].id;
@@ -49,7 +42,7 @@ function render() {
     : section === 'victory' ? `<div class="victory-preview ${selected}"><span>${chosen?.icon}</span><i></i><i></i><i></i></div>`
     : skinPortrait(chosenSkin?.id ?? account?.equipped ?? 'classic', previewLook);
   const roomNote = lang === 'ru' ? 'Все видят оформление создателя комнаты. Ваш набор используется, когда комнату создаёте вы.' : 'Everyone sees the room creator’s decor. Your set is used when you create the room.';
-  dialog.innerHTML = `<div class="settings-heading"><div><p class="eyebrow">FRAGMENT · ${lang === 'ru' ? 'КОЛЛЕКЦИЯ' : 'COLLECTION'}</p><h2 id="shop-title">${w.shop}</h2></div><button id="shop-close" aria-label="${w.close}">×</button></div><div class="shop-summary"><p class="shop-balance">${w.balance}: <b>${account?.balance ?? 0} ${w.currency}</b></p>${lastReward ? `<p class="shop-reward">${w.reward}: +${lastReward}</p>` : ''}</div><nav class="shop-tabs" aria-label="${w.shop}">${sections.map(id => `<button data-section="${id}" aria-pressed="${section === id}">${sectionNames[id][lang === 'ru' ? 0 : 1]}</button>`).join('')}</nav><div class="shop-preview"><div class="preview-art">${preview}</div><div><p class="eyebrow">${lang === 'ru' ? 'ПРЕДПРОСМОТР' : 'PREVIEW'}</p><h3>${chosen?.name[lang] ?? chosenSkin?.name[lang]}</h3><p class="fine">${section === 'room' ? roomNote : section === 'victory' ? (lang === 'ru' ? 'Ваш эффект на экране командной победы.' : 'Your effect on the team victory screen.') : (lang === 'ru' ? 'Выбранная маска заменяет родную маску персонажа. «Облик скина» возвращает исходный вариант. Ваш образ виден всем участникам комнаты.' : 'An equipped mask replaces the character’s original mask. Original skin face restores the default. Everyone sees your look.')}</p></div></div><div class="skin-grid ${section === 'characters' ? 'character-grid' : ''}">${list.map(entry => {
+  dialog.innerHTML = `<div class="settings-heading"><div><p class="eyebrow">FRAGMENT · ${lang === 'ru' ? 'КОЛЛЕКЦИЯ' : 'COLLECTION'}</p><h2 id="shop-title">${w.shop}</h2></div><button id="shop-close" aria-label="${w.close}">×</button></div><div class="shop-summary"><p class="shop-balance">${w.balance}: <b>${account?.balance ?? 0} ${w.currency}</b></p>${lastReward ? `<p class="shop-reward">${w.reward}: +${lastReward}</p>` : ''}</div><button id="signal-topup" type="button" ${!SIGNAL_TOPUPS_ENABLED ? 'disabled title="Пополнение за FRAG пока отключено"' : ''}>${lang === 'ru' ? 'Купить Сигналы за FRAG' : 'Buy Signals with FRAG'}</button><nav class="shop-tabs" aria-label="${w.shop}">${sections.map(id => `<button data-section="${id}" aria-pressed="${section === id}">${sectionNames[id][lang === 'ru' ? 0 : 1]}</button>`).join('')}</nav><div class="shop-preview"><div class="preview-art">${preview}</div><div><p class="eyebrow">${lang === 'ru' ? 'ПРЕДПРОСМОТР' : 'PREVIEW'}</p><h3>${chosen?.name[lang] ?? chosenSkin?.name[lang]}</h3><p class="fine">${section === 'room' ? roomNote : section === 'victory' ? (lang === 'ru' ? 'Ваш эффект на экране командной победы.' : 'Your effect on the team victory screen.') : (lang === 'ru' ? 'Выбранная маска заменяет родную маску персонажа. «Облик скина» возвращает исходный вариант. Ваш образ виден всем участникам комнаты.' : 'An equipped mask replaces the character’s original mask. Original skin face restores the default. Everyone sees your look.')}</p></div></div><div class="skin-grid ${section === 'characters' ? 'character-grid' : ''}">${list.map(entry => {
     const price = account?.platform ? platformPrices.get(entry.id) : entry.price;
     const cosmetic = COSMETICS.find(i => i.id === entry.id);
     const owned = cosmetic ? account?.items?.includes(entry.id) : account?.owned.includes(entry.id as typeof SKINS[number]['id']);
@@ -60,6 +53,28 @@ function render() {
     const category = cosmetic ? CATEGORY_NAMES[cosmetic.category][lang] : sectionNames.characters[lang === 'ru' ? 0 : 1];
     return `<article class="skin-card ${equipped ? 'equipped' : ''} ${selected === entry.id ? 'selected' : ''}"><button class="item-preview" data-preview="${entry.id}" aria-label="${entry.name[lang]}">${art}</button><p class="eyebrow">${category}</p><h3>${entry.name[lang]}</h3><p>${owned ? w.owned : `${price ?? '—'} ${w.currency}`}</p><button data-item="${entry.id}" data-action="${owned ? cosmetic ? 'equip_item' : 'equip' : cosmetic ? 'buy_item' : 'buy'}" ${pending || !account || equipped || !owned && (account.platform ? !account.platform.ready || price === undefined : account.balance < entry.price) ? 'disabled' : ''}>${equipped ? (lang === 'ru' ? 'Выбрано' : 'Selected') : owned ? cosmetic && !['head','face'].includes(cosmetic.category) ? (lang === 'ru' ? 'Применить' : 'Apply') : w.equip : w.buy}</button></article>`;
   }).join('')}</div><p id="shop-feedback" role="status"></p><p class="fine">${w.note}</p><p class="fine">${w.saved}</p>`;
+  dialog.querySelector<HTMLButtonElement>('#signal-topup')!.onclick = async () => {
+    const feedback = dialog.querySelector<HTMLElement>('#shop-feedback')!;
+    if (!account?.platform || !account.platform.ready) { feedback.textContent = lang === 'ru' ? 'Войдите через iDos. Пополнение станет доступно после активации Сигналов.' : 'Sign in with iDos. Top-ups become available after Signals activation.'; return; }
+    feedback.textContent = lang === 'ru' ? 'Загружаем пакеты…' : 'Loading packages…';
+    try {
+      const packages = await signalPackages();
+      if (!dialog.open || !feedback.isConnected) return;
+      feedback.replaceChildren();
+      if (!packages.length) feedback.textContent = lang === 'ru' ? 'Пополнение за FRAG ещё не активировано. Курс и пакеты будут объявлены перед запуском.' : 'FRAG top-ups are not active yet. Packages and exchange rate will be announced before launch.';
+      for (const pack of packages) {
+        const button = document.createElement('button');
+        button.type = 'button'; button.textContent = `${pack.signals} ${lang === 'ru' ? 'Сигналов за' : 'Signals for'} ${pack.frag} FRAG`;
+        button.onclick = async () => {
+          if (pending) return;
+          pending = true; feedback.querySelectorAll('button').forEach(b => b.disabled = true);
+          try { await buySignalPackage(pack.offerID, pack.frag, pack.signals, send); }
+          catch (error) { pending = false; render(); dialog.querySelector('#shop-feedback')!.textContent = error instanceof Error ? error.message : 'iDos unavailable'; }
+        };
+        feedback.append(button);
+      }
+    } catch (error) { if (feedback.isConnected) feedback.textContent = error instanceof Error ? error.message : 'iDos unavailable'; }
+  };
   dialog.querySelector<HTMLButtonElement>('#shop-close')!.onclick = () => dialog.close();
   dialog.querySelectorAll<HTMLButtonElement>('[data-section]').forEach(b => b.onclick = () => { section = b.dataset.section!; render(); dialog.scrollTop = 0; });
   dialog.querySelectorAll<HTMLButtonElement>('[data-preview]').forEach(b => b.onclick = () => { selected = b.dataset.preview!; render(); dialog.scrollTop = 0; });

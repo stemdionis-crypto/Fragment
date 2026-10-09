@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join, resolve } from 'node:path';
 import { SKINS, COSMETICS, DEFAULT_ITEMS, DEFAULT_LOADOUT, type ProfileView, type RewardView, type SkinId } from '../shared/economy';
 
-interface Account extends ProfileView { receipt?: string; id: string; token: string; rounds: string[]; completedRounds: string[]; day: string; earnedToday: number; publicName?: string; }
+interface Account extends ProfileView { economyVersion?: number; legacyDemoBalance?: number; legacyDemoEarned?: number; receipt?: string; id: string; token: string; rounds: string[]; completedRounds: string[]; day: string; earnedToday: number; publicName?: string; }
 const directory = resolve(process.env.FRAGMENT_DATA_DIR || '.data');
 const file = join(directory, 'profiles.json');
 const accounts = new Map<string, Account>();
@@ -13,9 +13,15 @@ if (existsSync(file)) {
   let migrated = false;
   const retiredEmotes: Record<string, number> = { 'emote-think': 0, 'emote-wave': 0, 'emote-wow': 15, 'emote-laugh': 20, 'emote-love': 25 };
   for (const account of saved) {
+    if (account.economyVersion !== 2) {
+      account.legacyDemoBalance = account.balance;
+      account.legacyDemoEarned = account.totalSignalEarned;
+      account.balance = 0; account.totalSignalEarned = 0; account.earnedToday = 0; account.day = ''; account.rounds = [];
+      account.economyVersion = 2; migrated = true;
+    }
     const retired = [...new Set(account.items ?? [])].filter(id => Object.hasOwn(retiredEmotes, id));
     if (retired.length) {
-      account.balance += retired.reduce((sum, id) => sum + retiredEmotes[id], 0);
+      account.legacyDemoBalance = (account.legacyDemoBalance ?? 0) + retired.reduce((sum, id) => sum + retiredEmotes[id], 0);
       migrated = true;
     }
     account.items = [...new Set([...DEFAULT_ITEMS, ...(account.items ?? []).filter(id => COSMETICS.some(i => i.id === id))])];
@@ -45,6 +51,7 @@ export function identify(token?: string) {
   const known = typeof token === 'string' ? [...accounts.values()].find((a) => a.token === token) : undefined;
   if (known) return known;
   const account: Account = { id: randomUUID(), token: randomBytes(32).toString('hex'), balance: 0, owned: ['classic'], equipped: 'classic', items: [...DEFAULT_ITEMS], loadout: { ...DEFAULT_LOADOUT }, wins: 0, gamesPlayed: 0, fastestSeconds: null, totalSignalEarned: 0, completedRounds: [], rounds: [], day: '', earnedToday: 0 };
+  account.economyVersion = 2;
   accounts.set(account.id, account);
   try { persist(); } catch (error) { accounts.delete(account.id); throw error; }
   return account;
@@ -89,7 +96,7 @@ export function buy(id: string, skinId: string) {
   const skin = SKINS.find((s) => s.id === skinId);
   if (!skin) throw new Error('Unknown skin / Неизвестный скин');
   if (a.owned.includes(skin.id)) return;
-  if (a.balance < skin.price) throw new Error('Not enough FRAG / Недостаточно FRAG');
+  if (a.balance < skin.price) throw new Error('Not enough Signals / Недостаточно Сигналов');
   change(a, () => { a.balance -= skin.price; a.owned.push(skin.id); });
 }
 export function equip(id: string, skin: string) {
@@ -98,14 +105,14 @@ export function equip(id: string, skin: string) {
   if (!a.owned.includes(skin as SkinId)) throw new Error('Skin is not owned / Скин не куплен');
   change(a, () => { a.equipped = skin as SkinId; });
 }
-export function reward(id: string, round: string, practice: boolean): RewardView {
+export function reward(id: string, round: string, practice: boolean, won = true): RewardView {
   const a = accounts.get(id)!;
-  if (a.platform && !a.platform.ready) return { amount: 0, balance: 0 };
+  if (practice || (a.platform && !a.platform.ready)) return { amount: 0, balance: a.balance }; 
   if (a.rounds.includes(round)) return { amount: 0, balance: a.balance, receipt: a.platform ? a.receipt : undefined };
   return change(a, () => {
     const day = new Date().toISOString().slice(0, 10);
     if (a.day !== day) { a.day = day; a.earnedToday = 0; }
-    const amount = Math.max(0, Math.min(practice ? 10 : 25, 100 - a.earnedToday));
+    const amount = Math.max(0, Math.min(won ? 10 : 3, 50 - a.earnedToday));
     if (!a.platform) a.balance += amount;
     a.totalSignalEarned += amount;
     a.earnedToday += amount;
@@ -120,7 +127,7 @@ export function buyItem(id: string, itemId: string) {
   const item = COSMETICS.find(i => i.id === itemId);
   if (!item) throw new Error('Unknown item / Неизвестный предмет');
   if (a.items.includes(itemId)) return;
-  if (a.balance < item.price) throw new Error('Not enough FRAG / Недостаточно FRAG');
+  if (a.balance < item.price) throw new Error('Not enough Signals / Недостаточно Сигналов');
   change(a, () => { a.balance -= item.price; a.items.push(itemId); });
 }
 export function equipItem(id: string, itemId: string) {
@@ -131,13 +138,17 @@ export function equipItem(id: string, itemId: string) {
   change(a, () => { a.loadout[item.category as keyof typeof a.loadout] = itemId; });
 }
 
-export function syncPlatform(userId: string, state: Pick<ProfileView, 'owned' | 'items' | 'equipped' | 'loadout'> & { stats?: { wins: number; gamesPlayed: number; fastestSeconds: number | null; totalEarned: number } }, balance: string, ready: boolean) {
+export function syncPlatform(userId: string, state: Pick<ProfileView, 'owned' | 'items' | 'equipped' | 'loadout'> & { nickname?: string; earnedToday?: number; stats?: { wins: number; gamesPlayed: number; fastestSeconds: number | null; totalSignalsEarned: number } }, balance: string, ready: boolean) {
   let a = [...accounts.values()].find(a => a.platform?.userId === userId);
   if (!a) { a = identify(); a.platform = { userId, balance, ready }; a.receipt = randomBytes(32).toString('hex'); }
   const account = a;
   change(account, () => { Object.assign(account, { owned: state.owned, items: state.items, equipped: state.equipped, loadout: state.loadout });
-    if (state.stats) { account.wins = Math.max(account.wins,state.stats.wins); account.gamesPlayed = Math.max(account.gamesPlayed,state.stats.gamesPlayed); account.totalSignalEarned = Math.max(account.totalSignalEarned,state.stats.totalEarned); if (state.stats.fastestSeconds !== null) account.fastestSeconds = Math.min(account.fastestSeconds ?? Infinity,state.stats.fastestSeconds); }
-    account.platform = { userId, balance, ready }; account.balance = 0; });
+    if (state.nickname) { account.nickname = state.nickname; account.publicName = state.nickname; }
+    const day = new Date().toISOString().slice(0,10);
+    if (account.day !== day) { account.day = day; account.earnedToday = 0; }
+    account.earnedToday = Math.max(account.earnedToday, state.earnedToday ?? 0);
+    if (state.stats) { account.wins = Math.max(account.wins,state.stats.wins); account.gamesPlayed = Math.max(account.gamesPlayed,state.stats.gamesPlayed); account.totalSignalEarned = Math.max(account.totalSignalEarned,(state.stats.totalSignalsEarned ?? 0)); if (state.stats.fastestSeconds !== null) account.fastestSeconds = Math.min(account.fastestSeconds ?? Infinity,state.stats.fastestSeconds); }
+    account.platform = { userId, balance, ready }; account.balance = Number(balance);  });
   return account;
 }
 export function platformReceipt(key: string) {
@@ -145,7 +156,7 @@ export function platformReceipt(key: string) {
   if (!a) return null;
   const day = new Date().toISOString().slice(0,10);
   return { userId: a.platform!.userId, ready: a.platform!.ready, day, earned: a.day === day ? a.earnedToday : 0,
-    wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalEarned: a.totalSignalEarned };
+    wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalSignalsEarned: a.totalSignalEarned };
 }
 
 export function setNickname(id: string, value: string) {

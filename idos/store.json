@@ -7,7 +7,7 @@
       },
       "Availability": {
         "Schedule": {
-          "Mode": "Always",
+          "Mode": "AlwaysOn",
           "IsActive": false
         }
       },
@@ -219,16 +219,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 20
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 1000
                   }
                 ]
               }
@@ -263,16 +263,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 60
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 1500
                   }
                 ]
               }
@@ -307,16 +307,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 120
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 2500
                   }
                 ]
               }
@@ -351,16 +351,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 30
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 300
                   }
                 ]
               }
@@ -395,16 +395,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 25
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 300
                   }
                 ]
               }
@@ -439,16 +439,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 40
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 400
                   }
                 ]
               }
@@ -483,16 +483,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 45
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 450
                   }
                 ]
               }
@@ -527,16 +527,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 60
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 600
                   }
                 ]
               }
@@ -571,16 +571,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 75
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 750
                   }
                 ]
               }
@@ -615,16 +615,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 50
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 500
                   }
                 ]
               }
@@ -659,16 +659,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 40
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 400
                   }
                 ]
               }
@@ -703,16 +703,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 20
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 300
                   }
                 ]
               }
@@ -747,16 +747,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 35
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 350
                   }
                 ]
               }
@@ -791,16 +791,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 40
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 400
                   }
                 ]
               }
@@ -835,16 +835,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 60
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 600
                   }
                 ]
               }
@@ -879,16 +879,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 40
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 400
                   }
                 ]
               }
@@ -923,16 +923,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 60
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 600
                   }
                 ]
               }
@@ -967,16 +967,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 30
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 300
                   }
                 ]
               }
@@ -1011,16 +1011,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 40
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 400
                   }
                 ]
               }
@@ -1055,16 +1055,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 25
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 300
                   }
                 ]
               }
@@ -1099,16 +1099,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 35
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 350
                   }
                 ]
               }
@@ -1143,16 +1143,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 35
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 350
                   }
                 ]
               }
@@ -1187,16 +1187,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 25
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 300
                   }
                 ]
               }
@@ -1231,16 +1231,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 30
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 300
                   }
                 ]
               }
@@ -1275,16 +1275,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 50
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 500
                   }
                 ]
               }
@@ -1319,16 +1319,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 60
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 600
                   }
                 ]
               }
@@ -1363,16 +1363,16 @@
       },
       "Pricing": {
         "Options": {
-          "frag": {
-            "OptionID": "frag",
-            "Name": "FRAG",
+          "signal": {
+            "OptionID": "signal",
+            "Name": "Signals",
             "Cost": {
               "Standard": {
                 "Entries": [
                   {
-                    "Type": "CryptoCurrency",
-                    "CurrencyID": "Main",
-                    "Amount": 75
+                    "Type": "VirtualCurrency",
+                    "CurrencyID": "SI",
+                    "Amount": 750
                   }
                 ]
               }

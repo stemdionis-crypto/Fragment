@@ -1,4 +1,5 @@
 # Fragment / iDos economy
+The current local draft replaces direct FRAG cosmetics/rewards with Signals (SI). See SIGNALS.md for the current activation plan; the older FRAG plan below documents the previous version.
 Title: 49HLIN0J. SDK: @idosgames/core 0.21.2.
 ## Current staging state
 FRAG name is displayed. Demo points are separate from platform Main balance. No automatic conversion.
