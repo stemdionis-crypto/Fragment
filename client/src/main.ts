@@ -344,7 +344,7 @@ function mountGame() {
   sceneKey = '';
   lastTurnId = '';
   lastBubbleId = state!.chat.at(-1)?.id ?? 0;
-  $<HTMLFormElement>('#chatForm').onsubmit = (e) => {
+  const sendChat = (e: Event) => {
     e.preventDefault();
     const input = $<HTMLInputElement>('#chatInput');
     if (!input.value.trim() || state?.turnId !== myId) return;
@@ -352,6 +352,9 @@ function mountGame() {
     input.value = '';
     try { sfx.send(); } catch { /* Audio must not block chat. */ }
   };
+  $<HTMLFormElement>('#chatForm').onsubmit = sendChat;
+  $('#sendBtn').onclick = sendChat;
+  $<HTMLInputElement>('#chatInput').onkeydown = event => { if (event.key === 'Enter') sendChat(event); };
   bindLangSwitch();
   renderMine();
   updateGame();

@@ -132,14 +132,20 @@ function requestLadder() { send({t:'leaderboard',metric}); }
 
 function showNickname() {
   nicknameDialog.innerHTML = '<form><h2 id="nickname-title">'+label(profile?.nickname ? 'Изменить ник' : 'Как вас называть?', profile?.nickname ? 'Change nickname' : 'Choose your nickname')+'</h2><p>'+label('Ник сохранится в вашем профиле. Его можно изменить позже.','Your nickname will be saved to your profile. You can change it later.')+'</p><label for="profile-nickname">'+label('Ваш ник','Nickname')+'</label><input id="profile-nickname" name="nickname" minlength="1" maxlength="16" required autocomplete="nickname" value="'+esc(profile?.nickname || '')+'"><p class="fine">'+label('От 1 до 16 символов','1–16 characters')+'</p><p role="status"></p><button type="submit" class="primary">'+label('Сохранить','Save')+'</button>'+(profile?.nickname ? '<button type="button" id="nickname-cancel">'+label('Отмена','Cancel')+'</button>' : '')+'</form>';
-  nicknameDialog.querySelector('form')!.onsubmit = event => {
+  const saveNickname = (event: Event) => {
     event.preventDefault();
+    if (nicknamePending) return;
     const nickname = nicknameDialog.querySelector<HTMLInputElement>('input')!.value.trim().normalize('NFC');
     if (!nickname || nickname.length > 16) { nicknameDialog.querySelector('[role=status]')!.textContent = label('Введите от 1 до 16 символов','Use 1–16 characters'); return; }
     nicknamePending = true;
     nicknameDialog.querySelector<HTMLButtonElement>('[type=submit]')!.disabled = true;
     send({ t: 'set_nickname', nickname });
   };
+  // iDos embeds the game without allow-forms; submit events never fire there.
+  const saveButton = nicknameDialog.querySelector<HTMLButtonElement>('[type=submit]')!;
+  saveButton.onclick = saveNickname;
+  nicknameDialog.querySelector('form')!.onsubmit = saveNickname;
+  nicknameDialog.querySelector('input')!.onkeydown = event => { if (event.key === 'Enter') saveNickname(event); };
   const cancel = nicknameDialog.querySelector<HTMLButtonElement>('#nickname-cancel');
   if (cancel) cancel.onclick = () => nicknameDialog.close();
   if (!nicknameDialog.open) nicknameDialog.showModal();
