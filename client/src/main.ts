@@ -88,7 +88,7 @@ function normalizeCode(raw: string) {
 
 function mountHome() {
   mounted = 'home';
-  const { name, color } = prefs();
+  const { color } = prefs();
   const params = new URLSearchParams(location.search);
   const codeFromUrl = (params.get('room') ?? '').toUpperCase();
 
@@ -103,8 +103,6 @@ function mountHome() {
         <div class="home-account"><button id="idos-login">iDos · Войти / Sign in</button><button id="wallet-home"></button></div>
         <p id="wallet-hint" class="fine"></p>
 
-        <label for="name">${t('yourName')}</label>
-        <input id="name" maxlength="16" placeholder="${t('stranger')}" value="${esc(name)}" autocomplete="off" />
 
         <label>${t('yourColour')}</label>
         <div class="swatches" role="radiogroup">
@@ -135,30 +133,30 @@ function mountHome() {
       app.querySelectorAll('.swatch').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
     };
   });
-  const nameInput = $<HTMLInputElement>('#name');
+  const playerName = () => account?.nickname || prefs().name || t('stranger');
   const codeInput = $<HTMLInputElement>('#code');
   codeInput.oninput = () => (codeInput.value = normalizeCode(codeInput.value));
 
   $('#practice').onclick = () => {
-    savePrefs(nameInput.value, chosen);
-    net.send({ t: 'create', name: nameInput.value, color: chosen, practice: true, lang });
+    savePrefs(playerName(), chosen);
+    net.send({ t: 'create', name: playerName(), color: chosen, practice: true, lang });
   };
   $('#match').onclick = () => {
     if (!canPlayOnline()) return;
-    savePrefs(nameInput.value, chosen);
+    savePrefs(playerName(), chosen);
     $<HTMLButtonElement>('#match').disabled = true;
-    net.send({ t: 'match', name: nameInput.value, color: chosen, lang });
+    net.send({ t: 'match', name: playerName(), color: chosen, lang });
   };
   $('#create').onclick = () => {
     if (!canPlayOnline()) return;
-    savePrefs(nameInput.value, chosen);
-    net.send({ t: 'create', name: nameInput.value, color: chosen, lang });
+    savePrefs(playerName(), chosen);
+    net.send({ t: 'create', name: playerName(), color: chosen, lang });
   };
   const join = () => {
     if (!canPlayOnline()) return;
     if (codeInput.value.length !== 4) return toast(t('enterCode'), 'error');
-    savePrefs(nameInput.value, chosen);
-    net.send({ t: 'join', code: codeInput.value, name: nameInput.value, color: chosen });
+    savePrefs(playerName(), chosen);
+    net.send({ t: 'join', code: codeInput.value, name: playerName(), color: chosen });
   };
   $('#join').onclick = join;
   // Must not return `false` here: an on* handler returning false cancels the keystroke
@@ -168,7 +166,7 @@ function mountHome() {
   bindLangSwitch();
   $('#wallet-home').onclick = () => void connectWallet();
   updateHomeWallet();
-  nameInput.focus();
+  codeInput.focus();
 }
 
 function canPlayOnline() {
@@ -180,6 +178,11 @@ function canPlayOnline() {
 
 function updateHomeWallet() {
   if (mounted !== 'home') return;
+  const idosButton = $<HTMLButtonElement>('#idos-login');
+  idosButton.textContent = account?.platform
+    ? (lang === 'ru' ? '✓ Вы вошли в iDos' : '✓ Signed in to iDos')
+    : (lang === 'ru' ? 'iDos · Войти' : 'iDos · Sign in');
+  idosButton.disabled = Boolean(account?.platform);
   const button = $<HTMLButtonElement>('#wallet-home');
   button.textContent = walletBusy()
     ? (lang === 'ru' ? 'Ожидаем подпись…' : 'Waiting for signature…')
@@ -953,4 +956,4 @@ render();
 net.connect();
 requestAnimationFrame(frame);
 
-document.addEventListener('click', e => { if ((e.target as HTMLElement).closest('#idos-login')) platformLogin(); });
+document.addEventListener('click', e => { if ((e.target as HTMLElement).closest('#idos-login') && !account?.platform) platformLogin(); });
