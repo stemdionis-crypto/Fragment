@@ -22,7 +22,8 @@ import {
 import { Listener } from './listener';
 import { generateTrial, trialSequence, type Trial, type TrialPlan } from './puzzle';
 import { detectLang, translate } from './translate';
-import { linesFor } from './bot-lines';
+import { linesFor, understandClue } from './bot-lines';
+import { decodeClue, HAND_TRIALS } from '../shared/trial-rules';
 import { profile, reward, recordMatch } from './economy';
 
 const SUSPICION_PLAIN = 30;
@@ -164,7 +165,6 @@ export class Room {
   private botTurn = '';
   private botLines: string[] = [];
   private botNextAt = 0;
-  private humanSpoke = false;
   private trialStartedAt = 0;
 
   constructor(public code: string, public practice = false, private botLang: Lang = 'ru') {}
@@ -205,11 +205,21 @@ export class Room {
   private tickCompanions(now: number) {
     if (!this.trial || !this.players.some((p) => p.socket)) return;
     const trial = this.trial;
-    if (this.humanSpoke && now - this.trialStartedAt >= 3000) {
-      for (const p of this.players.filter((p) => p.companion)) {
+    if (now - this.trialStartedAt >= 3000) {
+      for (const p of this.players.filter(p => p.companion)) {
         if (this.ready.has(p.id)) continue;
-        for (const c of trial.controls.filter((c) => c.ownerId === p.id)) this.setControl(p, c.id, c.target);
-        this.setReady(p, true);
+        const controls = trial.controls.filter(c => c.ownerId === p.id);
+        let understood = controls.length > 0;
+        for (const c of controls) {
+          const handTrial = HAND_TRIALS.includes(trial.kind);
+          const source = Object.keys(trial.knows).find(id => trial.knows[id].some(k => k.controlId === c.id));
+          const messages = this.chat.filter(m => m.t >= this.trialStartedAt && m.kind === 'player' && (handTrial ? !this.players.find(x => x.id === m.from)?.companion && /ответ|выбира|answer|choose/i.test(m.text) : m.from === source));
+          const clue = messages.map(m => understandClue(m.text, c.options)).filter(v => v !== null).at(-1);
+          if (clue === undefined) { understood = false; continue; }
+          this.setControl(p, c.id, decodeClue(trial.kind, clue, c.options));
+        }
+        if (understood) this.setReady(p, true);
+        if (this.trial !== trial) return;
       }
     }
     const speaker = this.players.find((p) => p.id === this.turnId);
@@ -315,7 +325,6 @@ export class Room {
 
   // A fresh trial of the current kind: new controls, new answers, new knowledge for everyone
   private setupTrial() {
-    this.humanSpoke = false;
     this.trialStartedAt = Date.now();
     this.botTurn = '';
     const step = this.plan[this.trialIndex];
@@ -403,7 +412,7 @@ export class Room {
     const text = raw.replace(/\s+/g, ' ').trim().slice(0, CHAT_MAX);
     if (!text) return;
     const now = Date.now();
-    if (now - p.lastChat < CHAT_COOLDOWN_MS) return;
+    if (now - p.lastChat < CHAT_COOLDOWN_MS) throw new GameError('Please wait a moment before sending again', 'Подождите немного перед следующим сообщением');
     p.lastChat = now;
 
     if (this.phase !== 'playing') {
@@ -420,7 +429,6 @@ export class Room {
       );
     }
 
-    if (!p.companion) this.humanSpoke = true;
     p.roundMessages = (p.roundMessages ?? 0) + 1;
     const r = this.listener.listen(text, now);
     this.say(p, r.masked, r.heardWords.length > 0);
