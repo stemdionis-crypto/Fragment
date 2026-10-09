@@ -25,7 +25,7 @@ mkdirSync(releases, { recursive: true });
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const zip = join(releases, `Fragment-${stamp}.zip`);
 if (process.platform === 'win32') {
-  run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "$ErrorActionPreference = 'Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory($env:FRAGMENT_DIST_PATH, $env:FRAGMENT_ZIP_PATH)"], {
+  run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "$ErrorActionPreference = 'Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; $archive = [System.IO.Compression.ZipFile]::Open($env:FRAGMENT_ZIP_PATH, 'Create'); try { Get-ChildItem -LiteralPath $env:FRAGMENT_DIST_PATH -Recurse -File | ForEach-Object { $entry = $_.FullName.Substring($env:FRAGMENT_DIST_PATH.Length + 1).Replace([char]92, [char]47); [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $_.FullName, $entry) | Out-Null } } finally { $archive.Dispose() }"], {
     ...process.env, FRAGMENT_DIST_PATH: dist, FRAGMENT_ZIP_PATH: zip,
   });
 } else {
