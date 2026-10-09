@@ -9,3 +9,6 @@ client/dist/
 economy-test-*/
 wallet-test-*/
 *.log
+
+client/dist-idos/
+releases/
