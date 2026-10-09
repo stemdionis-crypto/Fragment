@@ -17,7 +17,8 @@
     "check": "tsx scripts/check-trials.ts && tsx scripts/check-listener.ts && tsx scripts/check-friend-bots.ts --prod",
     "db:migrate": "tsx scripts/migrate.ts",
     "check:idos": "tsx scripts/check-idos.ts",
-    "check:idos:live": "node scripts/check-idos-live.mjs"
+    "check:idos:live": "node scripts/check-idos-live.mjs",
+    "release:idos": "node scripts/build-idos.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
