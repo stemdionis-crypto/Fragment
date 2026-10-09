@@ -89,3 +89,20 @@ export function linesFor(info: PrivateInfo, s: PublicState, LANG: Lang): string[
   return lines;
 }
 
+
+// Resolve a clue only from its visible words, never from the hidden answer.
+export function understandClue(text: string, options: Value[]): Value | null {
+  const normalized = text.toLowerCase().replace(/[«»".,!?;:]/g, ' ').replace(/\s+/g, ' ').trim();
+  const matches = options.filter(value => {
+    const descriptions = typeof value === 'number' ? [DIGITS_RU[value], DIGITS_EN[value]] : [RU[value], EN[value]];
+    return descriptions.some(description => {
+      if (normalized.includes(description.toLowerCase())) return true;
+      if (typeof value === 'number') return false;
+      const ignored = new Set(['котор', 'ночью', 'мален', 'птицы', 'предм', 'пальц', 'which', 'night', 'thing', 'small', 'black', 'water']);
+      const words = description.toLowerCase().match(/[a-zа-яё]{5,}/g) ?? [];
+      const input = normalized.match(/[a-zа-яё]{5,}/g) ?? [];
+      return words.some(word => !ignored.has(word.slice(0,5)) && input.some(token => token.slice(0,5) === word.slice(0,5)));
+    });
+  });
+  return matches.length === 1 ? matches[0] : null;
+}
