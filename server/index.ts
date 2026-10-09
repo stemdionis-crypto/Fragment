@@ -97,7 +97,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           lastChallenge = Date.now();
           const origin = request.headers.origin;
           const expected = process.env.FRAGMENT_PUBLIC_ORIGIN || process.env.RENDER_EXTERNAL_URL || `http://${request.headers.host}`;
-          const allowed = [expected, ...(!PROD ? ['http://localhost:5174', 'http://127.0.0.1:5174'] : [])];
+          const allowed = [expected, 'https://49hlin0j.idos.games', 'https://49hlin0j-preview.idos.games', ...(!PROD ? ['http://localhost:5174', 'http://127.0.0.1:5174'] : [])];
           if (!origin || !allowed.includes(origin)) throw new GameError('Wallet login origin is not allowed', 'Этот адрес сайта не разрешён для входа через кошелёк');
           walletProof = challenge(msg.address, origin, accountId);
           send({ t: 'wallet_challenge', message: walletProof.message, address: walletProof.address });
