@@ -166,6 +166,7 @@ export class Room {
   private botLines: string[] = [];
   private botNextAt = 0;
   private trialStartedAt = 0;
+  private trialStartedMessageId = 0;
 
   constructor(public code: string, public practice = false, private botLang: Lang = 'ru') {}
 
@@ -213,7 +214,7 @@ export class Room {
         for (const c of controls) {
           const handTrial = HAND_TRIALS.includes(trial.kind);
           const source = Object.keys(trial.knows).find(id => trial.knows[id].some(k => k.controlId === c.id));
-          const messages = this.chat.filter(m => m.t >= this.trialStartedAt && m.kind === 'player' && (handTrial ? !this.players.find(x => x.id === m.from)?.companion && /ответ|выбира|answer|choose/i.test(m.text) : m.from === source));
+          const messages = this.chat.filter(m => m.id > this.trialStartedMessageId && m.kind === 'player' && (handTrial ? !this.players.find(x => x.id === m.from)?.companion && /ответ|выбира|answer|choose/i.test(m.text) : m.from === source));
           const clue = messages.map(m => understandClue(m.text, c.options)).filter(v => v !== null).at(-1);
           if (clue === undefined) { understood = false; continue; }
           this.setControl(p, c.id, decodeClue(trial.kind, clue, c.options));
@@ -326,6 +327,7 @@ export class Room {
   // A fresh trial of the current kind: new controls, new answers, new knowledge for everyone
   private setupTrial() {
     this.trialStartedAt = Date.now();
+    this.trialStartedMessageId = this.msgId;
     this.botTurn = '';
     const step = this.plan[this.trialIndex];
     this.trial = generateTrial(
