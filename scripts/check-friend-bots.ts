@@ -44,6 +44,12 @@ try {
     room.chatFrom(host, '…');
     (room as unknown as { tickCompanions(now: number): void }).tickCompanions(Date.now() + 5000);
     assert.equal(room.ready.size,0,'unrelated words must not reveal hidden answers');
+    const askingBot=room.players.find(p=>p.companion)!;
+    room.turnId=askingBot.id;
+    (room as unknown as { tickCompanions(now: number): void }).tickCompanions(Date.now()+5000);
+    const followup=(room as unknown as {botLines:string[]}).botLines;
+    assert(followup.some(line=>line.includes('Мне нужна подсказка')), 'bot asks for a visible clue rather than guessing');
+    assert(followup.every(line=>line.length<=140),'bot messages fit the chat limit');
     giveTestClues(room,host);
     (room as unknown as { tickCompanions(now: number): void }).tickCompanions(Date.now() + 5000);
     const companion = room.players.find((p) => p.companion)!;

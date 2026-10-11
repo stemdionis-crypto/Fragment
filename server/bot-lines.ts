@@ -91,27 +91,124 @@ export function linesFor(info: PrivateInfo, s: PublicState, LANG: Lang): string[
 
 
 // Resolve a clue only from its visible words, never from the hidden answer.
+const ALIASES: Record<Glyph, string[]> = {
+  triangle: ['треугольник','три угла','крыша','triangle','three corners'],
+  circle: ['круг','круглый','колесико','circle','round shape'],
+  square: ['квадрат','четыре угла','окошко','square','four corners'],
+  cross: ['крест','плюсик','cross','plus sign'],
+  star: ['звезда','звездочка','верхушка елки','star','christmas tree topper'],
+  moon: ['луна','месяц','полумесяц','ночное светило','moon','crescent'],
+  eye: ['глаз','глазик','зрение','смотрит','eye','vision'],
+  key: ['ключ','ключик','открывает дверь','открыть дверь','key','opens doors'],
+  candle: ['свеча','свечка','задувают','торт огонь','candle','birthday cake flame'],
+  cup: ['чашка','кружка','пьют чай','пить чай','cup','mug','drink tea'],
+  clock: ['часы','часики','тикает','циферблат','clock','ticking'],
+  knife: ['нож','ножик','режет хлеб','резать хлеб','knife','cuts bread'],
+  book: ['книга','книжка','страницы','читают','book','pages','reading'],
+  coin: ['монета','монетка','денежка','мелочь','coin','pocket change'],
+  feather: ['перо','перышко','оперение','feather','bird plumage'],
+  bottle: ['бутылка','бутылочка','сосуд горлышко','bottle','narrow neck container'],
+  cat: ['кот','котик','кошка','котенок','мурчит','мурлычет','мяукает','cat','kitten','purrs','meows'],
+  owl: ['сова','филин','ухает','owl','hooting'],
+  fish: ['рыба','рыбка','аквариум','жабры','fish','aquarium','gills'],
+  spider: ['паук','паучок','паутина','плетет сеть','spider','web weaving'],
+  crow: ['ворона','ворон','каркает','crow','raven','caws'],
+  snake: ['змея','змейка','шипит ползает','snake','slithers','hisses crawls'],
+  rabbit: ['заяц','зайчик','кролик','ушастый','любит морковку','rabbit','bunny','loves carrots'],
+  moth: ['мотылек','моль','летит лампу','moth','flies lamp'],
+  antenna: ['антенна','ловит станции','ловит сигнал','antenna','receives stations'],
+  cassette: ['кассета','кассетка','две катушки','магнитная лента','cassette','two reels','tape'],
+  bell: ['колокол','колокольчик','звонок','звенит','bell','rings door'],
+  hourglass: ['песочные часы','песок время','песок пересыпается','hourglass','sand timer'],
+  compass: ['компас','ищет север','стрелка север','compass','finds north'],
+  lantern: ['фонарь','фонарик','переносной свет','lantern','flashlight','portable light'],
+  gear: ['шестерня','шестеренка','зубчатое колесико','колесо зубья','gear','cog','wheel teeth','wheel with teeth'],
+  lock: ['замок','замочек','скважина','lock','padlock','keyhole'],
+  cloud: ['облако','туча','тучка','серая пелена','cloud','grey sky veil'],
+  sun: ['солнце','солнышко','греет неба','sun','sunshine'],
+  rain: ['дождь','дождик','капли неба','rain','raindrops'],
+  snowflake: ['снежинка','ледяной узор','snowflake','ice crystal'],
+  lightning: ['молния','гроза вспышка','lightning','storm flash'],
+  wind: ['ветер','ветерок','качает деревья','дует','wind','breeze','trees sway'],
+  umbrella: ['зонт','зонтик','защищает дождя','umbrella','rain protection'],
+  thermometer: ['термометр','градусник','меряет температуру','thermometer','measures temperature'],
+  microphone: ['микрофон','поют него','microphone','mic','sing into'],
+  headphones: ['наушники','музыка уши','headphones','earphones','music ears'],
+  record: ['пластинка','винил','виниловый диск','record','vinyl'],
+  dial: ['регулятор','крутилка','ручка настройки','dial','tuning knob'],
+  speaker: ['динамик','колонка','музыка коробки','speaker','loudspeaker'],
+  battery: ['батарея','батарейка','источник питания','battery','power source'],
+  wire: ['провод','проводок','шнур ток','wire','electric cord'],
+  switch: ['выключатель','переключатель','включает свет','switch','turns light on'],
+};
+const NUMBER_ALIASES = [
+  ['ноль','ничего','пусто','zero','nothing'], ['один','нос человека','one','human nose'],
+  ['два','пара','глаза человека','two','pair','human eyes'], ['три','медведи','медведя','медведи маша','three','goldilocks bears'],
+  ['четыре','лапы собаки','four','dog legs'], ['пять','пальцы руке','five','fingers hand'],
+  ['шесть','ноги жука','six','beetle legs'], ['семь','дни недели','дней неделе','seven','days week'],
+  ['восемь','щупальца осьминога','eight','octopus arms'], ['девять','пальцы без мизинца','nine','fingers without pinky'],
+];
+const normalizeClue = (value: string) => value.toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,' ').trim();
+const STOP_WORDS = new Set('то та тот что чем из во на у в и а как для по с со не это меня тебя него нее the a an what that which of in on with from you your it is to'.split(' '));
+function closeWord(a: string, b: string) {
+  if (a === b) return true;
+  if (a.length < 5 || b.length < 5) return false;
+  // Russian endings and one typo; short, generic words never get fuzzy matching.
+  if (a.slice(0,5) === b.slice(0,5)) return true;
+  if (Math.abs(a.length-b.length)>1) return false;
+  if(a.length===b.length) {
+    const mismatch=[...a].findIndex((char,index)=>char!==b[index]);
+    if(mismatch>=0 && a[mismatch]===b[mismatch+1] && a[mismatch+1]===b[mismatch] && a.slice(mismatch+2)===b.slice(mismatch+2))return true;
+  }
+  let i=0,j=0,edits=0;
+  while(i<a.length && j<b.length) {
+    if(a[i]===b[j]) {i++;j++;continue;}
+    if(++edits>1)return false;
+    if(a.length>=b.length)i++;
+    if(b.length>=a.length)j++;
+  }
+  return edits+(a.length-i)+(b.length-j)<=1;
+}
 export function understandClue(text: string, options: Value[]): Value | null {
-  const normalize = (value: string) => value.toLowerCase().replace(/[«»".,!?;:]/g, ' ').replace(/\s+/g, ' ').trim();
+  const normalize = normalizeClue;
   const normalized = normalize(text);
+  const descriptionsFor = (value: Value) => typeof value === 'number'
+    ? [DIGITS_RU[value],DIGITS_EN[value],...NUMBER_ALIASES[value],String(value)]
+    : [RU[value],EN[value],...ALIASES[value]];
+  const negated = (start: number) => /(?:^| )(?:не|нет|not|no)(?: (?:это|the|a|an))? $/.test(normalized.slice(0,start));
+  const contains = (phrase: string) => {
+    let start=normalized.indexOf(phrase);
+    while(start>=0) {
+      if((start===0 || normalized[start-1]===' ') && (start+phrase.length===normalized.length || normalized[start+phrase.length]===' ') && !negated(start)) return true;
+      start=normalized.indexOf(phrase,start+1);
+    }
+    return false;
+  };
   const exact = options.flatMap(value => {
-    const descriptions = typeof value === 'number' ? [DIGITS_RU[value],DIGITS_EN[value]] : [RU[value],EN[value]];
-    return descriptions.map(normalize).filter(description => normalized.includes(description)).map(description => ({value,description}));
+    return descriptionsFor(value).map(normalize).filter(contains).map(description => ({value,description}));
   });
   if (exact.length) {
-    const specific = exact.filter(match => !exact.some(other => other.description !== match.description && other.description.includes(match.description)));
+    const terms=(phrase:string)=>phrase.split(' ').filter(word=>!STOP_WORDS.has(word));
+    const specific = exact.filter(match => !exact.some(other => {
+      if(other.description===match.description)return false;
+      const a=terms(match.description),b=terms(other.description);
+      return other.description.includes(match.description) || (a.length>0 && b.length>a.length && a.every(word=>b.includes(word)));
+    }));
     const values = [...new Set(specific.map(match => match.value))];
     return values.length === 1 ? values[0] : null;
   }
   const matches = options.filter(value => {
-    const descriptions = typeof value === 'number' ? [DIGITS_RU[value], DIGITS_EN[value]] : [RU[value], EN[value]];
+    const descriptions = descriptionsFor(value);
     return descriptions.some(description => {
-      if (normalized.includes(normalize(description))) return true;
+      const phrase=normalize(description);
+      const input = [...normalized.matchAll(/\S+/g)].filter(match=>!negated(match.index!) && !STOP_WORDS.has(match[0])).map(match=>match[0]);
+      const words=phrase.split(' ').filter(word=>!STOP_WORDS.has(word));
+      // Synonym phrases can be reordered, with inflected forms or a small typo.
+      if(words.length && words.every(word=>input.some(token=>closeWord(word,token))))return true;
       if (typeof value === 'number') return false;
       const ignored = new Set(['котор', 'ночью', 'мален', 'птицы', 'предм', 'пальц', 'which', 'night', 'thing', 'small', 'black', 'water']);
-      const words = description.toLowerCase().match(/[a-zа-яё]{5,}/g) ?? [];
-      const input = normalized.match(/[a-zа-яё]{5,}/g) ?? [];
-      return words.some(word => !ignored.has(word.slice(0,5)) && input.some(token => token.slice(0,5) === word.slice(0,5)));
+      const canonical = normalize(description).match(/[a-zа-я]{5,}/g) ?? [];
+      return canonical.some(word => !ignored.has(word.slice(0,5)) && input.some(token => closeWord(word,token)));
     });
   });
   return matches.length === 1 ? matches[0] : null;

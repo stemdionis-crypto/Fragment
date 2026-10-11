@@ -165,6 +165,7 @@ export class Room {
   private botTurn = '';
   private botLines: string[] = [];
   private botNextAt = 0;
+  private botAskedForClue = new Set<string>();
   private trialStartedAt = 0;
   private trialStartedMessageId = 0;
 
@@ -214,7 +215,7 @@ export class Room {
         for (const c of controls) {
           const handTrial = HAND_TRIALS.includes(trial.kind);
           const source = Object.keys(trial.knows).find(id => trial.knows[id].some(k => k.controlId === c.id));
-          const messages = this.chat.filter(m => m.id > this.trialStartedMessageId && m.kind === 'player' && (handTrial ? !this.players.find(x => x.id === m.from)?.companion && /ответ|выбира|answer|choose/i.test(m.text) : m.from === source));
+          const messages = this.chat.filter(m => m.id > this.trialStartedMessageId && m.kind === 'player' && (handTrial ? !this.players.find(x => x.id === m.from)?.companion && /ответ|выбира|берем|берём|берите|ставь|нужен|нужна|мой выбор|answer|choose|pick|select|go with/i.test(m.text) : m.from === source));
           const clue = messages.map(m => understandClue(m.text, c.options)).filter(v => v !== null).at(-1);
           if (clue === undefined) { understood = false; continue; }
           this.setControl(p, c.id, decodeClue(trial.kind, clue, c.options));
@@ -229,6 +230,16 @@ export class Room {
     if (key !== this.botTurn) {
       this.botTurn = key;
       this.botLines = linesFor({ knows: trial.knows[speaker.id] ?? [], hand: trial.hands?.[speaker.id], mine: {} }, this.publicState(), this.botLang);
+      if(!this.ready.has(speaker.id) && !this.botAskedForClue.has(speaker.id)) {
+        const mine=trial.controls.filter(c=>c.ownerId===speaker.id);
+        if(mine.length) {
+          const labels=mine.map(c=>c.label[this.botLang].toLowerCase()).join(', ').slice(0,32);
+          this.botLines.push(this.botLang==='ru'
+            ? `Мне нужна подсказка (${labels}). Опиши предмет или приведи пример количества.`
+            : `I need a clue (${labels}). Describe the item, or something with that many parts.`);
+          this.botAskedForClue.add(speaker.id);
+        }
+      }
       this.botNextAt = now + 2000;
     }
     if (now < this.botNextAt) return;
@@ -329,6 +340,7 @@ export class Room {
     this.trialStartedAt = Date.now();
     this.trialStartedMessageId = this.msgId;
     this.botTurn = '';
+    this.botAskedForClue.clear();
     const step = this.plan[this.trialIndex];
     this.trial = generateTrial(
       step.kind,
