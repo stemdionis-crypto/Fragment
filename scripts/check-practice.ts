@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import type { WebSocket } from 'ws';
 import type { ServerMessage } from '../shared/protocol';
 import { Room } from '../server/room';
+import { giveTestClues } from './bot-test-clues';
 
 // Run with --prod to verify that built-in companions do not rely on debug bots.
 const messages: ServerMessage[] = [];
@@ -30,6 +31,9 @@ try {
     assert.equal(room.ready.size, 0, 'bots wait for human participation');
     human.lastChat = 0;
     room.chatFrom(human, '…');
+    botTick(Date.now() + 5000);
+    assert.equal(room.ready.size,0,'unrelated words do not solve bot controls');
+    giveTestClues(room,human);
     botTick(Date.now() + 5000);
     assert.equal(room.ready.size, 3, 'all bots set their controls and confirm');
     const control = trial.controls.find((c) => c.ownerId === human.id)!;
@@ -67,6 +71,9 @@ for (const kind of TRIAL_KINDS) {
     player.lastChat = 0;
     testRoom.turnId = player.id;
     testRoom.chatFrom(player, '…');
+    (testRoom as unknown as { tickCompanions(now: number): void }).tickCompanions(Date.now() + 5000);
+    assert.equal(testRoom.ready.size,0,'companions cannot use hidden targets');
+    giveTestClues(testRoom,player);
     (testRoom as unknown as { tickCompanions(now: number): void }).tickCompanions(Date.now() + 5000);
     assert.equal(testRoom.ready.size, 3, `companions confirm ${kind}`);
     testRoom.trial!.controls.filter(c => c.ownerId !== player.id).forEach(c => {

@@ -6,7 +6,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import type { ClientMessage, ServerMessage } from '../shared/protocol';
 import { GameError, Room, type Player } from './room';
 import { translationEngine } from './translate';
-import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet, leaderboard, setNickname } from './economy';
+import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet, leaderboard, setNickname, restoreWalletProfile, platformSyncState, platformSyncComplete, durableAccounts } from './economy';
 import { platformSnapshot, platformCall, type PlatformSession } from './idos';
 import { syncPlatform, platformReceipt } from './economy';
 import { challenge, verifyChallenge } from './wallet-auth';
@@ -35,6 +35,7 @@ const http = createServer((req, res) => {
     return res.writeHead(receipt ? 200 : 404).end(JSON.stringify(receipt ?? { error: 'not_found' }));
   }
   if (req.url === '/health') return res.end('ok');
+  if (req.url === '/api/storage-health') { res.setHeader('Content-Type','application/json'); return res.end(JSON.stringify({durable:durableAccounts})); }
   if (!existsSync(DIST)) return res.writeHead(404).end('Client not built. Run `npm run dev` for development.');
   const path = normalize(decodeURIComponent((req.url ?? '/').split('?')[0])).replace(/^([/\\])+/, '');
   let file = join(DIST, path);
@@ -54,14 +55,39 @@ wss.on('connection', (socket: WebSocket, request) => {
   let walletProof: ReturnType<typeof challenge> | null = null;
   let pendingWallet: { address: string; expiresAt: number } | null = null;
   let lastChallenge = 0;
-  const send = (msg: ServerMessage) => socket.send(JSON.stringify(msg));
+  let syncTimer: ReturnType<typeof setTimeout> | undefined;
+  let syncing = false;
+  let syncBackoff = 1000;
+  const scheduleSync = (delay: number) => {
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => { syncTimer = undefined; void syncStats(); },delay);
+  };
+  const send = (msg: ServerMessage) => { if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(msg)); };
+  const syncStats = async () => {
+    if (syncing || !platformSession || !accountId || socket.readyState !== socket.OPEN) return;
+    const state = platformSyncState(accountId);
+    if (!state?.pending) return;
+    syncing = true;
+    const id = accountId; const session = platformSession; const before = profile(id);
+    try {
+      const result = await platformCall<{Error?:unknown}>(session,'CloudCode','Execute',{FunctionName:'fragmentMatch',FunctionParameter:{receipt:state.receipt}});
+      if (result.Error) throw new Error('Statistics sync pending');
+      await platformSyncComplete(id,before.gamesPlayed,before.totalSignalEarned);
+      syncBackoff = 1000;
+    } catch { syncBackoff = Math.min(60_000,syncBackoff * 2); }
+    finally {
+      syncing = false;
+      if (socket.readyState === socket.OPEN && platformSyncState(accountId)?.pending) scheduleSync(syncBackoff);
+    }
+  };
   const requireWallet = () => {
-    if (!accountId || !profile(accountId).wallet) throw new GameError('Sign in with a verified Solana wallet to play with others', 'Для игры с друзьями и случайного подбора войдите через Solana-кошелёк и подтвердите подпись');
+    if (!accountId || (!profile(accountId).wallet && !platformSession)) throw new GameError('Sign in to play with others', 'Для игры с другими войдите через iDos или подтвердите Solana-кошелёк');
   };
   const onProfile = (id: string) => {
     if (id !== accountId || socket.readyState !== socket.OPEN) return;
     send({ t: 'profile', profile: profile(id) });
     room?.broadcast();
+    if (!syncTimer && !syncing && platformSyncState(id)?.pending) scheduleSync(500);
   };
   profileListeners.add(onProfile);
 
@@ -82,7 +108,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           const snapshot = await platformSnapshot(session);
           if (socket.readyState !== socket.OPEN) return;
           platformSession = session;
-          const account = syncPlatform(msg.userId, snapshot, snapshot.balance, snapshot.ready);
+          const account = await syncPlatform(msg.userId, snapshot, snapshot.balance, snapshot.ready);
           accountId = account.id;
           if (account.nickname && !snapshot.nickname) {
             const saved = await platformCall<{ Error?: unknown }>(session, 'CloudCode', 'Execute', { FunctionName: 'fragmentNickname', FunctionParameter: { nickname: account.nickname } });
@@ -91,17 +117,19 @@ wss.on('connection', (socket: WebSocket, request) => {
           send({ t: 'profile', profile: profile(accountId) });
           if (me) me.accountId = accountId;
           room?.broadcast();
+          void syncStats();
           break;
         }
         case 'set_nickname': {
           if (room) throw new GameError('Leave the room before changing your nickname', 'Выйдите из комнаты перед сменой ника');
+          if (accountId && profile(accountId).platform && !platformSession) throw new GameError('Sign in to iDos again', 'Войдите в iDos снова для изменения профиля');
           if (platformSession) {
             const nickname = typeof msg.nickname === 'string' ? msg.nickname.trim().normalize('NFC') : '';
             if (!nickname || nickname.length > 16 || /[\u0000-\u001f\u007f]/u.test(nickname)) throw new GameError('Use 1–16 characters', 'Введите от 1 до 16 символов');
             const saved = await platformCall<{ Error?: unknown }>(platformSession, 'CloudCode', 'Execute', { FunctionName: 'fragmentNickname', FunctionParameter: { nickname } });
             if (saved.Error) throw new GameError('Nickname could not be saved', 'Не удалось сохранить ник');
           }
-          setNickname(accountId, msg.nickname);
+          await setNickname(accountId, msg.nickname);
           break;
         }
         case 'wallet_challenge': {
@@ -129,7 +157,7 @@ wss.on('connection', (socket: WebSocket, request) => {
             pendingWallet = { address: proof.address, expiresAt: Date.now() + 120_000 };
             send({ t: 'wallet_conflict', profile: profile(existing.id) });
           } else {
-            bindWallet(accountId, proof.address);
+            await bindWallet(accountId, proof.address);
             if (me) me.wallet = proof.address;
             room?.broadcast();
             send({ t: 'wallet_verified', restored: false });
@@ -144,14 +172,17 @@ wss.on('connection', (socket: WebSocket, request) => {
           if (!pending || pending.expiresAt <= Date.now() || room) throw new GameError('Request a new wallet signature from the main menu', 'Запросите новую подпись кошелька из главного меню');
           const target = walletAccount(pending.address);
           if (!target) throw new GameError('Profile not found', 'Профиль не найден');
-          accountId = target.id;
-          send({ t: 'profile', token: target.token, profile: profile(accountId) });
+          if (target.platform && platformSession?.userId !== target.platform.userId) throw new GameError('Sign in to the linked iDos account first', 'Сначала войдите в связанный аккаунт iDos');
+          const restored = await restoreWalletProfile(pending.address);
+          accountId = restored.id;
+          if (!target.platform) platformSession = null;
+          send({ t: 'profile', token: restored.token, profile: profile(accountId) });
           send({ t: 'wallet_verified', restored: true });
           break;
         }
         case 'identify': {
           if (!accountId) {
-            const account = identify(msg.token);
+            const account = await identify(msg.token);
             accountId = account.id;
             send({ t: 'profile', token: account.token, profile: profile(accountId) });
           } else send({ t: 'profile', profile: profile(accountId) });
@@ -168,8 +199,8 @@ wss.on('connection', (socket: WebSocket, request) => {
         case 'equip_item': {
           if (!accountId) throw new GameError('Profile not connected', 'Профиль не подключён');
           if (platformSession) throw new GameError('Use the iDos shop', 'Используйте магазин iDos');
-          if (msg.t === 'buy_item') buyItem(accountId, String(msg.item));
-          else equipItem(accountId, String(msg.item));
+          if (msg.t === 'buy_item') await buyItem(accountId, String(msg.item));
+          else await equipItem(accountId, String(msg.item));
           send({ t: 'profile', profile: profile(accountId) });
           room?.broadcast();
           break;
@@ -178,8 +209,8 @@ wss.on('connection', (socket: WebSocket, request) => {
         case 'equip': {
           if (!accountId) throw new GameError('Profile not connected', 'Профиль не подключён');
           if (platformSession) throw new GameError('Use the iDos shop', 'Используйте магазин iDos');
-          if (msg.t === 'buy') buy(accountId, msg.skin);
-          else equip(accountId, msg.skin);
+          if (msg.t === 'buy') await buy(accountId, msg.skin);
+          else await equip(accountId, msg.skin);
           send({ t: 'profile', profile: profile(accountId) });
           room?.broadcast();
           break;
@@ -276,6 +307,7 @@ wss.on('connection', (socket: WebSocket, request) => {
   });
 
   socket.on('close', () => {
+    if (syncTimer) clearTimeout(syncTimer);
     profileListeners.delete(onProfile);
     if (room && me && me.socket === socket) room.disconnect(me);
   });

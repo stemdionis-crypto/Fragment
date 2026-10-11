@@ -3,6 +3,7 @@ import type { WebSocket } from 'ws';
 import { MAX_PLAYERS } from '../shared/protocol';
 import { TRIAL_KINDS } from '../server/puzzle';
 import { Room } from '../server/room';
+import { giveTestClues } from './bot-test-clues';
 
 const socket = { OPEN: 1, readyState: 1, send: () => {} } as unknown as WebSocket;
 const room = new Room('TEAM', false, 'ru');
@@ -41,6 +42,9 @@ try {
     room.turnId = host.id;
     host.lastChat = 0;
     room.chatFrom(host, '…');
+    (room as unknown as { tickCompanions(now: number): void }).tickCompanions(Date.now() + 5000);
+    assert.equal(room.ready.size,0,'unrelated words must not reveal hidden answers');
+    giveTestClues(room,host);
     (room as unknown as { tickCompanions(now: number): void }).tickCompanions(Date.now() + 5000);
     const companion = room.players.find((p) => p.companion)!;
     assert(room.ready.has(companion.id), `friend-room bot confirms ${kind}`);

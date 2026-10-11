@@ -17,6 +17,7 @@ let pending = false;
 let feedback = '';
 let nicknameDialog: HTMLDialogElement;
 let nicknamePending = false;
+let requestedNickname = '';
 let inventoryButton: HTMLButtonElement;
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as Record<string, string>)[c]);
 const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
@@ -57,7 +58,7 @@ export function placeProfileButton() {
 export function handleProfileMessage(message: ServerMessage) {
   if (message.t === 'profile') {
     profile = message.profile; pending = false; feedback = '';
-    if (nicknamePending && profile.nickname) { nicknamePending = false; nicknameDialog.close(); }
+    if (nicknamePending && profile.nickname === requestedNickname) { nicknamePending = false; nicknameDialog.close(); }
     if ((profile.platform || profile.wallet) && !profile.nickname && !nicknameDialog.open) showNickname();
   }
   if (message.t === 'error' && nicknamePending) {
@@ -108,7 +109,7 @@ function render() {
   ].map(([value,title])=>'<div><b>'+value+'</b><span>'+title+'</span></div>').join('')+'</div></div></div><div class="account-links"><div><span>'+label('Кошелёк Solana','Solana wallet')+'</span><b title="'+esc(profile.wallet ?? '')+'">'+esc(shortWallet)+'</b></div><div><span>'+label('Хранение инвентаря','Inventory storage')+'</span><b>'+ (profile.platform ? 'iDos Games' : label('Игровой сервер','Game server'))+'</b></div></div>' : '<p class="fine">'+label('Подключаем профиль…','Loading profile…')+'</p>';
   const inventory = '<div class="inventory-filters" aria-label="'+label('Категории вещей','Item categories')+'">'+groups.map(([id,ru,en])=>'<button data-category="'+id+'" aria-pressed="'+(category===id)+'">'+label(ru,en)+'</button>').join('')+'</div><div class="wardrobe-layout"><div class="inventory-grid">'+matches.map(i=>'<button class="collection-card '+(selected===i.id?'selected':'')+'" data-select="'+i.id+'" aria-pressed="'+(selected===i.id)+'"><div class="collection-art">'+art(i.id)+'</div><span class="collection-slot">'+esc(i.slot)+'</span><strong>'+esc(i.name)+'</strong><span class="collection-state">'+(i.equipped ? '✓ '+label('Используется','Equipped') : label('В коллекции','Owned'))+'</span></button>').join('')+(matches.length ? '' : '<p class="inventory-empty">'+label('В этой категории пока нет вещей. Новые образы можно найти в магазине.','No items in this category yet. Find new looks in the shop.')+'</p>')+'</div><aside class="inventory-detail">'+(chosen ? '<div class="inventory-big-art">'+art(chosen.id,true)+'</div><p class="eyebrow">'+esc(chosen.slot)+'</p><h3>'+esc(chosen.name)+'</h3><p class="fine">'+(['head','face','characters'].includes(chosen.category) ? label('Образ видят все в комнате. Новая маска заменяет маску скина.','Everyone in the room sees your look. A new mask replaces the skin mask.') : chosen.category==='victory' ? label('Появится на экране победы вашей команды.','Appears on your team victory screen.') : label('Оформление вашей комнаты. Команда увидит его, когда вы создадите лобби.','Your room decor. The team sees it when you create a lobby.'))+'</p><button id="inventory-equip" class="primary" '+(chosen.equipped || pending ? 'disabled' : '')+'>'+ (pending ? label('Сохраняем…','Saving…') : chosen.equipped ? '✓ '+label('Используется','Equipped') : label('Применить','Equip'))+'</button>' : '<p class="fine">'+label('Выберите вещь для просмотра','Select an item to preview')+'</p>')+'<p role="status" class="inventory-feedback">'+esc(feedback)+'</p></aside></div>';
   const names: Record<LadderMetric,string> = {speed:label('Быстрейшие матчи','Fastest matches'),signal:label('Заработано Сигналов','Signals earned'),games:label('Сыграно матчей','Matches played')};
-  const ladder = '<div class="profile-metrics">'+(['speed','signal','games'] as const).map(m=>'<button data-metric="'+m+'" aria-pressed="'+(metric===m)+'">'+names[m]+'</button>').join('')+'</div><p class="fine">'+label('В рейтинге участвуют профили с кошельком. Лучшее время учитывает матчи с людьми.','Rankings include wallet-linked profiles. Best times count matches with people.')+'</p><ol class="ladder-list">'+(entries.map(e=>'<li><span>'+esc(e.name)+' <small>'+esc(e.wallet)+'</small></span><b>'+(metric==='speed'?formatTime(e.value):e.value)+'</b></li>').join('') || '<li>'+label('Пока нет результатов','No results yet')+'</li>')+'</ol>';
+  const ladder = '<div class="profile-metrics">'+(['speed','signal','games'] as const).map(m=>'<button data-metric="'+m+'" aria-pressed="'+(metric===m)+'">'+names[m]+'</button>').join('')+'</div><p class="fine">'+label('В рейтинге участвуют аккаунты iDos и профили с кошельком. Купленные Сигналы не повышают рейтинг; лучшее время — только с людьми.','Rankings include iDos and wallet accounts. Purchased Signals do not count; best times require people.')+'</p><ol class="ladder-list">'+(entries.map(e=>'<li><span>'+esc(e.name)+' <small>'+esc(e.wallet)+'</small></span><b>'+(metric==='speed'?formatTime(e.value):e.value)+'</b></li>').join('') || '<li>'+label('Пока нет результатов','No results yet')+'</li>')+'</ol>';
   dialog.innerHTML = '<div class="settings-heading"><div><p class="eyebrow">FRAGMENT · '+label('ЛИЧНЫЙ ЭФИР','PERSONAL FREQUENCY')+'</p><h2 id="profile-title">'+label('Профиль и коллекция','Profile & collection')+'</h2></div><button id="profile-close" aria-label="'+label('Закрыть','Close')+'">×</button></div><div class="account-banner"><div><h3>'+esc(name)+'</h3>'+((profile?.platform || profile?.wallet) ? '<button id=edit-nickname>'+label('Изменить ник','Change nickname')+'</button>' : '')+'<p>'+esc(identity)+'</p></div><div class="account-balance"><b>'+esc(String(balance))+'</b><span>'+label('Сигналы','Signals')+(!profile?.platform ? ' · '+label('демо','demo') : '')+'</span></div></div><nav class="profile-tabs" aria-label="'+label('Разделы профиля','Profile sections')+'">'+tabs.map(([id,title])=>'<button data-tab="'+id+'" aria-pressed="'+(tab===id)+'">'+title+'</button>').join('')+'</nav>'+(tab==='stats'?stats:tab==='inventory'?inventory:ladder)+'<p class="account-storage fine">'+(profile?.platform ? (profile.platform.ready ? label('Инвентарь и баланс связаны с аккаунтом iDos Games.','Inventory and balance are linked to your iDos Games account.') : label('Инвентарь связан с аккаунтом iDos. Покупки и награды в Сигналах ожидают активации экономики.','Inventory is linked to your iDos account. Signals purchases and rewards await economy activation.')) : label('Демо: прогресс на сервере может сброситься при перезапуске. Кошелёк подключается в главном меню.','Demo: server progress may reset on restart. Connect your wallet in the main menu.'))+'</p>';
   const editNickname = dialog.querySelector<HTMLButtonElement>('#edit-nickname');
   if (editNickname) editNickname.onclick = showNickname;
@@ -138,6 +139,7 @@ function showNickname() {
     const nickname = nicknameDialog.querySelector<HTMLInputElement>('input')!.value.trim().normalize('NFC');
     if (!nickname || nickname.length > 16) { nicknameDialog.querySelector('[role=status]')!.textContent = label('Введите от 1 до 16 символов','Use 1–16 characters'); return; }
     nicknamePending = true;
+    requestedNickname = nickname;
     nicknameDialog.querySelector<HTMLButtonElement>('[type=submit]')!.disabled = true;
     send({ t: 'set_nickname', nickname });
   };
@@ -150,3 +152,4 @@ function showNickname() {
   if (cancel) cancel.onclick = () => nicknameDialog.close();
   if (!nicknameDialog.open) nicknameDialog.showModal();
 }
+

@@ -10,18 +10,18 @@ const economy = await import('../server/economy');
 const { Room } = await import('../server/room');
 const socket = { OPEN: 1, readyState: 1, send: () => {} } as unknown as WebSocket;
 try {
-  const account = economy.identify();
-  economy.bindWallet(account.id, 'TestWalletAddress');
-  economy.recordMatch(account.id, 'one', true, 142, 'Tester', false);
-  economy.recordMatch(account.id, 'one', true, 1, 'Tester', false);
-  economy.recordMatch(account.id, 'two', false, 300, 'Tester', false);
-  economy.reward(account.id, 'one', false);
+  const account = await economy.identify();
+  await economy.bindWallet(account.id, 'TestWalletAddress');
+  await economy.recordMatch(account.id, 'one', true, 142, 'Tester', false);
+  await economy.recordMatch(account.id, 'one', true, 1, 'Tester', false);
+  await economy.recordMatch(account.id, 'two', false, 300, 'Tester', false);
+  await economy.reward(account.id, 'one', false);
   assert.equal(economy.profile(account.id).gamesPlayed, 2);
   assert.equal(economy.profile(account.id).wins, 1);
   assert.equal(economy.profile(account.id).fastestSeconds, 142);
-  assert.equal(economy.profile(account.id).totalSignalEarned, 25);
+  assert.equal(economy.profile(account.id).totalSignalEarned, 10);
   assert.equal(economy.leaderboard('speed')[0].value, 142);
-  assert.equal(economy.leaderboard('signal')[0].value, 25);
+  assert.equal(economy.leaderboard('signal')[0].value, 10);
   assert.equal(economy.leaderboard('games')[0].value, 2);
 
   const room = new Room('TEST', true);

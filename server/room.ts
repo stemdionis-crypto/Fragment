@@ -166,6 +166,7 @@ export class Room {
   private botLines: string[] = [];
   private botNextAt = 0;
   private trialStartedAt = 0;
+  private trialStartedMessageId = 0;
 
   constructor(public code: string, public practice = false, private botLang: Lang = 'ru') {}
 
@@ -213,7 +214,7 @@ export class Room {
         for (const c of controls) {
           const handTrial = HAND_TRIALS.includes(trial.kind);
           const source = Object.keys(trial.knows).find(id => trial.knows[id].some(k => k.controlId === c.id));
-          const messages = this.chat.filter(m => m.t >= this.trialStartedAt && m.kind === 'player' && (handTrial ? !this.players.find(x => x.id === m.from)?.companion && /ответ|выбира|answer|choose/i.test(m.text) : m.from === source));
+          const messages = this.chat.filter(m => m.id > this.trialStartedMessageId && m.kind === 'player' && (handTrial ? !this.players.find(x => x.id === m.from)?.companion && /ответ|выбира|answer|choose/i.test(m.text) : m.from === source));
           const clue = messages.map(m => understandClue(m.text, c.options)).filter(v => v !== null).at(-1);
           if (clue === undefined) { understood = false; continue; }
           this.setControl(p, c.id, decodeClue(trial.kind, clue, c.options));
@@ -326,6 +327,7 @@ export class Room {
   // A fresh trial of the current kind: new controls, new answers, new knowledge for everyone
   private setupTrial() {
     this.trialStartedAt = Date.now();
+    this.trialStartedMessageId = this.msgId;
     this.botTurn = '';
     const step = this.plan[this.trialIndex];
     this.trial = generateTrial(
@@ -532,17 +534,20 @@ export class Room {
     this.broadcast();
   }
 
-  private recordParticipants(won: boolean) {
+  private async recordParticipants(won: boolean) {
     const seen = new Set<string>();
+    const participants = [...this.players];
+    const roundId = this.roundId;
+    const practice = this.practice;
     const seconds = Math.round((Date.now() - this.startedAt) / 1000);
-    const humanAccounts = new Set(this.players.filter(p => !p.bot && p.socket && (p.roundMessages ?? 0) >= 2 && p.accountId).map(p => p.accountId));
-    for (const p of this.players) {
+    const humanAccounts = new Set(participants.filter(p => !p.bot && p.socket && (p.roundMessages ?? 0) >= 2 && p.accountId).map(p => p.accountId));
+    for (const p of participants) {
       if (!p.accountId || p.bot || seen.has(p.accountId)) continue;
       seen.add(p.accountId);
-      try { recordMatch(p.accountId, this.roundId, won, seconds, p.name, this.practice); }
-      catch { this.send(p, { t: 'error', message: 'Match statistics could not be saved', ru: 'Не удалось сохранить статистику матча' }); }
-      if (!this.practice && seconds >= 60 && humanAccounts.size >= 2 && humanAccounts.has(p.accountId)) {
-        try { this.send(p, { t: 'reward', reward: reward(p.accountId, this.roundId, false, won) }); }
+      try { await recordMatch(p.accountId, roundId, won, seconds, p.name, practice || humanAccounts.size < 2); }
+      catch { this.send(p, { t: 'error', message: 'Match statistics could not be saved', ru: 'Не удалось сохранить статистику матча' }); continue; }
+      if (!practice && seconds >= 60 && humanAccounts.size >= 2 && humanAccounts.has(p.accountId)) {
+        try { this.send(p, { t: 'reward', reward: await reward(p.accountId, roundId, false, won) }); }
         catch { this.send(p, { t: 'error', message: 'Reward could not be saved', ru: 'Не удалось сохранить награду' }); }
       }
     }
