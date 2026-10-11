@@ -3,16 +3,14 @@
     "OfferID": "fragment_signal_pack_1000",
     "Identity": {
       "DisplayName": "1000 Signals",
-      "Description": "250000 FRAG → 1000 Signals"
+      "Description": "250000 FRAG → 1000 Signals",
+      "SortOrder": 1000
     },
     "Pricing": {
       "Options": {
         "frag": {
           "OptionID": "frag",
           "Name": "FRAG",
-          "AllowedPlatforms": [
-            "Web"
-          ],
           "Cost": {
             "Standard": {
               "Entries": [
@@ -23,7 +21,10 @@
                 }
               ]
             }
-          }
+          },
+          "AllowedPlatforms": [
+            "Web"
+          ]
         }
       }
     },
@@ -47,6 +48,204 @@
       }
     }
   },
+  "Offers": {
+    "fragment_signal_pack_1000": {
+      "OfferID": "fragment_signal_pack_1000",
+      "Identity": {
+        "DisplayName": "1000 Signals",
+        "Description": "250000 FRAG → 1000 Signals",
+        "SortOrder": 1000
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 250000
+                  }
+                ]
+              }
+            },
+            "AllowedPlatforms": [
+              "Web"
+            ]
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "VirtualCurrency",
+                "CurrencyID": "SI",
+                "Amount": 1000
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Schedule": {
+          "Mode": "AlwaysOn",
+          "IsActive": true
+        }
+      }
+    },
+    "fragment_signal_pack_500": {
+      "OfferID": "fragment_signal_pack_500",
+      "Identity": {
+        "DisplayName": "500 Signals",
+        "Description": "125000 FRAG → 500 Signals",
+        "SortOrder": 500
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 125000
+                  }
+                ]
+              }
+            },
+            "AllowedPlatforms": [
+              "Web"
+            ]
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "VirtualCurrency",
+                "CurrencyID": "SI",
+                "Amount": 500
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Schedule": {
+          "Mode": "AlwaysOn",
+          "IsActive": true
+        }
+      }
+    },
+    "fragment_signal_pack_2000": {
+      "OfferID": "fragment_signal_pack_2000",
+      "Identity": {
+        "DisplayName": "2000 Signals",
+        "Description": "500000 FRAG → 2000 Signals",
+        "SortOrder": 2000
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 500000
+                  }
+                ]
+              }
+            },
+            "AllowedPlatforms": [
+              "Web"
+            ]
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "VirtualCurrency",
+                "CurrencyID": "SI",
+                "Amount": 2000
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Schedule": {
+          "Mode": "AlwaysOn",
+          "IsActive": true
+        }
+      }
+    },
+    "fragment_signal_pack_4000": {
+      "OfferID": "fragment_signal_pack_4000",
+      "Identity": {
+        "DisplayName": "4000 Signals",
+        "Description": "1000000 FRAG → 4000 Signals",
+        "SortOrder": 4000
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 1000000
+                  }
+                ]
+              }
+            },
+            "AllowedPlatforms": [
+              "Web"
+            ]
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "VirtualCurrency",
+                "CurrencyID": "SI",
+                "Amount": 4000
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Schedule": {
+          "Mode": "AlwaysOn",
+          "IsActive": true
+        }
+      }
+    }
+  },
   "Section": {
     "SectionID": "topups",
     "Identity": {
@@ -55,9 +254,42 @@
     "Slots": {
       "fragment_signal_pack_1000": {
         "SlotID": "fragment_signal_pack_1000",
+        "Identity": {
+          "SortOrder": 1000
+        },
         "Rotation": {
           "Mode": "Fixed",
           "OfferID": "fragment_signal_pack_1000"
+        }
+      },
+      "fragment_signal_pack_500": {
+        "SlotID": "fragment_signal_pack_500",
+        "Identity": {
+          "SortOrder": 500
+        },
+        "Rotation": {
+          "Mode": "Fixed",
+          "OfferID": "fragment_signal_pack_500"
+        }
+      },
+      "fragment_signal_pack_2000": {
+        "SlotID": "fragment_signal_pack_2000",
+        "Identity": {
+          "SortOrder": 2000
+        },
+        "Rotation": {
+          "Mode": "Fixed",
+          "OfferID": "fragment_signal_pack_2000"
+        }
+      },
+      "fragment_signal_pack_4000": {
+        "SlotID": "fragment_signal_pack_4000",
+        "Identity": {
+          "SortOrder": 4000
+        },
+        "Rotation": {
+          "Mode": "Fixed",
+          "OfferID": "fragment_signal_pack_4000"
         }
       }
     }
