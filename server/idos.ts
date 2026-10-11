@@ -10,7 +10,7 @@ export async function platformCall<T>(session: PlatformSession, module: string, 
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.ticket, 'X-IG-Platform': 'Web' },
     body: JSON.stringify({ ...body, UserID: session.userId, ClientSessionTicket: session.ticket }),
   });
-  if (!response.ok) throw new Error('iDos request failed; sign in again / Войдите в iDos снова');
+  if (!response.ok) throw new Error(`iDos ${module}/${action}: HTTP ${response.status}. Sign in again / Войдите в iDos снова`);
   const result = await response.json() as { Success: boolean; Data: T };
   if (!result.Success || result.Data == null) throw new Error('iDos rejected the request / iDos отклонил запрос');
   return result.Data;
