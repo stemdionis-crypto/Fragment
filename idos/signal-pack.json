@@ -1,0 +1,65 @@
+{
+  "Offer": {
+    "OfferID": "fragment_signal_pack_1000",
+    "Identity": {
+      "DisplayName": "1000 Signals",
+      "Description": "250000 FRAG → 1000 Signals"
+    },
+    "Pricing": {
+      "Options": {
+        "frag": {
+          "OptionID": "frag",
+          "Name": "FRAG",
+          "AllowedPlatforms": [
+            "Web"
+          ],
+          "Cost": {
+            "Standard": {
+              "Entries": [
+                {
+                  "Type": "CryptoCurrency",
+                  "CurrencyID": "Main",
+                  "Amount": 250000
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "Reward": {
+      "Grant": {
+        "Standard": {
+          "Entries": [
+            {
+              "Type": "VirtualCurrency",
+              "CurrencyID": "SI",
+              "Amount": 1000
+            }
+          ]
+        }
+      }
+    },
+    "Availability": {
+      "Schedule": {
+        "Mode": "AlwaysOn",
+        "IsActive": true
+      }
+    }
+  },
+  "Section": {
+    "SectionID": "topups",
+    "Identity": {
+      "DisplayName": "Signals"
+    },
+    "Slots": {
+      "fragment_signal_pack_1000": {
+        "SlotID": "fragment_signal_pack_1000",
+        "Rotation": {
+          "Mode": "Fixed",
+          "OfferID": "fragment_signal_pack_1000"
+        }
+      }
+    }
+  }
+}

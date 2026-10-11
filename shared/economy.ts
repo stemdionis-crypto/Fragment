@@ -1,5 +1,5 @@
-// Re-enable only after publisher approval and reviewed FRAG package prices.
-export const SIGNAL_TOPUPS_ENABLED = false;
+// Publisher-approved package: 250,000 FRAG -> 1,000 Signals; prices resolved by iDos.
+export const SIGNAL_TOPUPS_ENABLED = true;
 export const SKINS = [
   { id: 'classic', name: { ru: 'Незнакомец', en: 'Stranger' }, price: 0, cloth: '#45464a', accent: '#aaa69d' },
   { id: 'operator', name: { ru: 'Гоблин в маске', en: 'Masked Goblin' }, price: 1000, cloth: '#394e4b', accent: '#a8b9a5' },

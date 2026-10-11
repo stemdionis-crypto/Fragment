@@ -68,7 +68,8 @@ function render() {
         button.onclick = async () => {
           if (pending) return;
           pending = true; feedback.querySelectorAll('button').forEach(b => b.disabled = true);
-          try { await buySignalPackage(pack.offerID, pack.frag, pack.signals, send); }
+          button.textContent = lang === 'ru' ? 'Ожидаем оплату iDos…' : 'Waiting for iDos payment…';
+          try { await buySignalPackage(pack.offerID, pack.frag, pack.signals, send); pending = false; render(); dialog.querySelector('#shop-feedback')!.textContent = lang === 'ru' ? 'Покупка подтверждена iDos. Обновляем баланс…' : 'Purchase confirmed by iDos. Refreshing balance…'; }
           catch (error) { pending = false; render(); dialog.querySelector('#shop-feedback')!.textContent = error instanceof Error ? error.message : 'iDos unavailable'; }
         };
         feedback.append(button);
