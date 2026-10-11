@@ -1304,6 +1304,42 @@ h2 {
 .shop-tabs { margin: 14px 0; }
 .shop-tabs button { flex: 1; padding: 10px 12px; }
 .shop-tabs button[aria-pressed="true"] { background: #c7c0ae; color: #151718; border-color: #c7c0ae; }
+.signal-topup-link { display: inline-flex; align-items: center; gap: 10px; border-color: #687a75; background: #25312e; padding: 10px 14px; }
+.signal-topup-link img, .signals-token img, .signal-pack-price img { border-radius: 50%; object-fit: contain; }
+.signal-topup-link > span:last-child { margin-left: 12px; color: #b5d2c8; }
+.signals-shop { border: 1px solid #3b4844; border-radius: 16px; padding: 22px; background: radial-gradient(ellipse at 100% 0%, #31423a80, transparent 65%), #141a18; }
+.signals-intro { display: flex; justify-content: space-between; align-items: center; gap: 22px; margin-bottom: 24px; }
+.signals-intro h3 { margin: 8px 0; color: #e8e4d8; font-size: 24px; line-height: 1.2; }
+.signals-intro p { margin: 0; color: #adb8b0; font-size: 13px; line-height: 1.6; max-width: 440px; }
+.signals-intro .eyebrow { color: #9dbbae; font-size: 10px; letter-spacing: .12em; }
+.signals-token { flex: 0 0 auto; display: flex; align-items: center; gap: 12px; font-size: 12px; color: #c1d0c6; }
+.signals-token span span { padding: 0 5px; color: #849d92; }
+.signal-packs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.signal-pack { position: relative; min-width: 0; padding: 18px 12px 12px; border: 1px solid #3c4943; border-radius: 12px; background: linear-gradient(160deg,#26322c,#181e1b); text-align: center; }
+.signal-pack .eyebrow { margin: 0; color: #9aaa9f; font-size: 10px; letter-spacing: .15em; }
+.signal-pack-art { display: grid; place-items: center; height: 84px; margin: 10px 0 4px; background: radial-gradient(circle,#5c806331,transparent 65%); }
+.signal-pack-art svg { width: 68px; height: 68px; stroke: #bfceab; stroke-width: 2; }
+.signal-pack-art svg path { stroke-width: 3; stroke-linecap: round; }
+.signal-pack:nth-child(2) .signal-pack-art svg { stroke: #accfc2; }
+.signal-pack:nth-child(3) .signal-pack-art svg { stroke: #b4c4d3; }
+.signal-pack:nth-child(4) .signal-pack-art svg { stroke: #d7c296; }
+.signal-pack h4 { margin: 0; font-size: 32px; color: #eee8d7; font-variant-numeric: tabular-nums; font-weight: 500; letter-spacing: -.04em; }
+.signal-pack-unit { margin: 4px 0 18px; color: #a8b7ae; font-size: 12px; }
+.signal-pack-price { display: flex; justify-content: center; align-items: center; gap: 7px; padding-top: 14px; border-top: 1px solid #39423c; color: #d9decc; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.signal-pack-price b { font-size: 10px; font-weight: 500; color: #9baa9e; }
+.signal-pack button { display: flex; align-items: center; justify-content: space-between; gap: 5px; width: 100%; padding: 10px 12px; margin-top: 14px; font-size: 13px; background: #35473e; border-color: #718a79; color: #e4eadb; }
+.signal-pack button:hover:not(:disabled) { background: #425c4e; border-color: #a4b8a5; }
+.signal-pack button:disabled { opacity: .65; }
+.signals-feedback { color: #d9caab; font-size: 13px; line-height: 1.5; margin: 14px 0 0; }
+.signals-feedback:empty { display: none; }
+.signals-retry { display: block; margin: 12px auto 0; background: transparent; border: 0; color: #a2b5aa; font-size: 11px; text-decoration: underline; }
+.signals-retry[hidden] { display: none; }
+.signals-payment-note { display: flex; gap: 12px; align-items: flex-start; margin-top: 20px; padding: 14px; border: 1px solid #36453e; border-radius: 9px; background: #1e2a24; }
+.signals-payment-note > span { font-size: 20px; color: #a4c5b5; }
+.signals-payment-note p { margin: 0; color: #b7c4b9; font-size: 12px; line-height: 1.6; }
+.signals-shop > .fine { margin: 12px 0 0; color: #899c8e; font-size: 11px; line-height: 1.5; }
+@media (max-width: 800px) { .signals-intro { align-items: flex-start; } .signals-token { flex-direction: column; gap: 6px; } .signal-packs { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 450px) { .signals-shop { padding: 14px; } .signals-intro { display: block; margin-bottom: 18px; } .signals-intro h3 { font-size: 21px; } .signals-token { flex-direction: row; margin-top: 14px; } .signals-token img { width: 32px; height: 32px; } .signal-packs { gap: 8px; } .signal-pack { padding: 14px 8px 8px; } .signal-pack h4 { font-size: 28px; } .signal-pack-price { font-size: 12px; gap: 4px; } .signal-pack-price img { width: 20px; height: 20px; } .shop-tabs button { flex-basis: 25%; } }
 .shop-preview { display: grid; grid-template-columns: 1.2fr 1fr; align-items: center; gap: 22px; background: linear-gradient(130deg,#2a302d,#1b1e23); padding: 20px; border: 1px solid var(--line); border-radius: 14px; margin-bottom: 18px; }
 .preview-art { height: 190px; overflow: hidden; border-radius: 10px; }
 .preview-art > svg { width: 100%; height: 100%; display: block; }

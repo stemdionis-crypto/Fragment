@@ -18,7 +18,10 @@ assert.equal(config.Section.Slots[offer.OfferID].Rotation.OfferID, offer.OfferID
 assert.equal(offer.Availability.Limits?.TotalCap, undefined, 'repeat purchases allowed');
 const view = { OfferID: offer.OfferID, PriceOptions: [{ ...offer.Pricing.Options.frag }], Rewards: offer.Reward.Grant };
 const front = { Stores: [{ StoreID: 'fragment', Sections: [{ SectionID: 'topups', Slots: [{ SlotID: offer.OfferID, Offer: view }] }] }] };
-idos.store.getStorefront = async () => ({ ok: true, data: front }) as any;
+let reads = 0;
+idos.store.getStorefront = async () => (++reads === 1 ? { ok: false, reason: 'throttled' } : { ok: true, data: front }) as any;
+assert.equal((await signalPackages())[0].frag, 250000);
+assert.equal(reads, 2, 'a throttled storefront read is retried once');
 let charges = 0;
 let release!: () => void;
 idos.store.purchase = async (id, count, options) => {

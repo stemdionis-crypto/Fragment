@@ -9,7 +9,13 @@ let busy = false;
 export const platformPrices = new Map<string, number>();
 export async function signalPackages() {
   if (!SIGNAL_TOPUPS_ENABLED) return [];
-  const r = await idos.store.getStorefront({ forceRefresh: true });
+  let r = await idos.store.getStorefront({ forceRefresh: true });
+  // Opening the shop also refreshes cosmetics; the SDK throttles adjacent reads.
+  // Retry only this read, never the purchase itself.
+  if (!r.ok && r.reason === 'throttled') {
+    await new Promise(resolve => setTimeout(resolve, 650));
+    r = await idos.store.getStorefront({ forceRefresh: true });
+  }
   if (!r.ok) throw new Error('iDos shop unavailable / Магазин iDos недоступен');
   const packages = [];
   for (const store of r.data.Stores ?? []) for (const section of store.Sections ?? []) for (const slot of section.Slots ?? []) {
@@ -23,7 +29,7 @@ export async function signalPackages() {
     if (!Number.isFinite(frag) || frag <= 0 || !Number.isSafeInteger(signals) || signals <= 0) continue;
     packages.push({ offerID: offer.OfferID, frag, signals, slot: { storeID: store.StoreID, sectionID: section.SectionID, slotID: slot.SlotID } });
   }
-  return packages;
+  return packages.sort((a, b) => a.signals - b.signals);
 }
 export async function buySignalPackage(offerID: string, expectedFrag: number, expectedSignals: number, send: (m: ClientMessage) => void) {
   if (!SIGNAL_TOPUPS_ENABLED) throw new Error('FRAG top-ups are disabled / Пополнение за FRAG отключено');
