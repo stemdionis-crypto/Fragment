@@ -244,6 +244,55 @@
           "IsActive": true
         }
       }
+    },
+    "fragment_signal_pack_1": {
+      "OfferID": "fragment_signal_pack_1",
+      "Identity": {
+        "DisplayName": "1 Signal",
+        "Description": "250 FRAG → 1 Signal",
+        "SortOrder": 1
+      },
+      "Pricing": {
+        "Options": {
+          "frag": {
+            "OptionID": "frag",
+            "Name": "FRAG",
+            "Cost": {
+              "Standard": {
+                "Entries": [
+                  {
+                    "Type": "CryptoCurrency",
+                    "CurrencyID": "Main",
+                    "Amount": 250
+                  }
+                ]
+              }
+            },
+            "AllowedPlatforms": [
+              "Web"
+            ]
+          }
+        }
+      },
+      "Reward": {
+        "Grant": {
+          "Standard": {
+            "Entries": [
+              {
+                "Type": "VirtualCurrency",
+                "CurrencyID": "SI",
+                "Amount": 1
+              }
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "Schedule": {
+          "Mode": "AlwaysOn",
+          "IsActive": true
+        }
+      }
     }
   },
   "Section": {
@@ -290,6 +339,16 @@
         "Rotation": {
           "Mode": "Fixed",
           "OfferID": "fragment_signal_pack_4000"
+        }
+      },
+      "fragment_signal_pack_1": {
+        "SlotID": "fragment_signal_pack_1",
+        "Identity": {
+          "SortOrder": 1
+        },
+        "Rotation": {
+          "Mode": "Fixed",
+          "OfferID": "fragment_signal_pack_1"
         }
       }
     }

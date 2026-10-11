@@ -4,8 +4,8 @@ Object.assign(globalThis, { localStorage: { getItem: () => null } });
 const { idos, signalPackages, buySignalPackage } = await import('../client/src/idos');
 const config = JSON.parse(readFileSync('idos/signal-pack.json', 'utf8'));
 const offer = config.Offer;
-assert.equal(Object.keys(config.Offers).length, 4);
-for (const [frag, signals] of [[125000,500],[250000,1000],[500000,2000],[1000000,4000]]) {
+assert.equal(Object.keys(config.Offers).length, 5);
+for (const [frag, signals] of [[250,1],[125000,500],[250000,1000],[500000,2000],[1000000,4000]]) {
   const pack = config.Offers['fragment_signal_pack_'+signals];
   assert.deepEqual(pack.Pricing.Options.frag.Cost.Standard.Entries, [{ Type: 'CryptoCurrency', CurrencyID: 'Main', Amount: frag }]);
   assert.deepEqual(pack.Reward.Grant.Standard.Entries, [{ Type: 'VirtualCurrency', CurrencyID: 'SI', Amount: signals }]);
