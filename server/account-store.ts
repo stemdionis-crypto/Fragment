@@ -7,7 +7,7 @@ import { dirname } from 'node:path';
 export async function openAccountStore(file: string) {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    if ((process.env.RENDER || process.argv.includes('--prod')) && process.env.FRAGMENT_ALLOW_EPHEMERAL_STORAGE !== 'true') {
+    if ((process.env.RENDER || process.env.FRAGMENT_REQUIRE_DATABASE === 'true') && process.env.FRAGMENT_ALLOW_EPHEMERAL_STORAGE !== 'true') {
       throw new Error('DATABASE_URL is required on Render; refusing temporary account storage');
     }
     return {
