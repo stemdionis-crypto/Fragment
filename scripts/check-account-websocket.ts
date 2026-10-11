@@ -38,6 +38,8 @@ try {
   await a.request({t:'wallet_proof',signature:sign(null,Buffer.from(proof.message),keys.privateKey).toString('hex')},'wallet_verified');
   const named=await a.request({t:'set_nickname',nickname:'Socket player'},'profile');
   assert.equal(named.profile.nickname,'Socket player');
+  const unchanged=await a.request({t:'set_nickname',nickname:'Socket player'},'profile');
+  assert.equal(unchanged.profile.nickname,'Socket player');
   const restored=await connect();
   const same=await restored.request({t:'identify',token:initial.token},'profile');
   assert.equal(same.profile.nickname,'Socket player'); assert.equal(same.profile.wallet,address);

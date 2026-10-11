@@ -130,6 +130,8 @@ wss.on('connection', (socket: WebSocket, request) => {
             if (saved.Error) throw new GameError('Nickname could not be saved', 'Не удалось сохранить ник');
           }
           await setNickname(accountId, msg.nickname);
+          // A no-op save still needs acknowledgement to release the nickname form.
+          send({ t: 'profile', profile: profile(accountId) });
           break;
         }
         case 'wallet_challenge': {
