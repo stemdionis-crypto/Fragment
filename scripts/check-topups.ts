@@ -42,5 +42,5 @@ await assert.rejects(buySignalPackage(offer.OfferID, 250000, 1000, () => {}), /P
 assert.equal(charges, 1, 'changed price must not charge');
 view.PriceOptions[0].Cost.Standard.Entries[0].Amount = 250000;
 idos.store.purchase = async () => ({ ok: false, reason: 'server', error: 'insufficient' }) as any;
-await assert.rejects(buySignalPackage(offer.OfferID, 250000, 1000, () => {}), /not confirmed/);
+await assert.rejects(buySignalPackage(offer.OfferID, 250000, 1000, () => {}), /iDos: insufficient/);
 console.log('Top-ups: approved price, correct resource types, repeat purchase, double-submit and price-change guards passed.');

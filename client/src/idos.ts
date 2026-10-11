@@ -7,8 +7,13 @@ export const idos = createIDosGamesClient({ titleID: TITLE });
 let enabled = false;
 let busy = false;
 export const platformPrices = new Map<string, number>();
+export let platformFragBalance: string | null = null;
 export async function signalPackages() {
   if (!SIGNAL_TOPUPS_ENABLED) return [];
+  if (idos.auth.context) {
+    const state = await idos.user.getUserState(['InventoryV2']);
+    platformFragBalance = state.ok ? idos.data.user.getCryptoCurrencyAmount('Main') : null;
+  }
   let r = await idos.store.getStorefront({ forceRefresh: true });
   // Opening the shop also refreshes cosmetics; the SDK throttles adjacent reads.
   // Retry only this read, never the purchase itself.
@@ -39,11 +44,18 @@ export async function buySignalPackage(offerID: string, expectedFrag: number, ex
     const pack = (await signalPackages()).find(p => p.offerID === offerID);
     if (!pack) throw new Error('Package unavailable / Пакет недоступен');
     if (pack.frag !== expectedFrag || pack.signals !== expectedSignals) throw new Error('Package changed; reopen top-ups / Пакет изменился; откройте пополнение снова');
+    if (platformFragBalance !== null && Number(platformFragBalance) < pack.frag && !idos.checkout.topUpAvailable) {
+      throw new Error(`На игровом балансе iDos ${platformFragBalance} FRAG. Откройте игру на idosgames.com и пополните приложение через кошелёк. / Open the game on idosgames.com and deposit FRAG into the app.`);
+    }
     const r = await idos.store.purchase(pack.offerID, 1, { selectedOptionID: 'frag', slot: pack.slot });
-    if (!r.ok) throw new Error('Purchase not confirmed; refresh your profile / Покупка не подтверждена; обновите профиль');
+    if (!r.ok) {
+      const detail = r.error || r.reason;
+      throw new Error(`iDos: ${detail}. Покупка не подтверждена; проверьте баланс перед повтором. / Purchase not confirmed; check your balance before retrying.`);
+    }
   } finally {
     busy = false;
-    const identity = await platformIdentity(); if (identity) send(identity);
+    // A failed refresh must not replace the actual purchase error.
+    try { const identity = await platformIdentity(); if (identity) send(identity); } catch { /* keep the purchase result */ }
   }
 }
 export async function refreshPlatformShop() {
