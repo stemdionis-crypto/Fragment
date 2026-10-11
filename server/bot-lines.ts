@@ -92,11 +92,21 @@ export function linesFor(info: PrivateInfo, s: PublicState, LANG: Lang): string[
 
 // Resolve a clue only from its visible words, never from the hidden answer.
 export function understandClue(text: string, options: Value[]): Value | null {
-  const normalized = text.toLowerCase().replace(/[«»".,!?;:]/g, ' ').replace(/\s+/g, ' ').trim();
+  const normalize = (value: string) => value.toLowerCase().replace(/[«»".,!?;:]/g, ' ').replace(/\s+/g, ' ').trim();
+  const normalized = normalize(text);
+  const exact = options.flatMap(value => {
+    const descriptions = typeof value === 'number' ? [DIGITS_RU[value],DIGITS_EN[value]] : [RU[value],EN[value]];
+    return descriptions.map(normalize).filter(description => normalized.includes(description)).map(description => ({value,description}));
+  });
+  if (exact.length) {
+    const specific = exact.filter(match => !exact.some(other => other.description !== match.description && other.description.includes(match.description)));
+    const values = [...new Set(specific.map(match => match.value))];
+    return values.length === 1 ? values[0] : null;
+  }
   const matches = options.filter(value => {
     const descriptions = typeof value === 'number' ? [DIGITS_RU[value], DIGITS_EN[value]] : [RU[value], EN[value]];
     return descriptions.some(description => {
-      if (normalized.includes(description.toLowerCase())) return true;
+      if (normalized.includes(normalize(description))) return true;
       if (typeof value === 'number') return false;
       const ignored = new Set(['котор', 'ночью', 'мален', 'птицы', 'предм', 'пальц', 'which', 'night', 'thing', 'small', 'black', 'water']);
       const words = description.toLowerCase().match(/[a-zа-яё]{5,}/g) ?? [];

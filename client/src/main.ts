@@ -170,8 +170,8 @@ function mountHome() {
 }
 
 function canPlayOnline() {
-  if (wallet) return true;
-  toast(lang === 'ru' ? 'Для игры с друзьями и случайного подбора войдите через Solana-кошелёк. После подписи выберите режим снова.' : 'Sign in with a Solana wallet to play with friends or find a match. After signing, select the mode again.');
+  if (wallet || account?.platform) return true;
+  toast(lang === 'ru' ? 'Для игры с людьми войдите через iDos или Solana-кошелёк.' : 'Sign in with iDos or a Solana wallet to play with people.');
   void connectWallet();
   return false;
 }
@@ -188,14 +188,14 @@ function updateHomeWallet() {
     ? (lang === 'ru' ? 'Ожидаем подпись…' : 'Waiting for signature…')
     : wallet ? `◎ ${shortAddr(wallet)}` : (lang === 'ru' ? 'Войти через кошелёк' : 'Sign in with wallet');
   button.disabled = walletBusy() || !!wallet;
-  $('#wallet-hint').textContent = import.meta.env.VITE_DEMO_MODE === 'true'
-    ? (lang === 'ru' ? 'С ботами — без кошелька. С друзьями и случайными игроками — через Solana-кошелёк. В демо привязка и прогресс временные.' : 'Bots need no wallet. Friends and matchmaking require a Solana wallet. Demo wallet links and progress are temporary.')
+  $('#wallet-hint').textContent = account?.platform
+    ? (lang === 'ru' ? 'Вы вошли через iDos. Можно играть с людьми; покупки сохраняются в профиле iDos.' : 'Signed in with iDos. Play with people; purchases stay in your iDos profile.')
     : wallet
     ? (lang === 'ru' ? 'Профиль привязан к кошельку. Прогресс сохранён.' : 'Profile linked to your wallet. Progress saved.')
-    : (lang === 'ru' ? 'С ботами можно играть гостем. Для игры с друзьями и случайного подбора нужен Solana-кошелёк.' : 'Play with bots as a guest. Friends and matchmaking require a Solana wallet.');
-  $<HTMLButtonElement>('#match').textContent = t('findMatch') + (wallet ? '' : ' · ◎');
-  $<HTMLButtonElement>('#create').textContent = t('createRoom') + (wallet ? '' : ' · ◎');
-  $<HTMLButtonElement>('#join').title = wallet ? '' : (lang === 'ru' ? 'Нужен Solana-кошелёк' : 'Solana wallet required');
+    : (lang === 'ru' ? 'С ботами можно играть гостем. Для игры с людьми войдите через iDos или кошелёк.' : 'Play with bots as a guest. Sign in with iDos or a wallet to play with people.');
+  $<HTMLButtonElement>('#match').textContent = t('findMatch') + (wallet || account?.platform ? '' : ' · ◎');
+  $<HTMLButtonElement>('#create').textContent = t('createRoom') + (wallet || account?.platform ? '' : ' · ◎');
+  $<HTMLButtonElement>('#join').title = wallet || account?.platform ? '' : (lang === 'ru' ? 'Войдите через iDos или кошелёк' : 'Sign in with iDos or a wallet');
 }
 
 // ---------- lobby ----------

@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, mkdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+
+const directory = mkdtempSync(join(tmpdir(),'fragment-accounts-'));
+delete process.env.DATABASE_URL;
+delete process.env.RENDER;
+process.env.FRAGMENT_DATA_DIR = directory;
+const e = await import('../server/economy');
+try {
+  const account = await e.identify();
+  await e.bindWallet(account.id,'wallet-a');
+  await e.setNickname(account.id,'Saved nickname');
+  await Promise.all([e.reward(account.id,'round-a',false),e.reward(account.id,'round-a',false)]);
+  assert.equal(e.profile(account.id).balance,10,'concurrent reward must credit once');
+  await Promise.all([e.recordMatch(account.id,'round-a',true,90,'Old name',false),e.recordMatch(account.id,'round-a',true,10,'Old name',false)]);
+  assert.equal(e.profile(account.id).gamesPlayed,1);
+  assert.equal(e.profile(account.id).fastestSeconds,90);
+  const guest = await e.identify();
+  await assert.rejects(e.bindWallet(guest.id,'wallet-a'),/already linked/);
+  await assert.rejects(e.buy(account.id,'operator'),/Signals/);
+  const saved = readFileSync(join(directory,'profiles.json'),'utf8');
+  assert(!saved.includes(account.token),'bearer token must not be persisted');
+  mkdirSync(join(directory,'profiles.json.tmp'));
+  await assert.rejects(e.setNickname(account.id,'Unsaved name'));
+  assert.equal(e.profile(account.id).nickname,'Saved nickname','failed write must roll back');
+  rmSync(join(directory,'profiles.json.tmp'),{recursive:true});
+  const rename = e.setNickname(account.id,'Committed name');
+  await Promise.resolve();
+  assert.equal(e.profile(account.id).nickname,'Saved nickname','readers must not see uncommitted writes');
+  await rename;
+  await e.setNickname(account.id,'Saved nickname');
+  const state = {nickname:'iDos player',owned:['classic'] as ['classic'],items:[],equipped:'classic' as const,loadout:{}};
+  const [p1,p2] = await Promise.all([e.syncPlatform('idos-a',state,'1000',true),e.syncPlatform('idos-a',state,'1000',true)]);
+  assert.equal(p1.id,p2.id,'concurrent login must restore one account');
+  await e.recordMatch(p1.id,'idos-round',true,120,'iDos player',false);
+  assert(e.leaderboard('games').some(row=>row.name==='iDos player'),'iDos-only account must rank');
+  assert(!e.leaderboard('signal').some(row=>row.name==='iDos player'),'purchased balance must not raise earned rank');
+  assert(e.platformSyncState(p1.id)?.pending);
+  await e.platformSyncComplete(p1.id,0,0);
+  assert(e.platformSyncState(p1.id)?.pending,'old acknowledgement cannot clear newer stats');
+  const child = spawnSync(process.execPath,['--import','tsx','--input-type=module','-e',`
+    import assert from 'node:assert/strict';
+    const e = await import('./server/economy.ts');
+    const a = await e.identify(process.env.TEST_PROFILE_TOKEN);
+    assert.equal(a.id,process.env.TEST_PROFILE_ID);
+    assert.equal(e.profile(a.id).nickname,'Saved nickname');
+    assert.equal(e.profile(a.id).wallet,'wallet-a');
+    assert.equal(e.profile(a.id).balance,10);
+    assert.equal(e.profile(a.id).gamesPlayed,1);
+    assert(e.leaderboard('games').some(row=>row.name==='iDos player'));
+    console.log('restart restored account and leaderboard');
+  `],{cwd:process.cwd(),env:{...process.env,TEST_PROFILE_TOKEN:account.token,TEST_PROFILE_ID:account.id},encoding:'utf8',timeout:20_000});
+  assert.equal(child.status,0,child.stderr);
+  console.log('PASS: restart, token hashing, write rollback, concurrent login/reward, wallet uniqueness, iDos ranking and sync acknowledgements');
+} finally { await e.closeAccountStore(); rmSync(directory,{recursive:true,force:true}); }

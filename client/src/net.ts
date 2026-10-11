@@ -37,12 +37,14 @@ export class Net {
   private ws: WebSocket | null = null;
   private queue: string[] = [];
   private retry = 0;
+  private authenticated = false;
   onMessage: (m: ServerMessage) => void = () => {};
   onStatus: (online: boolean) => void = () => {};
 
   connect() {
     const ws = new WebSocket(serverUrl());
     this.ws = ws;
+    this.authenticated = false;
     ws.onopen = async () => {
       this.retry = 0;
       this.onStatus(true);
@@ -56,12 +58,21 @@ export class Net {
         this.onMessage({ t: 'error', message: 'Sign in to iDos again', ru: 'Войдите в iDos снова' });
         return;
       }
-      const s = savedSession();
-      if (s) ws.send(JSON.stringify({ t: 'resume', code: s.code, playerId: s.playerId } satisfies ClientMessage));
-      this.queue.splice(0).forEach((m) => ws.send(m));
     };
-    ws.onmessage = (e) => this.onMessage(JSON.parse(e.data));
+    ws.onmessage = (e) => {
+      if (ws !== this.ws) return;
+      const message = JSON.parse(e.data) as ServerMessage;
+      this.onMessage(message);
+      if (message.t === 'profile' && !this.authenticated) {
+        this.authenticated = true;
+        const s = savedSession();
+        if (s) ws.send(JSON.stringify({ t: 'resume', code: s.code, playerId: s.playerId } satisfies ClientMessage));
+        this.queue.splice(0).forEach(m => ws.send(m));
+      }
+    };
     ws.onclose = () => {
+      if (ws !== this.ws) return;
+      this.authenticated = false;
       this.onStatus(false);
       setTimeout(() => this.connect(), Math.min(5000, 500 * 2 ** this.retry++));
     };
@@ -69,7 +80,7 @@ export class Net {
 
   send(msg: ClientMessage) {
     const data = JSON.stringify(msg);
-    if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(data);
+    if (this.ws?.readyState === WebSocket.OPEN && this.authenticated) this.ws.send(data);
     else this.queue.push(data);
   }
 }

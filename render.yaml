@@ -13,9 +13,11 @@ services:
     envVars:
       - key: FRAGMENT_SIGNALS_ENABLED
         value: "true"
+      - key: DATABASE_URL
+        sync: false
       - key: NODE_VERSION
         value: 22.16.0
       - key: FRAGMENT_DATA_DIR
         value: /tmp/fragment-demo-profiles
       - key: VITE_DEMO_MODE
-        value: "true"
+        value: "false"

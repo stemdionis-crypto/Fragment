@@ -532,17 +532,20 @@ export class Room {
     this.broadcast();
   }
 
-  private recordParticipants(won: boolean) {
+  private async recordParticipants(won: boolean) {
     const seen = new Set<string>();
+    const participants = [...this.players];
+    const roundId = this.roundId;
+    const practice = this.practice;
     const seconds = Math.round((Date.now() - this.startedAt) / 1000);
-    const humanAccounts = new Set(this.players.filter(p => !p.bot && p.socket && (p.roundMessages ?? 0) >= 2 && p.accountId).map(p => p.accountId));
-    for (const p of this.players) {
+    const humanAccounts = new Set(participants.filter(p => !p.bot && p.socket && (p.roundMessages ?? 0) >= 2 && p.accountId).map(p => p.accountId));
+    for (const p of participants) {
       if (!p.accountId || p.bot || seen.has(p.accountId)) continue;
       seen.add(p.accountId);
-      try { recordMatch(p.accountId, this.roundId, won, seconds, p.name, this.practice); }
-      catch { this.send(p, { t: 'error', message: 'Match statistics could not be saved', ru: 'Не удалось сохранить статистику матча' }); }
-      if (!this.practice && seconds >= 60 && humanAccounts.size >= 2 && humanAccounts.has(p.accountId)) {
-        try { this.send(p, { t: 'reward', reward: reward(p.accountId, this.roundId, false, won) }); }
+      try { await recordMatch(p.accountId, roundId, won, seconds, p.name, practice || humanAccounts.size < 2); }
+      catch { this.send(p, { t: 'error', message: 'Match statistics could not be saved', ru: 'Не удалось сохранить статистику матча' }); continue; }
+      if (!practice && seconds >= 60 && humanAccounts.size >= 2 && humanAccounts.has(p.accountId)) {
+        try { this.send(p, { t: 'reward', reward: await reward(p.accountId, roundId, false, won) }); }
         catch { this.send(p, { t: 'error', message: 'Reward could not be saved', ru: 'Не удалось сохранить награду' }); }
       }
     }

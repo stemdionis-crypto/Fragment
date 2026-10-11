@@ -31,10 +31,18 @@ handlers.fragmentMatch = function(args,context) {
   var response=check(server.HttpRequest({Method:'GET',Url:'https://fragment-demo.onrender.com/api/idos/receipt/'+args.receipt}));
   if (!response.Ok || response.BodyTooLarge) throw new Error('Match confirmation unavailable');
   var receipt=JSON.parse(response.Body);
-  if (receipt.userId!==context.UserID || !receipt.ready || receipt.day!==new Date().toISOString().slice(0,10)) throw new Error('Signals rewards are not active');
+  if (receipt.userId!==context.UserID) throw new Error('Receipt belongs to another account');
   if (!Number.isInteger(receipt.earned) || receipt.earned<0 || receipt.earned>50) throw new Error('Invalid reward amount');
   // Maximum aggregation is replay-safe: a repeat cannot add another reward.
-  check(server.AddQuestProgress('fragment_signals_verified_daily',receipt.earned));
-  check(server.SetUserCustomData('ReadOnly','fragment_signal_stats',JSON.stringify({wins:receipt.wins,gamesPlayed:receipt.gamesPlayed,fastestSeconds:receipt.fastestSeconds,totalSignalsEarned:receipt.totalSignalsEarned})));
+  if (receipt.ready && receipt.day===new Date().toISOString().slice(0,10)) check(server.AddQuestProgress('fragment_signals_verified_daily',receipt.earned));
+  var old=handlers.fragmentProfile({},context).stats || {};
+  var stats={};
+  ['wins','gamesPlayed','totalSignalsEarned'].forEach(function(key) {
+    if(!Number.isSafeInteger(receipt[key]) || receipt[key]<0) throw new Error('Invalid match statistics');
+    stats[key]=Math.max(old[key] || 0,receipt[key]);
+  });
+  if(receipt.fastestSeconds!==null && (!Number.isSafeInteger(receipt.fastestSeconds) || receipt.fastestSeconds<=0)) throw new Error('Invalid match time');
+  stats.fastestSeconds=receipt.fastestSeconds===null ? (old.fastestSeconds || null) : Math.min(old.fastestSeconds || Infinity,receipt.fastestSeconds);
+  check(server.SetUserCustomData('ReadOnly','fragment_signal_stats',JSON.stringify(stats)));
   return {verified:true,earned:receipt.earned};
 };
