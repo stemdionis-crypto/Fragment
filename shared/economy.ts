@@ -9,6 +9,7 @@ export const SKINS = [
 export type SkinId = typeof SKINS[number]['id'];
 export interface ProfileView { nickname?: string; platform?: { userId: string; balance: string; ready: boolean }; balance: number; owned: SkinId[]; equipped: SkinId; wins: number; gamesPlayed: number; fastestSeconds: number | null; totalSignalEarned: number; wallet?: string; items: string[]; loadout: Loadout; }
 export interface RewardView { receipt?: string; amount: number; balance: number; }
+export interface ProfileView { matchmakingBlockedUntil?: number; }
 
 export type CosmeticSlot = 'head' | 'face' | 'table' | 'wallpaper' | 'lighting' | 'poster' | 'decor' | 'victory';
 export type Loadout = Partial<Record<CosmeticSlot, string>>;

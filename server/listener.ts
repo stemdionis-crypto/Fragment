@@ -92,7 +92,8 @@ const STOPWORDS = new Set(
   ),
 );
 
-const LEARN_AFTER = 3; // uses before the radio understands a word
+for(const word of 'нужна нужен нужны нужно воду воды сколько зачем почему поясни пояснить подсказку подсказки количество предмет предмета пример понял понимать опиши описать выглядит назначение something describe need clue parts many'.split(' '))STOPWORDS.add(word);
+const LEARN_AFTER = 5;
 const LEARN_COOLDOWN_MS = 40_000;
 
 // ---------- normalisation: how a human would read the word ----------
@@ -238,6 +239,7 @@ export interface ListenResult {
 
 const staticFor = (s: string) => '▓'.repeat(Math.max(3, Math.min(12, s.replace(/\s/g, '').length)));
 
+const PROTECTED_STEMS = new Set([...STOPWORDS].map(stem));
 export class Listener {
   private learnedStems = new Map<string, string>(); // stem -> the form the radio first understood
   private counts = new Map<string, { n: number; form: string }>();
@@ -274,6 +276,10 @@ export class Listener {
     // 2. Then every word, disguised or not
     masked = masked.replace(WORD, (word) => {
       if (word.includes('▓')) return word;
+      if (this.names.has(stem(word))) return word;
+      // This animal is not a picture or a number; its prefix resembles "восемь".
+      if (/^осьминог(?:а|у|ом|е|и|ов)?$/i.test(word)) return word;
+      if(word.toLowerCase()==='weather')return word; // ordinary word, not a typo of "feather"
       if (isPlainWord(word)) {
         heard.push(word);
         return staticFor(word);
@@ -290,7 +296,7 @@ export class Listener {
     let newlyLearned: string | undefined;
     const seen = new Set<string>();
     for (const t of tokenize(masked)) {
-      if (t.length < 4 || STOPWORDS.has(t) || t.includes('▓') || this.names.has(stem(t))) continue;
+      if (t.length < 5 || PROTECTED_STEMS.has(stem(t)) || t.includes('▓') || this.names.has(stem(t))) continue;
       const s = stem(t);
       if (seen.has(s)) continue;
       seen.add(s);

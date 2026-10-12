@@ -39,7 +39,7 @@ export const MIN_PLAYERS = 4;
 export const MAX_PLAYERS = 4;
 export const MAX_ATTEMPTS = 3; // per trial
 export const TRIALS_PER_GAME = 5;
-export const ROUND_SECONDS = 10 * 60;
+export const ROUND_SECONDS = 15 * 60;
 export const CHAT_MAX = 140;
 export const TURN_MESSAGES = 3;
 
@@ -53,6 +53,7 @@ export interface PlayerView {
   ready: boolean; // pressed "I'm sure" in the current trial
   wallet?: string;
   bot?: boolean;
+  botStatus?: 'waiting-clue' | 'clarifying' | 'comparing';
   skin?: SkinId;
   cosmetics?: Loadout;
 }

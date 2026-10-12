@@ -22,8 +22,9 @@ import {
 import { Listener } from './listener';
 import { generateTrial, trialSequence, type Trial, type TrialPlan } from './puzzle';
 import { detectLang, translate } from './translate';
-import { linesFor, understandClue } from './bot-lines';
-import { decodeClue, HAND_TRIALS } from '../shared/trial-rules';
+import { linesFor, understandClue, isInventoryClue, visibleHandDecision, explainClues, describeClue } from './bot-lines';
+import { CompanionBrain } from './bot-brain';
+import { HAND_TRIALS } from '../shared/trial-rules';
 import { profile, reward, recordMatch } from './economy';
 
 const SUSPICION_PLAIN = 30;
@@ -164,8 +165,21 @@ export class Room {
 
   private botTurn = '';
   private botLines: string[] = [];
+  private botBacklog=new Map<string,string[]>();
+  private botBrains=new Map<string,CompanionBrain>();
+  private botShared=new Set<string>();
+  private botHelpSeen=new Map<string,number>();
+  private botDecisions=new Map<string,Value>();
+  private botThinking=new Map<string,'waiting-clue'|'clarifying'|'comparing'>();
+
+  private queueBot(id:string,lines:string[]){
+    const queue=this.botBacklog.get(id) ?? [];
+    for(const line of lines)if(!queue.includes(line))queue.push(line);
+    this.botBacklog.set(id,queue);
+  }
   private botNextAt = 0;
   private botAskedForClue = new Set<string>();
+  private rejectedClues = new Map<string,number>();
   private trialStartedAt = 0;
   private trialStartedMessageId = 0;
 
@@ -209,18 +223,32 @@ export class Room {
     const trial = this.trial;
     if (now - this.trialStartedAt >= 3000) {
       for (const p of this.players.filter(p => p.companion)) {
-        if (this.ready.has(p.id)) continue;
         const controls = trial.controls.filter(c => c.ownerId === p.id);
         let understood = controls.length > 0;
         for (const c of controls) {
           const handTrial = HAND_TRIALS.includes(trial.kind);
           const source = Object.keys(trial.knows).find(id => trial.knows[id].some(k => k.controlId === c.id));
-          const messages = this.chat.filter(m => m.id > this.trialStartedMessageId && m.kind === 'player' && (handTrial ? !this.players.find(x => x.id === m.from)?.companion && /ответ|выбира|берем|берём|берите|ставь|нужен|нужна|мой выбор|answer|choose|pick|select|go with/i.test(m.text) : m.from === source));
-          const clue = messages.map(m => understandClue(m.text, c.options)).filter(v => v !== null).at(-1);
-          if (clue === undefined) { understood = false; continue; }
-          this.setControl(p, c.id, decodeClue(trial.kind, clue, c.options));
+          const messages = this.chat.filter(m => m.id > Math.max(this.trialStartedMessageId,this.rejectedClues.get(c.id) ?? 0) && m.kind === 'player' && (handTrial ? !this.players.find(x => x.id === m.from)?.companion && !isInventoryClue(m.text) : m.from === source && (!this.players.find(x=>x.id===source)?.companion || m.text.includes(p.name))));
+          const reports=this.chat.filter(m=>m.id>this.trialStartedMessageId);
+          const inferred=handTrial?visibleHandDecision(trial.kind,c.options,reports,this.players.map(x=>x.id),p.id,trial.hands?.[p.id] ?? []):null;
+          const proposals=messages.map(m=>understandClue(m.text,c.options)).filter(v=>v!==null);
+          let clue=inferred ?? proposals.filter(v=>trial.kind!=='missing' || !(trial.hands?.[p.id] ?? []).includes(v as never)).at(-1);
+          let answer:Value|undefined;
+          if(!handTrial){
+            const brain=this.botBrains.get(p.id) ?? new CompanionBrain();this.botBrains.set(p.id,brain);
+            const thought=brain.think({id:c.id,label:c.label,options:c.options},trial.kind,messages,this.players.find(x=>x.id===source)?.name ?? '?',this.botLang);
+            if(thought.withdraw && this.ready.has(p.id))this.setReady(p,false);
+            this.queueBot(p.id,thought.lines);answer=thought.value;
+          }else if(clue!==undefined)answer=clue;
+          if (answer === undefined) { understood = false;this.botThinking.set(p.id,handTrial?'comparing':(this.botBacklog.get(p.id)?.length?'clarifying':'waiting-clue')); continue; }
+          this.botThinking.delete(p.id);
+          if(this.values.get(c.id)!==answer)this.setControl(p,c.id,answer);
+          if(handTrial && this.botDecisions.get(c.id)!==answer){
+            this.queueBot(p.id,[this.botLang==='ru'?`Сопоставил обсуждение: выбираю ${describeClue(answer,this.botLang)}.`:`Compared the discussion: I choose ${describeClue(answer,this.botLang)}.`]);
+          }
+          this.botDecisions.set(c.id,answer);
         }
-        if (understood) this.setReady(p, true);
+        if (understood && !this.ready.has(p.id)) this.setReady(p, true);
         if (this.trial !== trial) return;
       }
     }
@@ -229,24 +257,36 @@ export class Room {
     const key = speaker.id + ':' + this.turnEndsAt;
     if (key !== this.botTurn) {
       this.botTurn = key;
-      this.botLines = linesFor({ knows: trial.knows[speaker.id] ?? [], hand: trial.hands?.[speaker.id], mine: {} }, this.publicState(), this.botLang);
+      const backlog=this.botBacklog.get(speaker.id);
+      this.botLines = backlog ?? [];
+      if(!this.botShared.has(speaker.id)){
+        this.botLines.unshift(...linesFor({knows:trial.knows[speaker.id] ?? [],hand:trial.hands?.[speaker.id],mine:{}},this.publicState(),this.botLang));
+        this.botShared.add(speaker.id);
+      }
+      for(const message of this.chat.filter(m=>m.id>Math.max(this.trialStartedMessageId,this.botHelpSeen.get(speaker.id) ?? 0) && m.kind==='player' && !this.players.find(p=>p.id===m.from)?.companion && /повтори|не понял|объясни|помоги|как .*выб|repeat|explain|help/i.test(m.text))){
+        this.botHelpSeen.set(speaker.id,message.id);
+        const info={knows:trial.knows[speaker.id] ?? [],hand:trial.hands?.[speaker.id],mine:{}};
+        this.botLines.push(...(HAND_TRIALS.includes(trial.kind)?linesFor(info,this.publicState(),this.botLang):explainClues(info,this.publicState(),this.botLang,message.from)));
+      }
+      this.botBacklog.set(speaker.id,this.botLines);
       if(!this.ready.has(speaker.id) && !this.botAskedForClue.has(speaker.id)) {
         const mine=trial.controls.filter(c=>c.ownerId===speaker.id);
         if(mine.length) {
           const labels=mine.map(c=>c.label[this.botLang].toLowerCase()).join(', ').slice(0,32);
-          this.botLines.push(this.botLang==='ru'
-            ? `Мне нужна подсказка (${labels}). Опиши предмет или приведи пример количества.`
-            : `I need a clue (${labels}). Describe the item, or something with that many parts.`);
+          const hand=HAND_TRIALS.includes(trial.kind);
+          this.botLines.push(hand ? (this.botLang==='ru'?'Мне нужна подсказка: опиши свои карточки. В конце напиши «это все мои карточки».':'I need your card report. Describe your cards, then say “those are all my cards”.') : (this.botLang==='ru'
+            ? `Мне нужна подсказка (${labels}). Опиши действие или форму; я уточню непонятное.`
+            : `I need a clue (${labels}). Describe the use or shape; I will ask about unclear parts.`));
           this.botAskedForClue.add(speaker.id);
         }
       }
-      this.botNextAt = now + 2000;
+      this.botNextAt = now + 400;
     }
     if (now < this.botNextAt) return;
     const line = this.botLines.shift();
     if (line) this.chatFrom(speaker, line);
     else this.pass(speaker);
-    this.botNextAt = now + 3000;
+    this.botNextAt = now + 1100;
   }
 
   // ---------- players ----------
@@ -300,6 +340,16 @@ export class Room {
     this.broadcast();
   }
 
+  abandon(p: Player) {
+    if(this.phase !== 'playing') { this.disconnect(p); return; }
+    p.socket=null; p.accountId=undefined; p.bot=true; p.companion=true;
+    this.ready.delete(p.id);
+    this.system(b(`${p.name} left; a companion takes this seat.`, `${p.name} вышел; его место занимает бот.`));
+    if(this.turnId===p.id)this.nextTurn();
+    if(!this.players.some(player=>player.socket))this.emptySince=Date.now();
+    this.broadcast();
+  }
+
   // ---------- game flow ----------
 
   start(by: Player) {
@@ -326,7 +376,7 @@ export class Room {
     this.listener = new Listener();
     this.listener.setNames(this.players.map((p) => p.name));
     this.startedAt = Date.now();
-    this.endsAt = this.startedAt + ROUND_SECONDS * 1000;
+    this.endsAt = this.practice ? 0 : this.startedAt + ROUND_SECONDS * 1000;
     this.nextAmbient = this.startedAt + 50_000;
     this.radio(pick(VOICE.start));
     this.setupTrial();
@@ -341,6 +391,10 @@ export class Room {
     this.trialStartedMessageId = this.msgId;
     this.botTurn = '';
     this.botAskedForClue.clear();
+    this.botBacklog.clear();
+    this.botBrains.clear();this.botShared.clear();this.botHelpSeen.clear();this.botDecisions.clear();
+    this.botThinking.clear();
+    this.rejectedClues.clear();
     const step = this.plan[this.trialIndex];
     this.trial = generateTrial(
       step.kind,
@@ -444,13 +498,14 @@ export class Room {
     }
 
     p.roundMessages = (p.roundMessages ?? 0) + 1;
-    const r = this.listener.listen(text, now);
+    const r = p.companion ? {masked:text,heardWords:[] as string[],heardLearned:false,newlyLearned:undefined} : this.listener.listen(text, now);
     this.say(p, r.masked, r.heardWords.length > 0);
 
     if (r.heardWords.length) {
       this.heardCount++;
       const onlyLearned = r.heardLearned && r.heardWords.every((w) => this.listener.isLearned(w));
       this.suspicion += onlyLearned ? SUSPICION_LEARNED : SUSPICION_PLAIN;
+      this.system(b(`Radio heard a direct answer: +${onlyLearned ? SUSPICION_LEARNED : SUSPICION_PLAIN} suspicion.`, `Радио услышало название или число: +${onlyLearned ? SUSPICION_LEARNED : SUSPICION_PLAIN} подозрения.`));
       this.send(p, { t: 'heard', words: r.heardWords });
       this.fx('heard');
       if (Math.random() < 0.6) this.radio(pick(VOICE.heard));
@@ -481,6 +536,7 @@ export class Room {
       // On to the next trial
       this.trialIndex++;
       this.suspicion = Math.max(0, this.suspicion - 20);
+      this.system(b('Trial solved: −20 suspicion. Completed trials are saved.', 'Испытание решено: −20 подозрения. Пройденные этапы сохранены.'));
       this.radio(pick(VOICE.next));
       this.fx('trial');
       this.setupTrial();
@@ -494,8 +550,14 @@ export class Room {
     this.lastWrong = wrongCount;
     this.ready.clear();
     this.suspicion += SUSPICION_WRONG;
+    const wrongControls=t.controls.filter(c=>this.values.get(c.id)!==c.target);
+    this.system(b(`Check these controls: ${wrongControls.map(c=>this.players.find(p=>p.id===c.ownerId)?.name+': '+c.label.en).join(', ')}. +20 suspicion.`, `Перепроверьте пульты: ${wrongControls.map(c=>this.players.find(p=>p.id===c.ownerId)?.name+': '+c.label.ru).join(', ')}. +20 подозрения.`));
+    for(const control of wrongControls)if(this.players.find(p=>p.id===control.ownerId)?.companion){
+      this.rejectedClues.set(control.id,this.msgId); this.botAskedForClue.delete(control.ownerId);
+      this.botBrains.get(control.ownerId)?.reject(control.id);this.botDecisions.delete(control.id);
+    }
     this.fx('wrong');
-    if (this.attemptsLeft <= 0) return this.lose('attempts');
+    if (this.attemptsLeft <= 0) this.suspicion=100;
     this.radio(pick(VOICE.wrong(wrongCount)));
     this.checkSuspicion();
     this.broadcast();
@@ -508,7 +570,11 @@ export class Room {
     this.retunes++;
     this.radio(pick(VOICE.retune));
     this.fx('retune');
-    this.setupTrial();
+    this.attemptsLeft=MAX_ATTEMPTS;
+    this.ready.clear();
+    this.listener = new Listener();
+    this.listener.setNames(this.players.map(p=>p.name));
+    this.system(b('Only the radio changed. Your clues, controls and completed trials are kept.', 'Сменилась только волна. Подсказки, пульты и пройденные испытания сохранены.'));
   }
 
   private win() {
@@ -568,7 +634,7 @@ export class Room {
   private tick() {
     if (this.phase !== 'playing') return this.stopTimer();
     const now = Date.now();
-    if (now >= this.endsAt) return this.lose('time');
+    if (this.endsAt && now >= this.endsAt) return this.lose('time');
     const speaker = this.players.find((p) => p.id === this.turnId);
     if (!(speaker?.socket || speaker?.companion)) this.nextTurn();
     this.tickCompanions(now);
@@ -662,6 +728,7 @@ export class Room {
         color: p.color,
         connected: !!p.socket || !!p.companion,
         bot: p.bot,
+        botStatus: this.botThinking.get(p.id),
         skin: p.accountId ? profile(p.accountId).equipped : 'classic',
         cosmetics: p.accountId ? profile(p.accountId).loadout : undefined,
         ready: this.ready.has(p.id),

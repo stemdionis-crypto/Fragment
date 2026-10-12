@@ -1,5 +1,7 @@
 import { platformLogin, platformReward } from './idos';
 import './style.css';
+import './preview.css';
+import { openTutorial } from './tutorial';
 import {
   CHAT_MAX,
   MIN_PLAYERS,
@@ -98,6 +100,7 @@ function mountHome() {
       <div class="home-panel">
         <div class="home-top">${langSwitchHtml()}</div>
         <h1 class="title">Fragment</h1>
+        ${import.meta.env.VITE_LOCAL_PREVIEW==='true'?'<p class="preview-badge">ЛОКАЛЬНЫЙ ПРЕДПРОСМОТР · НЕ ОПУБЛИКОВАНО</p>':''}
         <p class="lead">${t('lead')}</p>
         ${import.meta.env.VITE_DEMO_MODE === 'true' ? `<p class="fine demo-note">${lang === 'ru' ? 'Демо концепции · Прогресс временный и может сброситься после перезапуска сервера.' : 'Concept demo · Progress is temporary and may reset when the server restarts.'}</p>` : ''}
         <div class="home-account"><button id="idos-login">iDos · Войти / Sign in</button><button id="wallet-home"></button></div>
@@ -112,6 +115,7 @@ function mountHome() {
         </div>
 
         <div class="home-actions">
+          <button id="tutorial">${lang==='ru'?'Попробовать правила · 3 шага':'Try the rules · 3 steps'}</button>
           <button id="match" class="primary">${t('findMatch')}</button>
           <p class="fine">${t('matchNote')}</p>
           <button id="practice">${t('playBots')}</button>
@@ -127,6 +131,7 @@ function mountHome() {
     </section>`;
 
   let chosen = color;
+  $('#tutorial').onclick=()=>openTutorial();
   app.querySelectorAll<HTMLButtonElement>('.swatch').forEach((b) => {
     b.onclick = () => {
       chosen = b.dataset.color!;
@@ -142,6 +147,7 @@ function mountHome() {
     net.send({ t: 'create', name: playerName(), color: chosen, practice: true, lang });
   };
   $('#match').onclick = () => {
+    if((account?.matchmakingBlockedUntil ?? 0)>Date.now())return toast(lang==='ru'?'Подождите окончания ограничения поиска.':'Wait for the matchmaking restriction to end.');
     if (!canPlayOnline()) return;
     savePrefs(playerName(), chosen);
     $<HTMLButtonElement>('#match').disabled = true;
@@ -170,6 +176,7 @@ function mountHome() {
 }
 
 function canPlayOnline() {
+  if(import.meta.env.VITE_LOCAL_PREVIEW==='true')return true;
   if (wallet || account?.platform) return true;
   toast(lang === 'ru' ? 'Для игры с людьми войдите через iDos или Solana-кошелёк.' : 'Sign in with iDos or a Solana wallet to play with people.');
   void connectWallet();
@@ -183,19 +190,30 @@ function updateHomeWallet() {
     ? (lang === 'ru' ? '✓ Вы вошли в iDos' : '✓ Signed in to iDos')
     : (lang === 'ru' ? 'iDos · Войти' : 'iDos · Sign in');
   idosButton.disabled = Boolean(account?.platform);
+  if(import.meta.env.VITE_LOCAL_PREVIEW==='true'){idosButton.disabled=true;idosButton.textContent='Предпросмотр · iDos отключён';}
   const button = $<HTMLButtonElement>('#wallet-home');
   button.textContent = walletBusy()
     ? (lang === 'ru' ? 'Ожидаем подпись…' : 'Waiting for signature…')
     : wallet ? `◎ ${shortAddr(wallet)}` : (lang === 'ru' ? 'Войти через кошелёк' : 'Sign in with wallet');
   button.disabled = walletBusy() || !!wallet;
+  if(import.meta.env.VITE_LOCAL_PREVIEW==='true'){button.disabled=true;button.textContent='Кошелёк отключён в предпросмотре';}
   $('#wallet-hint').textContent = account?.platform
     ? (lang === 'ru' ? 'Вы вошли через iDos. Можно играть с людьми; покупки сохраняются в профиле iDos.' : 'Signed in with iDos. Play with people; purchases stay in your iDos profile.')
     : wallet
     ? (lang === 'ru' ? 'Профиль привязан к кошельку. Прогресс сохранён.' : 'Profile linked to your wallet. Progress saved.')
     : (lang === 'ru' ? 'С ботами можно играть гостем. Для игры с людьми войдите через iDos или кошелёк.' : 'Play with bots as a guest. Sign in with iDos or a wallet to play with people.');
   $<HTMLButtonElement>('#match').textContent = t('findMatch') + (wallet || account?.platform ? '' : ' · ◎');
+  const blocked=Math.max(0,Math.ceil(((account?.matchmakingBlockedUntil ?? 0)-Date.now())/1000));
+  if(blocked){$<HTMLButtonElement>('#match').textContent=(lang==='ru'?'Поиск через ':'Matchmaking in ')+`${Math.floor(blocked/60)}:${String(blocked%60).padStart(2,'0')}`;}
+  $<HTMLButtonElement>('#match').disabled=blocked>0;
   $<HTMLButtonElement>('#create').textContent = t('createRoom') + (wallet || account?.platform ? '' : ' · ◎');
   $<HTMLButtonElement>('#join').title = wallet || account?.platform ? '' : (lang === 'ru' ? 'Войдите через iDos или кошелёк' : 'Sign in with iDos or a wallet');
+  if(import.meta.env.VITE_LOCAL_PREVIEW==='true'){
+    $('#wallet-hint').textContent='Отдельный тестовый профиль. Можно пробовать все игровые режимы без входа.';
+    if(!blocked)$<HTMLButtonElement>('#match').textContent=t('findMatch');
+    $<HTMLButtonElement>('#create').textContent=t('createRoom');
+    $<HTMLButtonElement>('#join').title='';
+  }
 }
 
 // ---------- lobby ----------
@@ -231,9 +249,10 @@ function mountLobby() {
         <button id="home">${state!.matchmaking ? t('cancelSearch') : t('mainMenu')}</button>
       </div>
       <div class="lobby-rules">
-        <h2>${t('howItWorks')}</h2>
+        <h2>${lang==='ru'?'Попробуйте, а не читайте':'Learn by trying'}</h2><button id="lobbyTutorial">${lang==='ru'?'Открыть мини-тренировку':'Open mini tutorial'}</button><p class="fine">${lang==='ru'?'Пульт → подсказка соседу → реакция радио. Три коротких шага.':'Your control → teammate clue → radio feedback. Three short steps.'}</p><details><summary>${lang==='ru'?'Полные правила':'Full rules'}</summary>
         ${!account || account.gamesPlayed < 3 ? `<div class="quickstart"><p class="eyebrow">${lang === 'ru' ? 'ПЕРВЫЕ ШАГИ' : 'FIRST STEPS'}</p><p>${lang === 'ru' ? '1. Посмотрите карточку «Вы знаете»: это подсказка для другого игрока. 2. В свой ход опишите её намёком, не называя предмет или число. 3. По подсказке команды выставьте свой пульт и нажмите «Я уверен». Ход можно передать вручную; таймера хода нет.' : '1. Read “You know”: that clue belongs to another player. 2. On your turn, describe it without naming the item or number. 3. Set your own control using the team’s clue, then press “I’m sure”. You can pass your turn; turns have no countdown.'}</p></div>` : ''}
         <ol>${t('rules').map((r) => `<li>${r}</li>`).join('')}</ol>
+        </details>
       </div>
     </section>`;
   $('#codeBtn').onclick = async () => {
@@ -246,6 +265,7 @@ function mountLobby() {
     }
   };
   $('#start').onclick = () => net.send({ t: 'start' });
+  $('#lobbyTutorial').onclick=()=>openTutorial();
   $('#addBot').onclick = () => net.send({ t: 'add_bot' });
   $('#home').onclick = () => {
     net.send({ t: 'leave' });
@@ -289,6 +309,7 @@ function mountGame() {
     <section class="game">
       <header class="hud">
         <span class="hud-title">Fragment</span>
+        <button id="leaveGame">${lang==='ru'?'Выйти':'Leave'}</button><button id="gameTutorial" aria-label="${lang==='ru'?'Открыть обучение':'Open tutorial'}">?</button>
         <span class="hud-item">${t('room')} <b id="hudCode"></b></span>
         <span class="hud-item trial-steps" id="hudTrial"></span>
         <span class="hud-item">${t('tries')} <b id="hudTries"></b></span>
@@ -308,8 +329,9 @@ function mountGame() {
             <div class="prompt" id="prompt"></div>
             <div class="game-guide" id="gameGuide" aria-live="polite"></div>
             <div class="suspicion" aria-label="Suspicion">
-              <span>${t('attention')}</span>
+              <span>${t('attention')} · <b id="susPercent"></b></span>
               <div class="bar"><div id="susBar"></div></div>
+              <small>${lang==='ru'?'Название или число +30 · Ошибка +20 · Решённый этап −20 · Боты +0':'Name or digit +30 · Wrong answer +20 · Solved trial −20 · Bots +0'}</small>
             </div>
           </div>
           <div class="pult">
@@ -328,10 +350,12 @@ function mountGame() {
           <div class="chat-log" id="chatLog" aria-live="polite"></div>
           <div class="learned" id="learned"></div>
           <p class="listen-hint">${t('listenHint')}</p>
+          <details class="radio-rules"><summary>${lang==='ru'?'Какие слова слышит радио?':'What words does the radio hear?'}</summary><p>${lang==='ru'?'Прямые названия предметов и числа, даже если их нет на вашем пульте. Например: «солнце», «свеча», «семь». Опишите действие или форму. Обычные слова «сколько», «нужна», «воду» не изучаются.':'Direct item names and numbers, even if absent from your control. For example: “sun”, “candle”, “seven”. Describe their shape or use instead. Everyday helper words are not learned.'}</p></details>
           <form class="chat-form" id="chatForm" autocomplete="off">
             <input id="chatInput" maxlength="${CHAT_MAX}" placeholder="${t('speakCarefully')}" />
             <button type="submit" class="primary" id="sendBtn">${t('send')}</button>
             <button type="button" class="ghost" id="passBtn" title="${t('passTitle')}">${t('pass')}</button>
+            <button type="button" class="ghost" id="askBot">${lang==='ru'?'Помощь напарника':'Teammate help'}</button>
           </form>
         </div>
         <ul class="players compact" id="gamePlayers"></ul>
@@ -340,6 +364,11 @@ function mountGame() {
     </section>`;
 
   $('#readyBtn').onclick = () => { sfx.confirm(); net.send({ t: 'ready', on: !me()?.ready }); };
+  $('#leaveGame').onclick=()=>confirmLeave();
+  $('#gameTutorial').onclick=()=>openTutorial();
+  $('#askBot').onclick=()=>{
+    const input=$<HTMLInputElement>('#chatInput');input.value=lang==='ru'?'Не понял свою подсказку. Объясни, что мне выбрать.':'I did not understand my clue. Explain what I should choose.';input.focus();
+  };
   $('#passBtn').onclick = () => { sfx.pass(); net.send({ t: 'pass' }); };
   sceneKey = '';
   lastTurnId = '';
@@ -363,6 +392,14 @@ function mountGame() {
 
 const me = () => state?.players.find((p) => p.id === myId);
 const myControls = () => (state?.trial?.controls ?? []).filter((c) => c.ownerId === myId);
+function confirmLeave(){
+  const penalty=Boolean(state?.matchmaking && state.phase==='playing');
+  const dialog=document.createElement('dialog');dialog.className='tutorial-dialog';
+  dialog.innerHTML=`<h2>${lang==='ru'?'Выйти из матча?':'Leave this match?'}</h2><p>${penalty?(lang==='ru'?'Новый поиск будет недоступен 5 минут. Бот займёт ваше место.':'Matchmaking will be unavailable for 5 minutes. A companion takes your place.'):(lang==='ru'?'Можно выйти без штрафа.':'You can leave without a penalty.')}</p><button data-stay>${lang==='ru'?'Остаться':'Stay'}</button><button data-leave class="primary">${lang==='ru'?'Выйти':'Leave'}</button>`;
+  document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove());
+  dialog.querySelector<HTMLButtonElement>('[data-stay]')!.onclick=()=>dialog.close();
+  dialog.querySelector<HTMLButtonElement>('[data-leave]')!.onclick=()=>{dialog.close();net.send({t:'leave'});};dialog.showModal();
+}
 const valueHtml = (v: Value, size = 34) => (typeof v === 'number' ? `<span class="digit">${v}</span>` : glyphSvg(v, '#e3ddcf', size));
 
 // Your own control(s): pick a picture, or turn a digit wheel. Only you see what you set.
@@ -389,11 +426,12 @@ function renderMyControls() {
           .join('')}</div>`;
       }
       const label = s.trial?.kind === 'code' ? (lang === 'ru' ? `Ваше место в коде: ${tl(c.label)}` : `Your position in the code: ${tl(c.label)}`) : tl(c.label);
-      return `<div class="my-control"><p class="control-label">${esc(label)}</p><p class="fine">${HAND_TRIALS.includes(s.trial!.kind) ? (lang === 'ru' ? 'Сравните карточки всей команды и выберите общий ответ по правилу испытания.' : 'Compare the whole team’s cards and choose the shared answer using the trial rule.') : (lang === 'ru' ? 'Здесь выставляйте свой ответ по подсказке другого игрока. Карточка «Вы знаете» предназначена для соседа.' : 'Set your own answer here using another player’s clue. The “You know” card is for your teammate.')}</p>${body}</div>`;
+      return `<div class="my-control"><p class="control-label"><span style="color:${me()?.color ?? '#d5af71'}">${esc(me()?.name ?? '')} · ${lang==='ru'?'ВАШ ПУЛЬТ':'YOUR CONTROL'}</span><br>${esc(label)}</p>${body}<details><summary>${lang==='ru'?'Откуда взять ответ?':'Where do I find the answer?'}</summary><p class="fine">${HAND_TRIALS.includes(s.trial!.kind) ? (lang === 'ru' ? 'Сравните карточки всей команды и выберите общий ответ по правилу испытания.' : 'Compare the whole team’s cards and choose the shared answer using the trial rule.') : (lang === 'ru' ? 'Команда знает ваш ответ. Карточка «Вы знаете» предназначена для соседа.' : 'Your team knows your answer. Your clue card is for your teammate.')}</p></details></div>`;
     })
     .join('');
   app.querySelectorAll<HTMLButtonElement>('#myControls [data-control]').forEach((b) => {
     b.onclick = () => {
+      if(!myControls().some(c=>c.id===b.dataset.control))return;
       const raw = b.dataset.value!;
       const value: Value = /^\d$/.test(raw) ? Number(raw) : (raw as Glyph);
       sfx.dial();
@@ -484,6 +522,7 @@ function updateGame() {
   $('#hudTries').textContent = `${s.attemptsLeft}`;
   $('#hudRetunes').textContent = `${s.retunes}`;
   $<HTMLDivElement>('#susBar').style.width = `${s.suspicion}%`;
+  $('#susPercent').textContent=`${s.suspicion}%`;
   $('#susBar').classList.toggle('hot', s.suspicion >= 70);
 
   const tr = s.trial;
@@ -492,8 +531,7 @@ function updateGame() {
     $('#prompt').innerHTML = `${trialBanner(tr, lang === 'ru')}
       <span class="trial-task-label">${lang === 'ru' ? 'ЧТО ДЕЛАТЬ' : 'WHAT TO DO'}</span>
       <span class="task">${esc(tl(tr.task))}</span>
-      ${trialExample(tr, lang === 'ru')}
-      <span class="q">${esc(tl(tr.prompt))}</span>${tr.kind === 'code' ? `<div class="code-order">${tr.controls.map((c) => { const owner = s.players.find((p) => p.id === c.ownerId); return `<span class="code-seat ${c.ownerId === myId ? 'mine' : ''}"><b>${esc(owner?.name ?? '?')}${c.ownerId === myId ? ` · ${t('you')}` : owner?.bot ? ` · ${t('bot')}` : ''}</b><span>${esc(tl(c.label))}</span></span>`; }).join('<span class="code-arrow" aria-hidden="true">→</span>')}</div>` : ''}`;
+      <details class="trial-details"><summary>${lang==='ru'?'Пример и подробности':'Example and details'}</summary>${trialExample(tr, lang === 'ru')}<span class="q">${esc(tl(tr.prompt))}</span></details>${tr.kind === 'code' ? `<div class="code-order">${tr.controls.map((c) => { const owner = s.players.find((p) => p.id === c.ownerId); return `<span class="code-seat ${c.ownerId === myId ? 'mine' : ''}"><b>${esc(owner?.name ?? '?')}${c.ownerId === myId ? ` · ${t('you')}` : owner?.bot ? ` · ${t('bot')}` : ''}</b><span>${esc(tl(c.label))}</span></span>`; }).join('<span class="code-arrow" aria-hidden="true">→</span>')}</div>` : ''}`;
     if (SYMBOL_CIPHERS.includes(tr.kind)) $('#prompt').insertAdjacentHTML('beforeend', `<div class="cipher-scale"><span class="fine">${lang === 'ru' ? 'Общая шкала · слева направо' : 'Shared scale · left to right'}</span><div class="glyph-row">${tr.controls[0].options.map((g, i) => `<span class="scale-item">${glyphSvg(g as Glyph, '#e3ddcf', 25)}<small>${i + 1}</small></span>`).join('')}</div></div>`);
   }
 
@@ -510,7 +548,7 @@ function updateGame() {
   $('#gamePlayers').innerHTML = s.players
     .map(
       (p) =>
-        `<li class="player ${p.connected ? '' : 'away'}"><span class="dot" style="--c:${p.color}"></span><span class="pname" style="color:${p.color}">${esc(p.name)}</span>${p.bot ? `<span class="tag">${t('bot')}</span>` : ''}<span class="tag">${p.ready ? '✓ ' + t('sure') : '…'}</span></li>`,
+        `<li class="player ${p.connected ? '' : 'away'}"><span class="dot" style="--c:${p.color}"></span><span class="pname" style="color:${p.color}">${esc(p.name)}</span>${p.bot ? `<span class="tag">${t('bot')}</span>` : ''}<span class="tag">${p.ready ? '✓ ' + t('sure') : p.botStatus==='clarifying' ? (lang==='ru'?'Уточняет подсказку':'Clarifying') : p.botStatus==='comparing' ? (lang==='ru'?'Сравнивает карточки':'Comparing cards') : p.botStatus==='waiting-clue' ? (lang==='ru'?'Ждёт описания':'Waiting for clue') : '…'}</span></li>`,
     )
     .join('');
 
@@ -876,7 +914,7 @@ net.onMessage = (m) => {
       break;
     }
     case 'heard':
-      toast(`${t('heardYou')} <b>${m.words.map(esc).join(', ')}</b>`, 'radio');
+      toast(`${t('heardYou')} <b>${m.words.map(esc).join(', ')}</b><br>${lang==='ru'?'Прямое название или число: +30. Опишите предмет намёком.':'Direct item name or number: +30. Describe it indirectly.'}`, 'radio');
       break;
     case 'fx':
       handleFx(m.kind);
@@ -909,6 +947,7 @@ setInterval(() => {
 }, 140);
 
 function frame(t: number) {
+  if(mounted==='home' && account?.matchmakingBlockedUntil)updateHomeWallet();
   if (mounted === 'lobby' && state?.matchmaking && state.matchStartsAt) {
     const hint = app.querySelector('#startHint');
     if (hint) hint.textContent = tMatchCountdown(state.matchStartsAt);
@@ -924,8 +963,8 @@ function frame(t: number) {
     const left = Math.max(0, Math.ceil((state.endsAt - Date.now()) / 1000));
     const el = app.querySelector('#hudTime');
     if (el) {
-      el.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
-      el.classList.toggle('low', left <= 60);
+      el.textContent = state.endsAt ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : `∞ · ${lang==='ru'?'тренировка':'practice'}`;
+      el.classList.toggle('low', Boolean(state.endsAt) && left <= 60);
     }
     if (left > 0 && left <= 60 && left % 30 === 0 && lastUrgency !== left) {
       lastUrgency = left;

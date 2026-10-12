@@ -18,7 +18,7 @@ for (const project of ['server', 'client']) {
   run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '-p', project, '--noEmit']);
 }
 run(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), 'build', '--config', 'client/vite.config.ts', '--base', './', '--outDir', 'dist-idos'], {
-  ...process.env, VITE_SERVER_URL: server, VITE_DEMO_MODE: 'false',
+  ...process.env, VITE_SERVER_URL: server, VITE_DEMO_MODE: 'false', VITE_LOCAL_PREVIEW: 'false',
 });
 if (!existsSync(join(dist, 'index.html'))) throw new Error('Build is missing index.html');
 mkdirSync(releases, { recursive: true });

@@ -1,5 +1,5 @@
-import type { Glyph, Lang, PrivateInfo, PublicState, Value } from '../shared/protocol';
-import { isCipher } from '../shared/trial-rules';
+import type { ChatMessage, Glyph, Lang, PrivateInfo, PublicState, TrialKind, Value } from '../shared/protocol';
+import { isCipher, handCandidates, decodeClue } from '../shared/trial-rules';
 
 const RU: Record<Glyph, string> = {
   triangle: 'крыша домика',
@@ -36,36 +36,37 @@ const RU: Record<Glyph, string> = {
   lock: 'железная скважина на двери',
   cloud: 'то, что закрывает небо серой пеленой', sun: 'яркий источник тепла над нами', rain: 'вода, падающая с неба', snowflake: 'ледяной узор, падающий зимой',
   lightning: 'яркая вспышка во время грозы', wind: 'то, что качает деревья', umbrella: 'то, что раскрывают над головой в непогоду', thermometer: 'прибор, который показывает температуру',
-  microphone: 'то, во что говорят на сцене', headphones: 'то, что надевают на уши для музыки', record: 'чёрная виниловая вещь с музыкой', dial: 'регулятор, который поворачивают пальцами',
+  microphone: 'то, во что говорят на сцене', headphones: 'то, что надевают на уши для музыки', record: 'плоская вещь с канавками для музыки', dial: 'регулятор, который поворачивают пальцами',
   speaker: 'коробка, из которой звучит музыка', battery: 'маленький источник питания', wire: 'тонкий шнур, по которому идёт ток', switch: 'то, чем включают свет',
 };
 const EN: Record<Glyph, string> = {
   triangle: 'a roof', circle: 'a wheel', square: 'a window', cross: 'a plus', star: 'what goes on top of a Christmas tree',
   moon: 'what shines at night', eye: 'what you look with', key: 'what opens a door', candle: 'what you blow out on a cake',
   cup: 'what you drink tea from', clock: 'what ticks on the wall', knife: 'what you cut bread with', book: 'what you read before bed',
-  coin: 'small change in your pocket', feather: 'what falls off a bird', bottle: 'what you pour water into', cat: 'the one who purrs',
-  owl: 'the night bird that hoots', fish: 'the one in the aquarium', spider: 'the one who weaves a web', crow: 'the black bird that caws',
-  snake: 'the one that hisses and crawls', rabbit: 'the one who hops and loves carrots', moth: 'the one that flies to the lamp at night',
-  antenna: 'a wire catching distant stations', cassette: 'a box with two reels', bell: 'what rings at the door',
+  coin: 'small change in your pocket', feather: 'what falls off a bird', bottle: 'what you pour water into', cat: 'something that purrs',
+  owl: 'the night bird that hoots', fish: 'something in the aquarium', spider: 'what weaves a web', crow: 'the black bird that caws',
+  snake: 'something that hisses and crawls', rabbit: 'a hopper that loves carrots', moth: 'a night visitor drawn to a lamp',
+  antenna: 'what receives distant stations', cassette: 'wound magnetic ribbon in a case', bell: 'what rings at the door',
   hourglass: 'sand measuring time', compass: 'the needle that finds north', lantern: 'a carried light',
   gear: 'a toothed wheel', lock: 'a metal clasp on a door',
   cloud: 'a grey veil across the sky', sun: 'the bright source of warmth above us', rain: 'water falling from the sky', snowflake: 'a tiny ice pattern falling in winter',
   lightning: 'a bright flash during a storm', wind: 'what makes trees sway', umbrella: 'what you open over your head in bad weather', thermometer: 'what shows the temperature',
-  microphone: 'what a singer speaks into', headphones: 'what you wear over your ears for music', record: 'a black vinyl thing that holds music', dial: 'the regulator you turn with your fingers',
-  speaker: 'a box that plays sound', battery: 'a small power source', wire: 'a thin cord that carries electricity', switch: 'what you use to turn on a light',
+  microphone: 'what a singer speaks into', headphones: 'what you wear over your ears for music', record: 'a flat grooved thing that holds music', dial: 'the regulator you turn with your fingers',
+  speaker: 'a cabinet that plays sound', battery: 'a small power source', wire: 'a thin cord that carries electricity', switch: 'what you use to turn on a light',
 };
 // Numbers without number words
 const DIGITS_RU = [
-  'пусто, как в кармане перед зарплатой', 'сколько носов у человека', 'сколько глаз у человека', 'сколько медведей в сказке про Машу',
+  'пусто, как в кармане перед зарплатой', 'сколько носов у человека', 'количество в обычной паре', 'сколько медведей в сказке про Машу',
   'сколько лап у собаки', 'сколько пальцев на руке', 'сколько ног у жука', 'сколько дней в неделе', 'сколько щупалец у осьминога',
   'все пальцы на руках, кроме мизинца',
 ];
 const DIGITS_EN = [
-  'nothing at all', 'how many noses you have', 'how many eyes you have', 'the bears in Goldilocks', 'the legs of a dog',
-  'the fingers on a hand', 'the legs of a beetle', 'the days in a week', 'the arms of an octopus', 'all your fingers but the little one',
+  'nothing at all', 'how many noses you have', 'the size of a pair', 'the bears in Goldilocks', 'the legs of a dog',
+  'the fingers on a hand', 'the legs of a beetle', 'the days in a week', 'the arms of an octopus', 'your fingers except a pinky',
 ];
 const describeValue = (v: Value, LANG: Lang) =>
   typeof v === 'number' ? (LANG === 'ru' ? DIGITS_RU : DIGITS_EN)[v] : `«${(LANG === 'ru' ? RU : EN)[v]}»`;
+export const describeClue=describeValue;
 
 
 // What the bot says about what it knows, addressed to whoever owns each control
@@ -77,7 +78,7 @@ export function linesFor(info: PrivateInfo, s: PublicState, LANG: Lang): string[
     const c = t.controls.find((x) => x.id === k.controlId);
     const owner = s.players.find((p) => p.id === c?.ownerId)?.name ?? '?';
     const label = c ? (LANG === 'ru' ? c.label.ru : c.label.en).toLowerCase() : '';
-    if (isCipher(t.kind)) return tr(`${owner}, исходная подсказка для тебя: ${describeValue(k.value, LANG)}. Примени правило испытания.`, `${owner}, your input clue: ${describeValue(k.value, LANG)}. Apply the trial rule.`);
+    if (isCipher(t.kind)) return tr(`${owner}, исходная подсказка для тебя: ${describeValue(k.value, LANG)}.`, `${owner}, your input clue: ${describeValue(k.value, LANG)}.`);
     if (t.kind === 'frequency') return tr(`${owner}, твоя цифра — ${describeValue(k.value, LANG)}.`, `${owner}, your digit: ${describeValue(k.value, LANG)}.`);
     if (t.kind === 'code') return tr(`${owner}, у тебя (${label}) стоит ${describeValue(k.value, LANG)}.`, `${owner}, in your place (${label}): ${describeValue(k.value, LANG)}.`);
     return tr(`${owner}, твоя ${label} — на ${describeValue(k.value, LANG)}.`, `${owner}, your ${label}: ${describeValue(k.value, LANG)}.`);
@@ -85,6 +86,7 @@ export function linesFor(info: PrivateInfo, s: PublicState, LANG: Lang): string[
   // Send each item separately so a clue cannot be cut off by CHAT_MAX.
   if (info.hand?.length) {
     for (const item of info.hand) lines.push(tr(`У меня есть ${describeValue(item, LANG)}.`, `I have ${describeValue(item, LANG)}.`));
+    lines.push(tr('Это все мои карточки.', 'Those are all my cards.'));
   }
   return lines;
 }
@@ -120,9 +122,9 @@ const ALIASES: Record<Glyph, string[]> = {
   cassette: ['кассета','кассетка','две катушки','магнитная лента','cassette','two reels','tape'],
   bell: ['колокол','колокольчик','звонок','звенит','bell','rings door'],
   hourglass: ['песочные часы','песок время','песок пересыпается','hourglass','sand timer'],
-  compass: ['компас','ищет север','стрелка север','compass','finds north'],
-  lantern: ['фонарь','фонарик','переносной свет','lantern','flashlight','portable light'],
-  gear: ['шестерня','шестеренка','зубчатое колесико','колесо зубья','gear','cog','wheel teeth','wheel with teeth'],
+  compass: ['компас','ищет север','стрелка север','показывает на север','показывает направление','указывает направление','compass','finds north'],
+  lantern: ['фонарь','фонарик','переносной свет','можно нести','светится','светиться','lantern','flashlight','portable light'],
+  gear: ['шестерня','шестеренка','зубчатое колесико','колесо зубья','зубья','gear','cog','wheel teeth','wheel with teeth'],
   lock: ['замок','замочек','скважина','lock','padlock','keyhole'],
   cloud: ['облако','туча','тучка','серая пелена','cloud','grey sky veil'],
   sun: ['солнце','солнышко','греет неба','sun','sunshine'],
@@ -172,6 +174,21 @@ function closeWord(a: string, b: string) {
 export function understandClue(text: string, options: Value[]): Value | null {
   const normalize = normalizeClue;
   const normalized = normalize(text);
+  const contextual:Partial<Record<Glyph,RegExp[]>>={
+    sun:[/днем|дневн|daytime|day light/,/свет|ярк|тепл|гре|shin|warm|light/],
+    moon:[/ноч|night/,/свет|неб|светил|shin|sky/],
+    candle:[/воск|фитил|торт|wax|wick|cake/,/огон|гор|задув|flame|burn|blow/],
+    lantern:[/нести|перенос|руке|carry|portable|hand/,/свет|ламп|light|lamp/],
+    gear:[/зуб|teeth|tooth/,/колес|крут|wheel|turn/],
+    compass:[/север|направлен|north|direction/,/стрел|показы|указыва|ищет|needle|point|find/],
+    hourglass:[/песок|песоч|пересып|sand/,/врем|час|меря|time|hour/],
+    headphones:[/уши|ушах|ears/,/музык|звук|слуш|music|sound|listen/],
+    wire:[/ток|электр|electric/,/шнур|тонк|cord|thin/],
+    battery:[/питани|энерги|energy|power/,/источ|маленьк|source|small/],
+    thermometer:[/температур|temperature/,/меря|показы|measure|show/],
+    umbrella:[/дожд|непогод|rain/,/раскры|голов|защит|open|head|protect/],
+  };
+  const contextMatches=options.filter(value=>typeof value==='string' && contextual[value]?.every(pattern=>pattern.test(normalized)));
   const descriptionsFor = (value: Value) => typeof value === 'number'
     ? [DIGITS_RU[value],DIGITS_EN[value],...NUMBER_ALIASES[value],String(value)]
     : [RU[value],EN[value],...ALIASES[value]];
@@ -197,6 +214,12 @@ export function understandClue(text: string, options: Value[]): Value | null {
     const values = [...new Set(specific.map(match => match.value))];
     return values.length === 1 ? values[0] : null;
   }
+  if(contextMatches.length===1 && !/(?:^| )(?:не|not|no)(?: |$)/.test(normalized))return contextMatches[0];
+  if(/светит|светится|светиться|shines|glows/.test(normalized) && !/торт|воск|фитил|север|cake|wax|wick|north/.test(normalized)){
+    const lights=options.filter(value=>['sun','moon','candle','lantern'].includes(String(value)));
+    if(lights.length>1)return null;
+    if(lights.length===1)return lights[0];
+  }
   const matches = options.filter(value => {
     const descriptions = descriptionsFor(value);
     return descriptions.some(description => {
@@ -212,4 +235,44 @@ export function understandClue(text: string, options: Value[]): Value | null {
     });
   });
   return matches.length === 1 ? matches[0] : null;
+}
+
+export function explainClues(info:PrivateInfo,s:PublicState,lang:Lang,recipientId?:string):string[]{
+  if(!s.trial)return [];
+  const lines:string[]=[];
+  for(const knowledge of info.knows){
+    const control=s.trial.controls.find(c=>c.id===knowledge.controlId);
+    if(!control || (recipientId && control.ownerId!==recipientId))continue;
+    const owner=s.players.find(p=>p.id===control.ownerId)?.name ?? '?';
+    lines.push(lang==='ru'?`${owner}, для твоего пульта: ${describeValue(knowledge.value,lang)}.`:`${owner}, for your control: ${describeValue(knowledge.value,lang)}.`);
+    if(isCipher(s.trial.kind)){
+      const result=decodeClue(s.trial.kind,knowledge.value,control.options);
+      lines.push(lang==='ru'?`Это исходная подсказка. После правила выбирай ${describeValue(result,lang)}.`:`That is the input clue. After the rule choose ${describeValue(result,lang)}.`);
+    }else lines.push(lang==='ru'?'Выбери эту картинку на своём пульте и подтверди ответ.':'Choose that picture on your control and confirm.');
+  }
+  return lines.map(line=>line.slice(0,140));
+}
+
+export const isInventoryClue = (text:string)=> /у меня|мои карточки|i have|my cards/i.test(text) && !/ответ|мой выбор|answer|choose|pick/i.test(text);
+export function visibleHandDecision(kind:TrialKind, options:Value[], messages:ChatMessage[], players:string[], ownId:string, ownHand:Glyph[]):Value|null {
+  const hands=new Map(players.map(id=>[id,new Set<Glyph>()]));
+  hands.set(ownId,new Set(ownHand));
+  const complete=new Set([ownId]);
+  for(const message of messages){
+    if(message.kind!=='player' || !message.from || !hands.has(message.from))continue;
+    if(/все мои карточки|больше нет|all my cards|no more cards/i.test(message.text))complete.add(message.from);
+    if(!isInventoryClue(message.text))continue;
+    const pieces=message.text.split(/[,;]|\s+(?:и|and)\s+/i);
+    for(const piece of pieces){
+      const understood=understandClue(piece,options);
+      const values=understood!==null?[understood]:options.filter(value=>understandClue(piece,[value])===value);
+      for(const value of values)if(typeof value==='string')hands.get(message.from)!.add(value);
+    }
+  }
+  const publicHands=[...hands.values()].map(hand=>[...hand]);
+  const candidates=handCandidates(kind,options,publicHands);
+  // Missing has a public guarantee: exactly one of the eight pictures is absent.
+  // Seeing seven distinct cards is enough; other collection rules need complete reports.
+  const enough=kind==='missing'?new Set(publicHands.flat()).size===options.length-1:complete.size===players.length;
+  return enough && candidates.length===1?candidates[0]:null;
 }

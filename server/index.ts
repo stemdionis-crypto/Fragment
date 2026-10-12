@@ -10,12 +10,14 @@ import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, wa
 import { platformSnapshot, platformCall, type PlatformSession } from './idos';
 import { syncPlatform, platformReceipt } from './economy';
 import { challenge, verifyChallenge } from './wallet-auth';
+import { penalizeMatchLeave, matchLeaveRemaining } from './economy';
 
 // Hosting platforms pass PORT in production; in dev the client expects the server on 2567
 const PROD = process.argv.includes('--prod');
 const PORT = Number((PROD && process.env.PORT) || process.env.SERVER_PORT || 2567);
 const DIST = fileURLToPath(new URL('../client/dist', import.meta.url));
 const rooms = new Map<string, Room>();
+const disconnectGrace = new Map<string,ReturnType<typeof setTimeout>>();
 
 function newCode() {
   const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -81,6 +83,7 @@ wss.on('connection', (socket: WebSocket, request) => {
     }
   };
   const requireWallet = () => {
+    if(!PROD && process.env.FRAGMENT_LOCAL_PREVIEW==='true')return;
     if (!accountId || (!profile(accountId).wallet && !platformSession)) throw new GameError('Sign in to play with others', 'Для игры с другими войдите через iDos или подтвердите Solana-кошелёк');
   };
   const onProfile = (id: string) => {
@@ -218,6 +221,9 @@ wss.on('connection', (socket: WebSocket, request) => {
           break;
         }
         case 'match': {
+          const remaining=matchLeaveRemaining(accountId);
+          if(remaining)throw new GameError(`Matchmaking paused for ${Math.ceil(remaining/1000)} seconds`, `Поиск недоступен ещё ${Math.ceil(remaining/1000)} сек. за выход из матча`);
+          if([...rooms.values()].some(r=>r!==room && r.phase==='playing' && r.players.some(p=>p.accountId===accountId && !p.companion)))throw new GameError('Resume your current match first', 'Вы уже в матче. Вернитесь в него или дождитесь завершения выхода');
           requireWallet();
           if (room && me) {
             if (!room.matchmaking) throw new GameError('Already in a room', 'Вы уже в комнате');
@@ -235,7 +241,11 @@ wss.on('connection', (socket: WebSocket, request) => {
           break;
         }
         case 'leave': {
-          if (room && me) room.disconnect(me);
+          if (room && me) {
+            const grace=disconnectGrace.get(me.id);if(grace)clearTimeout(grace);disconnectGrace.delete(me.id);
+            if(room.matchmaking && room.phase==='playing')await penalizeMatchLeave(accountId);
+            room.abandon(me);
+          }
           room = null;
           me = null;
           send({ t: 'left' });
@@ -282,6 +292,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           const returning = r.players.find((p) => p.id === msg.playerId);
           if (returning?.accountId && returning.accountId !== accountId) throw new GameError('This player belongs to another profile', 'Этот игрок принадлежит другому профилю');
           me = r.resume(msg.playerId, socket);
+          const grace=disconnectGrace.get(me.id);if(grace)clearTimeout(grace);disconnectGrace.delete(me.id);
           me.accountId = accountId || undefined;
           room = r;
           send({ t: 'joined', playerId: me.id, code: r.code });
@@ -311,7 +322,17 @@ wss.on('connection', (socket: WebSocket, request) => {
   socket.on('close', () => {
     if (syncTimer) clearTimeout(syncTimer);
     profileListeners.delete(onProfile);
-    if (room && me && me.socket === socket) room.disconnect(me);
+    if (room && me && me.socket === socket) {
+      const departingRoom=room,departingPlayer=me,id=accountId;
+      room.disconnect(me);
+      if(room.matchmaking && room.phase==='playing' && id && !disconnectGrace.has(me.id)){
+        disconnectGrace.set(me.id,setTimeout(()=>{
+          disconnectGrace.delete(departingPlayer.id);
+          if(departingPlayer.socket || departingRoom.phase!=='playing')return;
+          void penalizeMatchLeave(id).then(()=>departingRoom.abandon(departingPlayer)).catch(error=>console.error('Leave penalty persistence failed:',error instanceof Error?error.message:'storage error'));
+        },60_000));
+      }
+    }
   });
 });
 
@@ -324,4 +345,4 @@ setInterval(() => {
     }
 }, 60_000);
 
-http.listen(PORT, () => console.log(`FRAGMENT server listening on :${PORT} · chat translation: ${translationEngine}`));
+http.listen(PORT, process.env.FRAGMENT_LOCAL_PREVIEW==='true' && !PROD ? '127.0.0.1' : '0.0.0.0', () => console.log(`FRAGMENT server listening on :${PORT} · chat translation: ${translationEngine}`));

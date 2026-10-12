@@ -61,6 +61,7 @@ const cache = new Map<string, string | null>();
 
 // Translate a chat line. Static (▓▓▓) is protected with [[n]] tokens and restored afterwards.
 export async function translate(text: string, from: Lang, to: Lang): Promise<string | null> {
+  if(process.env.FRAGMENT_LOCAL_PREVIEW==='true')return null;
   if (from === to) return text;
   const key = `${from}>${to}:${text}`;
   if (cache.has(key)) return cache.get(key)!;

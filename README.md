@@ -28,7 +28,7 @@ ciphers. The latter reuse the controls but change how clues become answers.
 `npm run check` verifies unique solutions and distributed information for every
 rule with three and four players.
 
-Players speak **in turns** (up to 3 messages, with no per-turn countdown), and the camera follows whoever holds the floor. A player can pass early; the ten-minute match limit still applies.
+Players speak **in turns** (up to 3 messages, with no per-turn countdown), and the camera follows whoever holds the floor. Multiplayer matches last up to fifteen minutes; bot practice has no countdown.
 
 ## How a round works
 
@@ -38,8 +38,10 @@ Players speak **in turns** (up to 3 messages, with no per-turn countdown), and t
    - plain words (tones, signs, numbers, order words, in English and Russian) become `▓▓▓` static and raise the radio's suspicion;
    - words the team keeps repeating get **learned**: after that, they become static too;
    - only the speaker is told which words were overheard.
-4. The radio's *magic eye* opens as its suspicion grows. At 100% it **retunes**: a brand new code, every fragment is useless.
-5. Three attempts per trial, ten minutes for the whole match. Pass all five trials to open the radio.
+4. At 100% suspicion the radio **retunes**, preserving completed trials, current clues and control values. Bot messages do not train the radio or increase suspicion.
+5. Three attempts per trial; exhausting them triggers a retune. Pass all five trials to open the radio. Leaving an active matchmaking game blocks matchmaking for five minutes; leaving bot practice is free.
+
+The home screen offers a three-step interactive tutorial. Companions remember clues, ask for clarification, accept corrections and explain rules using their own clues and public chat. They use a contextual parser rather than an external language model, so unusual metaphors may need clarification.
 
 ## Design rule: off-chain play, on-chain memory
 

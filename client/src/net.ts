@@ -51,7 +51,7 @@ export class Net {
       let token: string | undefined;
       try { token = localStorage.getItem('fragment.profile-token') ?? undefined; } catch { /* guest profile */ }
       try {
-        const identity = await platformIdentity();
+        const identity = import.meta.env.VITE_LOCAL_PREVIEW==='true' ? null : await platformIdentity();
         if (ws !== this.ws || ws.readyState !== WebSocket.OPEN) return;
         ws.send(JSON.stringify(identity ?? { t: 'identify', token } satisfies ClientMessage));
       } catch {

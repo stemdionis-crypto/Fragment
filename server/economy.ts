@@ -80,7 +80,7 @@ function change<T>(id: string, fn: (account: Account) => T) { return transaction
 }); }
 export function profile(id: string): ProfileView {
   const a = committedAccounts.get(id)!;
-  return { nickname: a.nickname, platform: a.platform, balance: a.balance, owned: [...a.owned], equipped: a.equipped, wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalSignalEarned: a.totalSignalEarned, wallet: a.wallet, items: [...a.items], loadout: { ...a.loadout } };
+  return { matchmakingBlockedUntil: a.matchmakingBlockedUntil, nickname: a.nickname, platform: a.platform, balance: a.balance, owned: [...a.owned], equipped: a.equipped, wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalSignalEarned: a.totalSignalEarned, wallet: a.wallet, items: [...a.items], loadout: { ...a.loadout } };
 }
 export function recordMatch(id: string, round: string, won: boolean, seconds: number, name: string, practice: boolean) {
   return change(id, a => {
@@ -209,4 +209,11 @@ export function setNickname(id: string, value: string) {
     a.nickname = nickname; a.publicName = nickname;
     return nickname;
   });
+}
+
+export function penalizeMatchLeave(id: string, now = Date.now()) {
+  return change(id, a => { a.matchmakingBlockedUntil = now + 5 * 60_000; });
+}
+export function matchLeaveRemaining(id: string, now = Date.now()) {
+  return Math.max(0, (committedAccounts.get(id)?.matchmakingBlockedUntil ?? 0) - now);
 }
