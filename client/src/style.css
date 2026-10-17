@@ -1519,6 +1519,9 @@ body.reduced-motion .victory-preview i, body.reduced-motion .victory-particles i
 .wires-control .wires-art { width: 100%; height: auto; display: block; }
 .socket-hit { position: absolute; width: 46px; height: 46px; transform: translate(-50%, -50%); border-radius: 50%; padding: 0; background: transparent; border: 0; box-shadow: none; cursor: pointer; }
 .socket-hit:hover:not(:disabled) { background: rgba(227, 221, 207, 0.12); }
+/* These buttons are centred over a dial/socket. Keep their hit area still
+   while pressed: the generic button transform would move it off the pointer. */
+.antenna-hit:active:not(:disabled), .socket-hit:active:not(:disabled) { transform: translate(-50%, -50%); }
 .lamp-control { display: grid; gap: 10px; justify-items: center; }
 .lamp-swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; width: 100%; }
 .lamp-swatch { height: 34px; border-radius: 8px; background: var(--sw); border: 2px solid #0a0a0a; box-shadow: 0 2px 0 #070707; padding: 0; }
