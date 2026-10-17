@@ -21,13 +21,14 @@ try{
  assert.deepEqual(listener.learnedWords(),[],'helper words never become censored');
  const control=room.trial!.controls[0];room.values.set(control.id,control.options[0]);
  room.trialIndex=2;room.trialsDone=[{en:'First',ru:'Первый'},{en:'Second',ru:'Второй'}];
- const oldTrial=room.trial,oldValues=[...room.values];room.suspicion=100;
+ const oldTrial=room.trial,oldKind=room.trial!.kind,oldTries=room.attemptsLeft;room.suspicion=100;
  (room as unknown as {checkSuspicion():void}).checkSuspicion();
- assert.equal(room.trial,oldTrial);assert.equal(room.trialIndex,2);assert.deepEqual([...room.values],oldValues);assert.equal(room.trialsDone.length,2);
+ // a retune keeps the trial kind and completed trials, but deals new answers and costs a try
+ assert.notEqual(room.trial,oldTrial);assert.equal(room.trial!.kind,oldKind);assert.equal(room.trialIndex,2);assert.ok([...room.values].every(([,v])=>v===null));assert.equal(room.trialsDone.length,2);assert.equal(room.attemptsLeft,Math.max(1,oldTries-1));
  const a=await identify();await penalizeMatchLeave(a.id,100000);
  assert.equal(matchLeaveRemaining(a.id,100001),299999);assert.equal(matchLeaveRemaining(a.id,400001),0);
  assert.equal(profile(a.id).matchmakingBlockedUntil,400000);
  assert(JSON.parse(readFileSync(join(directory,'profiles.json'),'utf8')).some((p:any)=>p.id===a.id&&p.matchmakingBlockedUntil===400000));
  const before=room.trial;room.abandon(human);assert(human.companion);assert.equal(human.accountId,undefined);assert.equal(room.trial,before);
- console.log('PASS: no practice timer, bot radio isolation, protected words, retune preserves progress, durable 5-minute restriction, companion replacement');
+ console.log('PASS: no practice timer, bot radio isolation, protected words, retune deals new answers but keeps progress, durable 5-minute restriction, companion replacement');
 }finally{room.stopTimer();await closeAccountStore();rmSync(directory,{recursive:true,force:true});}

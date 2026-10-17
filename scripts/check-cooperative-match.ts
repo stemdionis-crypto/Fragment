@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {WebSocket} from 'ws';
 import type {PrivateInfo,PublicState,Value} from '../shared/protocol';
-import {linesFor,understandClue,visibleHandDecision} from '../server/bot-lines';
+import {linesFor,understandFor,visibleHandDecision} from '../server/bot-lines';
 import {decodeClue,HAND_TRIALS} from '../shared/trial-rules';
 const directory=mkdtempSync(join(tmpdir(),'fragment-coop-'));
 const environment={...process.env,SERVER_PORT:'2614',FRAGMENT_DATA_DIR:directory,FRAGMENT_LOCAL_PREVIEW:'true',FRAGMENT_REQUIRE_DATABASE:'false'};
@@ -28,7 +28,7 @@ try{
  while(Date.now()-started<180000){
   assert.equal(errors.length,0,errors.join('; '));
   const current=state as PublicState|undefined;
-  if(current?.phase==='won'){assert.equal(seenKinds.length,5);console.log('PASS: full five-trial match solved through real WebSocket chat and own private clues only: '+seenKinds.join(', '));break;}
+  if(current?.phase==='won'){assert.equal(seenKinds.length,4);console.log('PASS: full four-trial match solved through real WebSocket chat and own private clues only: '+seenKinds.join(', '));break;}
   assert(current?.phase!=='lost','match must remain playable');
   if(!current?.trial || !info || current.phase!=='playing'){await new Promise(r=>setTimeout(r,100));continue;}
   const trial=current.trial;
@@ -40,7 +40,7 @@ try{
   for(const control of trial.controls.filter(c=>c.ownerId===myId)){
    let input:Value|null=HAND_TRIALS.includes(trial.kind)
     ?visibleHandDecision(trial.kind,control.options,recent,current.players.map(p=>p.id),myId,info.hand ?? [])
-    :recent.filter(m=>m.kind==='player' && m.from!==myId && m.text.includes('Проверяющий')).map(m=>understandClue(m.text,control.options)).filter(v=>v!==null).at(-1) ?? null;
+    :recent.filter(m=>m.kind==='player' && m.from!==myId && m.text.includes('Проверяющий')).map(m=>understandFor(trial.kind,m.text,control.options,control.scale)).filter(v=>v!==null).at(-1) ?? null;
    if(input!==null){const answer=HAND_TRIALS.includes(trial.kind)?input:decodeClue(trial.kind,input,control.options);
     if(info.mine[control.id]!==answer && Date.now()-lastSet>700){send({t:'set',control:control.id,value:answer});lastSet=Date.now();}
    }

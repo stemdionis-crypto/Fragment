@@ -4,6 +4,14 @@ import { glyphSvg } from './glyphs';
 
 // Each trial has its own illustrated transmission card, using the same line art as the game.
 const LOOK: Partial<Record<TrialKind, { mark: Glyph; accent: string; glow: string }>> = {
+  wave: { mark: 'speaker', accent: '#b5cad1', glow: '#36545c' },
+  equalizer: { mark: 'dial', accent: '#bdc9ad', glow: '#42543b' },
+  morse: { mark: 'switch', accent: '#cabfa5', glow: '#5b4e38' },
+  scale: { mark: 'compass', accent: '#b6c7d0', glow: '#3b515e' },
+  wires: { mark: 'wire', accent: '#a9c5bd', glow: '#36554d' },
+  lamp: { mark: 'lantern', accent: '#d0bd99', glow: '#5e4f30' },
+  cassette: { mark: 'cassette', accent: '#cabfa5', glow: '#5b4e38' },
+  antenna: { mark: 'antenna', accent: '#b6c5b8', glow: '#36534c' },
   tuning: { mark: 'antenna', accent: '#b6c5b8', glow: '#36534c' },
   missing: { mark: 'eye', accent: '#b4b9d0', glow: '#343c58' },
   frequency: { mark: 'dial', accent: '#c9bba2', glow: '#514734' },

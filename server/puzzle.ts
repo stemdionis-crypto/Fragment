@@ -6,6 +6,7 @@
 
 import { ITEM_SETS, type Glyph, type ItemSet, type Knowledge, type L, type TrialKind, type Value } from '../shared/protocol';
 import { NUMBER_CIPHERS, SYMBOL_CIPHERS, HAND_TRIALS, decodeClue, handCandidates } from '../shared/trial-rules';
+import { ANTENNA_OPTIONS, BITS_OPTIONS, CASSETTE_OPTIONS, LAMP_OPTIONS, SCALE_STOPS, WAVE_OPTIONS, WIRE_OPTIONS } from '../shared/dials';
 
 export interface Control {
   id: string;
@@ -14,6 +15,7 @@ export interface Control {
   options: Value[];
   target: Value;
   clue?: Value;
+  scale?: Glyph[];
 }
 
 export interface Trial {
@@ -27,8 +29,14 @@ export interface Trial {
   hands?: Record<string, Glyph[]>; // "Missing": the items each player holds
 }
 
-// One trial from each chapter. The first is always a direct clue exchange;
-// later chapters introduce sets, then a single transformation at a time.
+// The current catalogue: hands-on radio parts plus the code lock and the missing card.
+// A match takes four of them; the older rule trials stay in the code for later chapters.
+export const TRIAL_CATALOG: readonly TrialKind[] = ['wave', 'cassette', 'antenna', 'equalizer', 'morse', 'scale', 'wires', 'lamp', 'code', 'missing'];
+const OPENERS: readonly TrialKind[] = ['wave', 'cassette', 'antenna', 'equalizer', 'wires'];
+// Trials built on picture sets; two of them in a row feel the same
+const PICTURE_TRIALS: readonly TrialKind[] = ['code', 'missing', 'scale'];
+
+// Legacy chapters (15-trial route), kept for reference and older checks
 export const TRIAL_CHAPTERS: readonly (readonly TrialKind[])[] = [
   ['tuning'],
   ['missing', 'frequency', 'code'],
@@ -36,7 +44,7 @@ export const TRIAL_CHAPTERS: readonly (readonly TrialKind[])[] = [
   ['duplicate', 'previous', 'pairs', 'crowd'],
   ['rare', 'leap', 'opposite', 'reflection'],
 ];
-export const TRIAL_KINDS: TrialKind[] = TRIAL_CHAPTERS.flat();
+export const TRIAL_KINDS: TrialKind[] = [...TRIAL_CATALOG];
 
 function shuffle<T>(arr: readonly T[]): T[] {
   const a = [...arr];
@@ -118,6 +126,90 @@ function frequencyTrial(players: string[]): Trial {
   };
 }
 
+// ---------- Hands-on parts: a wave, a tape, an antenna ----------
+
+const WAVE_LABELS: L[] = [both('Upper wave', 'Верхняя волна'), both('Lower wave', 'Нижняя волна'), both('Left wave', 'Левая волна'), both('Right wave', 'Правая волна')];
+
+function waveTrial(players: string[]): Trial {
+  const controls = players.map((_, i) => ({ id: `wave${i}`, label: WAVE_LABELS[i % WAVE_LABELS.length], options: [...WAVE_OPTIONS], target: pick(WAVE_OPTIONS) }));
+  return {
+    kind: 'wave',
+    title: both('The Wave', 'Волна'),
+    prompt: pick([
+      both('…I hear you, but crooked. Straighten my wave.', '…слышу вас, но криво. Выровняйте мне волну.'),
+      both('…the signal is shaking. Draw it for me.', '…сигнал дрожит. Нарисуйте мне его.'),
+    ]),
+    task: both('Describe the wave on your card. Set yours by height and spacing.', 'Опиши волну с карточки. Свою выставь по высоте и частоте.'),
+    ...circle(players, controls),
+  };
+}
+
+function cassetteTrial(players: string[]): Trial {
+  const controls = players.map((_, i) => ({ id: `tape${i}`, label: both(`Cassette ${i + 1}`, `Кассета ${i + 1}`), options: [...CASSETTE_OPTIONS], target: pick(CASSETTE_OPTIONS) }));
+  return {
+    kind: 'cassette',
+    title: both('The Tape', 'Кассета'),
+    prompt: pick([
+      both('…wind my tape. Exactly as much as needed.', '…отмотайте плёнку. Ровно сколько надо.'),
+      both('…one frame too long and I forget everything.', '…лишний кадр, и я всё забуду.'),
+    ]),
+    task: both('Say how long the tape on your card is. Wind yours to the same length.', 'Скажи, какой длины плёнка на карточке. Свою отмотай так же.'),
+    ...circle(players, controls),
+  };
+}
+
+function antennaTrial(players: string[]): Trial {
+  const controls = players.map((_, i) => ({ id: `antenna${i}`, label: both(`Antenna ${i + 1}`, `Антенна ${i + 1}`), options: [...ANTENNA_OPTIONS], target: pick(ANTENNA_OPTIONS) }));
+  return {
+    kind: 'antenna',
+    title: both('Antennas', 'Антенны'),
+    prompt: pick([
+      both('…turn me. No, the other way.', '…поверните меня. Нет, в другую сторону.'),
+      both('…somewhere out there a station is calling. Point me at it.', '…где-то там зовёт станция. Наведите меня.'),
+    ]),
+    task: both('Say where the antenna on your card points. Turn yours the same way.', 'Скажи, куда смотрит антенна на карточке. Свою поверни так же.'),
+    ...circle(players, controls),
+  };
+}
+
+function simpleTrial(kind: TrialKind, title: L, prompts: L[], task: L, label: (i: number) => L, options: number[], players: string[], extra: Partial<Control> = {}): Trial {
+  const controls = players.map((_, i) => ({ id: `${kind}${i}`, label: label(i), options: [...options], target: pick(options), ...extra }));
+  return { kind, title, prompt: pick(prompts), task, ...circle(players, controls) };
+}
+
+function equalizerTrial(players: string[]) {
+  return simpleTrial('equalizer', both('Equalizer', 'Эквалайзер'),
+    [both('…my voice is lopsided. Even it out.', '…голос у меня кривой. Подровняйте.'), both('…too much bass. Or too little. You decide.', '…то басов много, то мало. Решайте.')],
+    both('Describe the three bars on your card. Raise or lower yours to match.', 'Опиши три полоски с карточки. Свои подними или опусти так же.'),
+    (i) => both(`Equalizer ${i + 1}`, `Эквалайзер ${i + 1}`), BITS_OPTIONS, players);
+}
+function morseTrial(players: string[]) {
+  return simpleTrial('morse', both('Morse', 'Морзе'),
+    [both('…tap me a message. Three signals.', '…отстучите мне сообщение. Три сигнала.'), both('…short, long… I forget which.', '…коротко, длинно… я забыл, как там было.')],
+    both('Say the rhythm on your card out loud. Tap yours: short or long.', 'Произнеси ритм с карточки. Свой отстучи: коротко или длинно.'),
+    (i) => both(`Key ${i + 1}`, `Ключ ${i + 1}`), BITS_OPTIONS, players);
+}
+function scaleTrial(set: ItemSet, players: string[]) {
+  const scale = shuffle(itemsOf(set)).slice(0, 5);
+  const t = simpleTrial('scale', both('Station Scale', 'Шкала станций'),
+    [both('…somewhere between two stations. Find the spot.', '…где-то между станциями. Найдите место.'), both('…left a little. No, right.', '…чуть левее. Нет, правее.')],
+    both('Say where the pointer stands: on which picture or between which two. Move yours there.', 'Скажи, где стоит стрелка: на какой картинке или между какими. Свою поставь туда же.'),
+    (i) => both(`Pointer ${i + 1}`, `Стрелка ${i + 1}`), SCALE_STOPS, players, { scale });
+  return { ...t, set };
+}
+function wiresTrial(players: string[]) {
+  return simpleTrial('wires', both('Wires', 'Провода'),
+    [both('…plug me in. The right socket.', '…воткните меня. В нужное гнездо.'), both('…wrong socket and I scream.', '…не то гнездо, и я закричу.')],
+    both('Say which socket the plug is in. Plug yours into the same one.', 'Скажи, в каком гнезде штекер. Свой воткни в такое же.'),
+    (i) => both(`Plug ${i + 1}`, `Штекер ${i + 1}`), WIRE_OPTIONS, players);
+}
+function lampTrial(players: string[]) {
+  return simpleTrial('lamp', both('The Lamp', 'Лампа'),
+    [both('…I hear colours. Do not say them.', '…я слышу цвета. Не называйте их.'), both('…what colour is my light? Whisper it.', '…какого цвета мой свет? Только шёпотом.')],
+    both('Describe the colour without naming it. Pick the same colour for your lamp.', 'Опиши цвет, не называя его. Свою лампу зажги таким же.'),
+    (i) => both(`Lamp ${i + 1}`, `Лампа ${i + 1}`), LAMP_OPTIONS, players);
+}
+
 // ---------- 3. The Code: a chain of pictures, everyone owns one place in it ----------
 
 const PLACES: Record<number, L[]> = {
@@ -140,15 +232,12 @@ function codeTrial(set: ItemSet, players: string[]): Trial {
   return {
     kind: 'code',
     set,
-    title: both('The Code', 'Код'),
+    title: both('Code Lock', 'Кодовый замок'),
     prompt: pick([
-      both('…a chain of pictures. Only one order opens me.', '…цепочка картинок. Открывает меня только один порядок.'),
-      both('…I am locked. You each hold a link of my code.', '…я заперт. У каждого из вас звено моего кода.'),
+      both('…I am locked. Each of you holds one wheel.', '…я заперт. У каждого из вас одно колёсико.'),
+      both('…four pictures, one order. Do not rush.', '…четыре картинки, один порядок. Не спешите.'),
     ]),
-    task: both(
-      'Each player owns one position in the code. Describe your teammate’s picture; listen for the picture in your position. Select it and confirm.',
-      'У каждого своё место в коде. Опишите картинку напарника и выслушайте подсказку для своего места. Выберите картинку и подтвердите.',
-    ),
+    task: both('Describe the picture for your neighbour’s wheel without naming it. Set your own wheel.', 'Опиши картинку для колёсика соседа, не называя её. Своё выставь по его подсказке.'),
     ...circle(players, controls),
   };
 }
@@ -175,12 +264,9 @@ function missingTrial(set: ItemSet, players: string[]): Trial {
     title: both('Missing', 'Пропажа'),
     prompt: pick([
       both('…something of mine is gone. Find out what.', '…у меня что-то пропало. Узнайте что.'),
-      both('…one is missing. I can feel the empty place.', '…одного не хватает. Я чувствую пустое место.'),
+      both('…one is missing. I can feel the empty spot.', '…одного не хватает. Чувствую пустое место.'),
     ]),
-    task: both(
-      'Compare everyone’s cards. Which picture is missing from all hands? Each player selects that picture and confirms.',
-      'Сравните карточки всех игроков. Какой картинки нет ни у кого? Каждый выбирает её и подтверждает ответ.',
-    ),
+    task: both('Tell each other your cards. Pick the picture nobody has.', 'Расскажите друг другу свои карточки. Выберите ту, которой нет ни у кого.'),
     controls: players.map((p, i) => ({ id: `vote${i}`, ownerId: p, label: both('Your vote', 'Ваш голос'), options: items, target: lost })),
     knows: Object.fromEntries(players.map((p) => [p, []])),
     hands: Object.fromEntries(players.map((p, i) => [p, shuffle(hands[i])])),
@@ -249,6 +335,22 @@ export function generateTrial(kind: TrialKind, set: ItemSet, players: string[]):
   if (NUMBER_CIPHERS.includes(kind) || SYMBOL_CIPHERS.includes(kind)) return cipherTrial(kind, set, players);
   if (HAND_TRIALS.includes(kind) && kind !== 'missing') return collectionTrial(kind, set, players);
   switch (kind) {
+    case 'wave':
+      return waveTrial(players);
+    case 'cassette':
+      return cassetteTrial(players);
+    case 'antenna':
+      return antennaTrial(players);
+    case 'equalizer':
+      return equalizerTrial(players);
+    case 'morse':
+      return morseTrial(players);
+    case 'scale':
+      return scaleTrial(set, players);
+    case 'wires':
+      return wiresTrial(players);
+    case 'lamp':
+      return lampTrial(players);
     case 'tuning':
       return tuningTrial(set, players);
     case 'frequency':
@@ -266,13 +368,19 @@ export interface TrialPlan {
   set: ItemSet;
 }
 
-// Sample a progressively harder five-trial route from the fifteen-trial catalogue.
+// Four different trials per match, in a new order every time.
+// A hands-on part always opens, and the two picture trials never come back to back.
 export function trialSequence(count: number): TrialPlan[] {
-  if (!Number.isInteger(count) || count < 1 || count > TRIAL_CHAPTERS.length) throw new Error('Invalid trial count');
+  if (!Number.isInteger(count) || count < 1 || count > TRIAL_CATALOG.length) throw new Error('Invalid trial count');
+  const first = pick(OPENERS);
+  let route: TrialKind[] = [];
+  for (let tries = 0; tries < 30; tries++) {
+    route = [first, ...shuffle(TRIAL_CATALOG.filter((k) => k !== first))].slice(0, count);
+    if (!route.some((k, i) => i > 0 && PICTURE_TRIALS.includes(k) && PICTURE_TRIALS.includes(route[i - 1]))) break;
+  }
   const openingSet = pick<ItemSet>(['objects', 'animals']);
   const sets = [openingSet, ...shuffle((Object.keys(ITEM_SETS) as ItemSet[]).filter((set) => set !== openingSet))];
-  return TRIAL_CHAPTERS.slice(0, count)
-    .map((chapter, i) => ({ kind: pick(chapter), set: sets[i % sets.length] }));
+  return route.map((kind, i) => ({ kind, set: sets[i % sets.length] }));
 }
 
 // ---------- what the whole table knows (used by the tests and the test bots) ----------

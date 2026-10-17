@@ -21,7 +21,11 @@ import { initSettingsUI, placeSettingsButton } from './settings-ui';
 import { initShop, placeShopButton, handleShopMessage } from './shop';
 import { initProfileUI, placeProfileButton, handleProfileMessage } from './profile-ui';
 import { SKINS, type ProfileView } from '../../shared/economy';
-import { isCipher, SYMBOL_CIPHERS, HAND_TRIALS } from '../../shared/trial-rules';
+import { isCipher, SYMBOL_CIPHERS } from '../../shared/trial-rules';
+import { DESCRIBE_HINTS, isDial, waveDensity, waveHeight, waveValue, TAPE_FRAMES, bitAt, LAMP_COLORS } from '../../shared/dials';
+import { dialArt, waveSvg, tapeSvg, antennaSvg, waveMeter, equalizerSvg, morseSvg, scaleSvg, wiresSvg, lampSvg, setArtLang } from './dial-art';
+import { GLYPH_NAMES } from '../../shared/glyph-names';
+const glyphName = (g: Glyph) => GLYPH_NAMES[g] ? (lang === 'ru' ? GLYPH_NAMES[g].ru : GLYPH_NAMES[g].en) : g;
 import { connectWallet, initWalletAuth, handleWalletMessage, walletBusy } from './wallet-auth';
 import { glyphSvg } from './glyphs';
 import { trialBanner, trialExample } from './trial-presentation';
@@ -143,6 +147,8 @@ function mountHome() {
   codeInput.oninput = () => (codeInput.value = normalizeCode(codeInput.value));
 
   $('#practice').onclick = () => {
+    $<HTMLButtonElement>('#practice').disabled = true;
+    $('#practice').textContent = lang === 'ru' ? 'Подключаем тренировку…' : 'Connecting to practice…';
     savePrefs(playerName(), chosen);
     net.send({ t: 'create', name: playerName(), color: chosen, practice: true, lang });
   };
@@ -324,16 +330,16 @@ function mountGame() {
           <div class="bubbles" id="bubbles"></div>
           <div class="turn-banner" id="turnBanner"></div>
         </div>
-        <div class="controls">
+        <div class="controls play-row">
           <div class="controls-left">
             <div class="prompt" id="prompt"></div>
             <div class="game-guide" id="gameGuide" aria-live="polite"></div>
-            <div class="suspicion" aria-label="Suspicion">
+            <div class="suspicion" aria-label="Suspicion" title="${lang==='ru'?'Название или число +30 · Ошибка +20 · Решённый этап −20':'Name or digit +30 · Wrong answer +20 · Solved trial −20'}">
               <span>${t('attention')} · <b id="susPercent"></b></span>
               <div class="bar"><div id="susBar"></div></div>
-              <small>${lang==='ru'?'Название или число +30 · Ошибка +20 · Решённый этап −20 · Боты +0':'Name or digit +30 · Wrong answer +20 · Solved trial −20 · Bots +0'}</small>
             </div>
           </div>
+          <div class="mine describe" id="mine"></div>
           <div class="pult">
             <p class="eyebrow">${t('yourPanel')}</p>
             <div id="myControls"></div>
@@ -345,12 +351,10 @@ function mountGame() {
       </div>
 
       <aside class="side">
-        <div class="mine" id="mine"></div>
         <div class="chat">
           <div class="chat-log" id="chatLog" aria-live="polite"></div>
           <div class="learned" id="learned"></div>
-          <p class="listen-hint">${t('listenHint')}</p>
-          <details class="radio-rules"><summary>${lang==='ru'?'Какие слова слышит радио?':'What words does the radio hear?'}</summary><p>${lang==='ru'?'Прямые названия предметов и числа, даже если их нет на вашем пульте. Например: «солнце», «свеча», «семь». Опишите действие или форму. Обычные слова «сколько», «нужна», «воду» не изучаются.':'Direct item names and numbers, even if absent from your control. For example: “sun”, “candle”, “seven”. Describe their shape or use instead. Everyday helper words are not learned.'}</p></details>
+          <p class="listen-hint">${lang==='ru'?'Радио глушит названия, числа и очевидные слова испытания. Говорите образами.':'The radio jams names, numbers and the obvious words of each trial. Use images.'}</p>
           <form class="chat-form" id="chatForm" autocomplete="off">
             <input id="chatInput" maxlength="${CHAT_MAX}" placeholder="${t('speakCarefully')}" />
             <button type="submit" class="primary" id="sendBtn">${t('send')}</button>
@@ -367,7 +371,7 @@ function mountGame() {
   $('#leaveGame').onclick=()=>confirmLeave();
   $('#gameTutorial').onclick=()=>openTutorial();
   $('#askBot').onclick=()=>{
-    const input=$<HTMLInputElement>('#chatInput');input.value=lang==='ru'?'Не понял свою подсказку. Объясни, что мне выбрать.':'I did not understand my clue. Explain what I should choose.';input.focus();
+    const input=$<HTMLInputElement>('#chatInput');input.value=lang==='ru'?'Не понял, объясни ещё раз по-другому.':'Did not get it, explain it another way.';input.focus();
   };
   $('#passBtn').onclick = () => { sfx.pass(); net.send({ t: 'pass' }); };
   sceneKey = '';
@@ -400,35 +404,96 @@ function confirmLeave(){
   dialog.querySelector<HTMLButtonElement>('[data-stay]')!.onclick=()=>dialog.close();
   dialog.querySelector<HTMLButtonElement>('[data-leave]')!.onclick=()=>{dialog.close();net.send({t:'leave'});};dialog.showModal();
 }
-const valueHtml = (v: Value, size = 34) => (typeof v === 'number' ? `<span class="digit">${v}</span>` : glyphSvg(v, '#e3ddcf', size));
+const valueHtml = (v: Value, size = 34) => {
+  const kind = state?.trial?.kind;
+  if (kind && isDial(kind) && typeof v === 'number') return dialArt(kind, v, size / 40);
+  return typeof v === 'number' ? `<span class="digit">${v}</span>` : glyphSvg(v, '#e3ddcf', size);
+};
+// A wave is set in two halves; keep the half you picked until the other one is chosen
+const wavePicks = new Map<string, { h?: number; d?: number }>();
 
 // Your own control(s): pick a picture, or turn a digit wheel. Only you see what you set.
 function renderMyControls() {
+  setArtLang(lang === 'ru');
   const s = state!;
   const playing = s.phase === 'playing';
   $('#myControls').innerHTML = myControls()
     .map((c) => {
       const current = priv?.mine[c.id] ?? null;
       let body: string;
-      if (typeof c.options[0] === 'number') {
+      const kind = s.trial!.kind;
+      const dis = playing ? '' : 'disabled';
+      if (kind === 'wave') {
+        const pickNow = wavePicks.get(c.id) ?? (typeof current === 'number' ? { h: waveHeight(current), d: waveDensity(current) } : {});
+        const preview = pickNow.h !== undefined && pickNow.d !== undefined ? waveValue(pickNow.h, pickNow.d) : null;
+        const row = (part: 'h' | 'd', names: string[]) => `<div class="seg">${names.map((n, i) => `<button class="seg-btn ${pickNow[part] === i ? 'chosen' : ''}" data-wave="${c.id}" data-part="${part}" data-value="${i}" ${dis}>${n}</button>`).join('')}</div>`;
+        body = `<div class="wave-control">${waveSvg(preview, 300, 110)}
+          <span class="seg-label">${lang === 'ru' ? 'Высота' : 'Height'}</span>${row('h', lang === 'ru' ? ['низкая', 'средняя', 'высокая'] : ['low', 'medium', 'tall'])}
+          <span class="seg-label">${lang === 'ru' ? 'Частота' : 'Spacing'}</span>${row('d', lang === 'ru' ? ['редкая', 'средняя', 'частая'] : ['sparse', 'medium', 'dense'])}</div>`;
+      } else if (kind === 'cassette') {
+        const n = typeof current === 'number' ? current : null;
+        body = `<div class="tape-control">${tapeSvg(n, 320)}<div class="tape-hits">${Array.from({ length: TAPE_FRAMES }, (_, i) => `<button class="tape-hit" data-control="${c.id}" data-value="${i + 1}" ${dis} aria-label="${i + 1}"></button>`).join('')}</div></div>
+          <p class="fine center">${lang === 'ru' ? 'Нажми на кадр, до которого мотать' : 'Tap the frame to wind up to'}</p>`;
+      } else if (kind === 'antenna') {
+        const d = typeof current === 'number' ? current : null;
+        body = `<div class="antenna-control">${antennaSvg(d, 180)}${Array.from({ length: 8 }, (_, i) => {
+          // the dial is drawn with a margin for its landmarks, so the ring is 180/256 of the box
+          const a = (i * Math.PI) / 4, x = 50 + 31 * Math.sin(a), y = 50 - 31 * Math.cos(a);
+          return `<button class="antenna-hit ${d === i ? 'chosen' : ''}" style="left:${x}%;top:${y}%" data-control="${c.id}" data-value="${i}" ${dis} aria-label="${i}"></button>`;
+        }).join('')}</div>`;
+      } else if (kind === 'equalizer' || kind === 'morse') {
+        // Each click flips one bar or one signal; an untouched panel starts all low / all short
+        const v = typeof current === 'number' ? current : 0;
+        const art = kind === 'equalizer' ? equalizerSvg(typeof current === 'number' ? current : null, 240) : morseSvg(typeof current === 'number' ? current : null, 260);
+        const names = kind === 'equalizer' ? (lang === 'ru' ? ['бас', 'голос', 'писк'] : ['bass', 'voice', 'treble']) : (lang === 'ru' ? ['первый', 'второй', 'третий'] : ['first', 'second', 'third']);
+        body = `<div class="bits-control ${kind}">${art}<div class="bits-row">${[0, 1, 2].map((i) => {
+          const on = typeof current === 'number' && bitAt(current, i) === 1;
+          const word = kind === 'equalizer' ? (on ? (lang === 'ru' ? '▲ выше' : '▲ up') : (lang === 'ru' ? '▼ ниже' : '▼ down')) : (on ? (lang === 'ru' ? '— длинно' : '— long') : (lang === 'ru' ? '• коротко' : '• short'));
+          return `<button class="seg-btn ${on ? 'chosen' : ''}" data-control="${c.id}" data-value="${v ^ (4 >> i)}" ${dis}><small>${names[i]}</small><br>${word}</button>`;
+        }).join('')}</div></div>`;
+      } else if (kind === 'scale') {
+        const v = typeof current === 'number' ? current : null;
+        body = `<div class="scale-control">${scaleSvg(v, c.scale ?? [], 300, '#e3ddcf', (c.scale ?? []).map(glyphName))}<div class="scale-hits">${Array.from({ length: 9 }, (_, i) => `<button class="scale-hit ${v === i ? 'chosen' : ''}" data-control="${c.id}" data-value="${i}" ${dis} aria-label="${i}"></button>`).join('')}</div></div>
+          <p class="fine center">${lang === 'ru' ? 'Нажми под картинкой или между ними' : 'Tap under a picture or between two'}</p>`;
+      } else if (kind === 'wires') {
+        const v = typeof current === 'number' ? current : null;
+        body = `<div class="wires-control">${wiresSvg(v, 200)}${Array.from({ length: 6 }, (_, i) => `<button class="socket-hit ${v === i ? 'chosen' : ''}" style="left:${(44 + (200 / 3) * ((i % 3) + 0.5)) / 288 * 100}%;top:${(18 + 38 + Math.floor(i / 3) * 62) / 176 * 100}%" data-control="${c.id}" data-value="${i}" ${dis} aria-label="${i}"></button>`).join('')}</div>`;
+      } else if (kind === 'lamp') {
+        const v = typeof current === 'number' ? current : null;
+        body = `<div class="lamp-control">${lampSvg(v, 120)}<div class="lamp-swatches">${LAMP_COLORS.map((col, i) => `<button class="lamp-swatch ${v === i ? 'chosen' : ''}" style="--sw:${col}" data-control="${c.id}" data-value="${i}" ${dis} aria-label="${i}"></button>`).join('')}</div></div>`;
+      } else if (typeof c.options[0] === 'number') {
         const v = typeof current === 'number' ? current : null;
         body = `<div class="wheel">
-          <button class="ghost wheel-btn" data-control="${c.id}" data-value="${v === null ? 9 : (v + 9) % 10}" ${playing ? '' : 'disabled'} aria-label="−">‹</button>
+          <button class="ghost wheel-btn" data-control="${c.id}" data-value="${v === null ? 9 : (v + 9) % 10}" ${dis} aria-label="−">‹</button>
           <span class="wheel-digit ${v === null ? 'empty' : ''}">${v === null ? '?' : v}</span>
-          <button class="ghost wheel-btn" data-control="${c.id}" data-value="${v === null ? 0 : (v + 1) % 10}" ${playing ? '' : 'disabled'} aria-label="+">›</button>
+          <button class="ghost wheel-btn" data-control="${c.id}" data-value="${v === null ? 0 : (v + 1) % 10}" ${dis} aria-label="+">›</button>
         </div>`;
       } else {
-        body = `<div class="options">${c.options
+        body = `<div class="options ${kind === 'code' ? 'lock-wheel' : ''}">${c.options
           .map(
             (o) =>
-              `<button class="opt ${o === current ? 'chosen' : ''}" data-control="${c.id}" data-value="${o}" ${playing ? '' : 'disabled'}>${glyphSvg(o as Glyph, o === current ? '#121212' : '#d9d3c5', 30)}</button>`,
+              `<button class="opt ${o === current ? 'chosen' : ''}" data-control="${c.id}" data-value="${o}" ${dis} title="${esc(glyphName(o as Glyph))}">${glyphSvg(o as Glyph, o === current ? '#121212' : '#d9d3c5', 30)}<small>${esc(glyphName(o as Glyph))}</small></button>`,
           )
           .join('')}</div>`;
       }
       const label = s.trial?.kind === 'code' ? (lang === 'ru' ? `Ваше место в коде: ${tl(c.label)}` : `Your position in the code: ${tl(c.label)}`) : tl(c.label);
-      return `<div class="my-control"><p class="control-label"><span style="color:${me()?.color ?? '#d5af71'}">${esc(me()?.name ?? '')} · ${lang==='ru'?'ВАШ ПУЛЬТ':'YOUR CONTROL'}</span><br>${esc(label)}</p>${body}<details><summary>${lang==='ru'?'Откуда взять ответ?':'Where do I find the answer?'}</summary><p class="fine">${HAND_TRIALS.includes(s.trial!.kind) ? (lang === 'ru' ? 'Сравните карточки всей команды и выберите общий ответ по правилу испытания.' : 'Compare the whole team’s cards and choose the shared answer using the trial rule.') : (lang === 'ru' ? 'Команда знает ваш ответ. Карточка «Вы знаете» предназначена для соседа.' : 'Your team knows your answer. Your clue card is for your teammate.')}</p></details></div>`;
+      return `<div class="my-control"><p class="control-label">${esc(label)}</p>${body}</div>`;
     })
     .join('');
+  app.querySelectorAll<HTMLButtonElement>('#myControls [data-wave]').forEach((b) => {
+    b.onclick = () => {
+      const id = b.dataset.wave!, part = b.dataset.part as 'h' | 'd', cur = priv?.mine[id];
+      const pickNow = { ...(wavePicks.get(id) ?? (typeof cur === 'number' ? { h: waveHeight(cur), d: waveDensity(cur) } : {})), [part]: Number(b.dataset.value) };
+      wavePicks.set(id, pickNow);
+      sfx.dial();
+      if (pickNow.h !== undefined && pickNow.d !== undefined) {
+        const value = waveValue(pickNow.h, pickNow.d);
+        if (priv) priv.mine[id] = value;
+        net.send({ t: 'set', control: id, value });
+      }
+      renderMyControls();
+    };
+  });
   app.querySelectorAll<HTMLButtonElement>('#myControls [data-control]').forEach((b) => {
     b.onclick = () => {
       if(!myControls().some(c=>c.id===b.dataset.control))return;
@@ -461,28 +526,28 @@ function renderReady() {
 
 
 function renderMine() {
+  setArtLang(lang === 'ru');
   const s = state;
   if (!priv || !s?.trial) return;
+  const kind = s.trial.kind;
+  // "How to say it" helps when playing with companions; tables of humans find their own words
+  const withBots = s.practice || s.players.some((p) => p.bot);
+  const hints = withBots ? (DESCRIBE_HINTS[kind] ?? []).map((h) => `<span class="hint-chip">${esc(tl(h))}</span>`).join('') : '';
   const parts: string[] = [];
-  if (priv.knows.length) {
-    const rows = priv.knows
-      .map((k) => {
-        const c = s.trial!.controls.find((x) => x.id === k.controlId);
-        const owner = s.players.find((p) => p.id === c?.ownerId);
-        return `<li class="know-row">
-          <span class="know-who"><span class="fine">${lang === 'ru' ? 'Подсказка для' : 'Clue for'}</span><span class="pname" style="color:${owner?.color ?? '#999'}">${esc(owner?.name ?? '?')} ${owner?.bot ? `<span class="tag">${t('bot')}</span>` : ''}</span><span class="fine">${s.trial!.kind === 'code' ? (lang === 'ru' ? 'Место в коде' : 'Position in the code') : (lang === 'ru' ? 'Пульт' : 'Control')}: ${c ? esc(tl(c.label)) : ''}</span></span>
-          <span class="know-value">${valueHtml(k.value, 40)}<span class="fine">${isCipher(s.trial!.kind) ? (lang === 'ru' ? 'Исходная подсказка' : 'Input clue') : (lang === 'ru' ? 'Ответ соседа' : 'Teammate’s answer')}</span></span>
-        </li>`;
-      })
-      .join('');
-    parts.push(`<div class="piece"><p class="eyebrow">${t('youKnow')}</p><p class="fine">${isCipher(s.trial.kind) ? (lang === 'ru' ? 'Это исходная подсказка для соседа, а не готовый ответ. Опишите её; сосед применит правило испытания.' : 'This is your teammate’s input clue, not the final answer. Describe it; they apply the trial rule.') : t('youKnowHint')}</p><ul class="know-list">${rows}</ul></div>`);
+  for (const k of priv.knows) {
+    const c = s.trial.controls.find((x) => x.id === k.controlId);
+    const owner = s.players.find((p) => p.id === c?.ownerId);
+    const big = isDial(kind) && typeof k.value === 'number' ? dialArt(kind, k.value, kind === 'lamp' ? 1.3 : 1.6, '#e3ddcf', c?.scale ?? [], (c?.scale ?? []).map(glyphName)) : valueHtml(k.value, 96);
+    parts.push(`<div class="describe-card" style="--owner:${owner?.color ?? '#999'}">
+      <p class="describe-to">${lang === 'ru' ? 'Опиши для' : 'Describe for'} <b>${esc(owner?.name ?? '?')}</b>${owner?.bot ? ` <span class="tag">${t('bot')}</span>` : ''}</p>
+      <div class="describe-art">${big}</div>${typeof k.value === 'string' ? `<p class="describe-name">${lang === 'ru' ? 'это' : 'it is'} <b>${esc(glyphName(k.value as Glyph))}</b></p>` : ''}${kind === 'wave' && typeof k.value === 'number' ? waveMeter(k.value, lang === 'ru') : ''}
+      ${c && kind === 'code' ? `<p class="describe-sub">${esc(tl(c.label))}</p>` : ''}
+      ${isCipher(kind) ? `<p class="describe-sub">${lang === 'ru' ? 'Это исходная подсказка, сосед применит правило' : 'Input clue, they apply the rule'}</p>` : ''}
+    </div>`);
   }
   if (priv.hand?.length)
-    parts.push(
-      `<div class="piece"><p class="eyebrow">${t('knowHand')}</p><p class="fine">${t('knowHandHint')}</p><div class="glyph-row">${priv.hand
-        .map((g) => glyphSvg(g, '#e3ddcf', 38))
-        .join('')}</div></div>`,
-    );
+    parts.push(`<div class="describe-card"><p class="describe-to">${lang === 'ru' ? 'Твои карточки' : 'Your cards'}</p><div class="describe-art hand">${priv.hand.map((g) => `<span class="hand-card">${glyphSvg(g, '#e3ddcf', 50)}<small>${esc(glyphName(g))}</small></span>`).join('')}</div></div>`);
+  if (parts.length && hints) parts.push(`<div class="hint-row"><span class="hint-title">${lang === 'ru' ? 'Как описать' : 'How to say it'}</span>${hints}</div>`);
   $('#mine').innerHTML = parts.join('');
 }
 
@@ -503,7 +568,10 @@ function formatChat(m: ChatMessage) {
   const p = state!.players.find((x) => x.id === m.from);
   const { text, translated } = playerText(m);
   const mark = translated ? ` <span class="tr-mark" title="${t('original')}: ${esc(m.text)}">${t('translated')}</span>` : '';
-  return `<div class="msg ${m.heard ? 'heard' : ''}"><span class="who" style="color:${p?.color ?? '#999'}">${esc(p?.name ?? '?')}</span><span class="txt">${withStatic(text)}${mark}</span></div>`;
+  // Lines that name me are for me: they are drawn green so they never get lost in the chat
+  const myName = me()?.name?.trim().toLowerCase();
+  const toMe = !!myName && m.from !== myId && text.toLowerCase().includes(myName);
+  return `<div class="msg ${m.heard ? 'heard' : ''} ${toMe ? 'to-me' : ''}"><span class="who" style="color:${p?.color ?? '#999'}">${esc(p?.name ?? '?')}</span><span class="txt">${withStatic(text)}${mark}</span></div>`;
 }
 
 function updateChat() {
@@ -529,14 +597,13 @@ function updateGame() {
   if (tr) {
     $('#hudTrial').innerHTML = `${Array.from({ length: tr.total }, (_, i) => `<span class="step ${i < tr.index ? 'done' : i === tr.index ? 'now' : ''}"></span>`).join('')} <b>${esc(tl(tr.title))}</b>`;
     $('#prompt').innerHTML = `${trialBanner(tr, lang === 'ru')}
-      <span class="trial-task-label">${lang === 'ru' ? 'ЧТО ДЕЛАТЬ' : 'WHAT TO DO'}</span>
-      <span class="task">${esc(tl(tr.task))}</span>
-      <details class="trial-details"><summary>${lang==='ru'?'Пример и подробности':'Example and details'}</summary>${trialExample(tr, lang === 'ru')}<span class="q">${esc(tl(tr.prompt))}</span></details>${tr.kind === 'code' ? `<div class="code-order">${tr.controls.map((c) => { const owner = s.players.find((p) => p.id === c.ownerId); return `<span class="code-seat ${c.ownerId === myId ? 'mine' : ''}"><b>${esc(owner?.name ?? '?')}${c.ownerId === myId ? ` · ${t('you')}` : owner?.bot ? ` · ${t('bot')}` : ''}</b><span>${esc(tl(c.label))}</span></span>`; }).join('<span class="code-arrow" aria-hidden="true">→</span>')}</div>` : ''}`;
+      <span class="task">${esc(tl(tr.task))}</span>${trialExample(tr, lang === 'ru')}${tr.kind === 'code' ? `<div class="code-order">${tr.controls.map((c) => { const owner = s.players.find((p) => p.id === c.ownerId); return `<span class="code-seat ${c.ownerId === myId ? 'mine' : ''}"><b>${esc(owner?.name ?? '?')}${c.ownerId === myId ? ` · ${t('you')}` : owner?.bot ? ` · ${t('bot')}` : ''}</b><span>${esc(tl(c.label))}</span></span>`; }).join('<span class="code-arrow" aria-hidden="true">→</span>')}</div>` : ''}`;
     if (SYMBOL_CIPHERS.includes(tr.kind)) $('#prompt').insertAdjacentHTML('beforeend', `<div class="cipher-scale"><span class="fine">${lang === 'ru' ? 'Общая шкала · слева направо' : 'Shared scale · left to right'}</span><div class="glyph-row">${tr.controls[0].options.map((g, i) => `<span class="scale-item">${glyphSvg(g as Glyph, '#e3ddcf', 25)}<small>${i + 1}</small></span>`).join('')}</div></div>`);
   }
 
   // Re-draw your controls only when they change (keeps clicks snappy)
-  const panelKey = JSON.stringify([s.phase, tr?.index, tr?.controls.map((c) => c.id), priv?.mine]);
+  const panelKey = JSON.stringify([myId, s.phase, tr?.index, tr?.controls.map((c) => [c.id, c.ownerId]), priv?.mine, priv?.knows]);
+  if ($('#myControls').dataset.trial !== `${tr?.index}:${tr?.kind}`) { wavePicks.clear(); $('#myControls').dataset.trial = `${tr?.index}:${tr?.kind}`; }
   if ($('#myControls').dataset.key !== panelKey) {
     renderMyControls();
     renderMine();
@@ -562,26 +629,10 @@ function updateGame() {
   updateOverlay();
 }
 
+// The task line and the card to describe already say what to do; no extra step-by-step tip
 function updateGuide() {
   const box = app.querySelector<HTMLElement>('#gameGuide');
-  if (!box) return;
-  if (state?.phase !== 'playing' || !state.trial) { box.hidden = true; return; }
-  const games = account?.gamesPlayed ?? 0;
-  if (games >= 3) { box.hidden = true; return; }
-  box.hidden = false;
-  const isMine = state.turnId === myId;
-  const ownSet = myControls().every(c => priv?.mine[c.id] != null);
-  const hand = !!priv?.hand?.length;
-  const text = games === 0
-    ? !ownSet && isMine ? hand
-      ? (lang === 'ru' ? 'Сравните свои картинки с картинками команды и опишите их намёками. Затем выберите общий ответ по правилу испытания.' : 'Compare your pictures with the team’s, describe them indirectly, then choose the shared answer using the trial rule.')
-      : (lang === 'ru' ? 'Сначала опишите в чате карточку «Вы знаете» для соседа. Когда получите подсказку для своего пульта, выберите ответ ниже.' : 'First describe your “You know” card for a teammate. When you receive a clue for your own control, choose an answer below.')
-    : !ownSet ? (lang === 'ru' ? 'Слушайте подсказки команды и выставьте свой пульт. Во время чужого хода можно менять ответ.' : 'Listen to your team and set your own control. You may adjust it during another player’s turn.')
-    : !me()?.ready ? (lang === 'ru' ? 'Пульт выставлен. Если уверены в ответе, нажмите «Я уверен». Радио проверит всех вместе.' : 'Your control is set. If confident, press “I’m sure”. The radio checks everyone together.')
-    : (lang === 'ru' ? 'Вы готовы. Дождитесь команды; ответ можно изменить до общей проверки.' : 'You are ready. Wait for the team; you can change your answer before the shared check.')
-    : !ownSet ? (lang === 'ru' ? 'Вы знаете ответ соседа, а свой узнаете от команды. Не называйте точное слово: радио слушает.' : 'You know a teammate’s answer; your team knows yours. Avoid exact words: the radio listens.')
-    : (lang === 'ru' ? 'Сверьте ответ с подсказками команды и подтвердите его кнопкой «Я уверен».' : 'Check your answer against the team’s clues, then confirm with “I’m sure”.');
-  box.innerHTML = `<span class="eyebrow">${lang === 'ru' ? 'ПОДСКАЗКА' : 'TIP'}</span><p>${text}</p>`;
+  if (box) box.hidden = true;
 }
 
 // ---------- scene, camera, turns ----------
@@ -847,6 +898,7 @@ function bindLangSwitch() {
 // ---------- routing ----------
 
 function render() {
+  setSoundscape(state?.phase === 'playing', state?.suspicion ?? 0);
   if (!state) {
     if (mounted !== 'home') mountHome();
     placeSettingsButton();
@@ -902,7 +954,6 @@ net.onMessage = (m) => {
       break;
     case 'state':
       state = m.state;
-      setSoundscape(state.phase === 'playing', state.suspicion);
       render();
       break;
     case 'private': {
@@ -914,12 +965,14 @@ net.onMessage = (m) => {
       break;
     }
     case 'heard':
-      toast(`${t('heardYou')} <b>${m.words.map(esc).join(', ')}</b><br>${lang==='ru'?'Прямое название или число: +30. Опишите предмет намёком.':'Direct item name or number: +30. Describe it indirectly.'}`, 'radio');
+      toast(`${t('heardYou')} <b>${m.words.map(esc).join(', ')}</b><br>${lang==='ru'?'Запретное слово: +30. Скажите образом или через ориентир.':'Direct item name or number: +30. Describe it indirectly.'}`, 'radio');
       break;
     case 'fx':
       handleFx(m.kind);
       break;
     case 'error':
+      const practiceButton = app.querySelector<HTMLButtonElement>('#practice');
+      if (practiceButton) { practiceButton.disabled = false; practiceButton.textContent = t('playBots'); }
       const matchButton = app.querySelector<HTMLButtonElement>('#match');
       if (matchButton) matchButton.disabled = false;
       if (/no longer|no room/i.test(m.message) && savedSession()) {

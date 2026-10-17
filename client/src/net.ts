@@ -38,6 +38,7 @@ export class Net {
   private queue: string[] = [];
   private retry = 0;
   private authenticated = false;
+  private preferGuest = false;
   onMessage: (m: ServerMessage) => void = () => {};
   onStatus: (online: boolean) => void = () => {};
 
@@ -45,42 +46,73 @@ export class Net {
     const ws = new WebSocket(serverUrl());
     this.ws = ws;
     this.authenticated = false;
+    let authTimer: ReturnType<typeof setTimeout> | undefined;
+    const guestFallback = () => {
+      if (ws !== this.ws || this.authenticated || this.preferGuest) return;
+      this.preferGuest = true;
+      this.connect();
+      ws.close();
+    };
     ws.onopen = async () => {
       this.retry = 0;
       this.onStatus(true);
       let token: string | undefined;
       try { token = localStorage.getItem('fragment.profile-token') ?? undefined; } catch { /* guest profile */ }
       try {
-        const identity = import.meta.env.VITE_LOCAL_PREVIEW==='true' ? null : await platformIdentity();
+        // A stale platform login must never block a guest practice session.
+        if (!this.preferGuest) authTimer = setTimeout(guestFallback, 6000);
+        const identity = this.preferGuest || import.meta.env.VITE_LOCAL_PREVIEW==='true' ? null : await platformIdentity();
         if (ws !== this.ws || ws.readyState !== WebSocket.OPEN) return;
         ws.send(JSON.stringify(identity ?? { t: 'identify', token } satisfies ClientMessage));
       } catch {
-        this.onMessage({ t: 'error', message: 'Sign in to iDos again', ru: 'Войдите в iDos снова' });
-        return;
+        guestFallback();
       }
     };
     ws.onmessage = (e) => {
       if (ws !== this.ws) return;
       const message = JSON.parse(e.data) as ServerMessage;
+      if (message.t === 'error' && !this.authenticated && !this.preferGuest) {
+        guestFallback();
+        return;
+      }
       this.onMessage(message);
       if (message.t === 'profile' && !this.authenticated) {
+        clearTimeout(authTimer);
         this.authenticated = true;
         const s = savedSession();
         if (s) ws.send(JSON.stringify({ t: 'resume', code: s.code, playerId: s.playerId } satisfies ClientMessage));
         this.queue.splice(0).forEach(m => ws.send(m));
       }
+      if (message.t === 'left' && this.preferGuest) {
+        this.preferGuest = false;
+        this.connect();
+        ws.close();
+      }
     };
     ws.onclose = () => {
+      clearTimeout(authTimer);
       if (ws !== this.ws) return;
       this.authenticated = false;
       this.onStatus(false);
-      setTimeout(() => this.connect(), Math.min(5000, 500 * 2 ** this.retry++));
+      setTimeout(() => { if (ws === this.ws) this.connect(); }, Math.min(5000, 500 * 2 ** this.retry++));
     };
   }
 
   send(msg: ClientMessage) {
     const data = JSON.stringify(msg);
     if (this.ws?.readyState === WebSocket.OPEN && this.authenticated) this.ws.send(data);
-    else this.queue.push(data);
+    else {
+      this.queue.push(data);
+      if (msg.t === 'create' && msg.practice === true && !this.preferGuest) {
+        this.preferGuest = true;
+        // If SSO or its server-side verification is already in progress,
+        // use a fresh guest connection rather than queue behind that work.
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          const previous = this.ws;
+          this.connect();
+          previous.close();
+        }
+      }
+    }
   }
 }

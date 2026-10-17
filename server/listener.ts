@@ -246,6 +246,32 @@ export class Listener {
   private lastLearnAt = 0;
   private names = new Set<string>(); // players' names are never heard or learned
 
+  // The part a trial is about may be named freely: "your antenna points left" gives nothing away
+  private free: string[] = [];
+  setFree(prefixes: string[]) {
+    this.free = prefixes.map((x) => x.toLowerCase());
+  }
+  // Words this trial forbids on top of the usual ones ("The Lamp" jams colour names)
+  private jammed: RegExp[] = [];
+  setJammed(patterns: RegExp[]) {
+    this.jammed = patterns;
+  }
+  private isJammed(word: string) {
+    const w = word.toLowerCase().replace(/ё/g, 'е');
+    return this.jammed.some((re) => re.test(w));
+  }
+  // Later in a match the radio picks up the team's pet words sooner
+  private learnAfter = LEARN_AFTER;
+  private learnCooldown = LEARN_COOLDOWN_MS;
+  setLearning(after: number, cooldownMs: number) {
+    this.learnAfter = after;
+    this.learnCooldown = cooldownMs;
+  }
+  private isFree(word: string) {
+    const w = word.toLowerCase().replace(/ё/g, 'е');
+    return this.free.some((f) => w.startsWith(f));
+  }
+
   setNames(names: string[]) {
     this.names = new Set(names.flatMap((n) => tokenize(n)).map(stem));
   }
@@ -276,11 +302,11 @@ export class Listener {
     // 2. Then every word, disguised or not
     masked = masked.replace(WORD, (word) => {
       if (word.includes('▓')) return word;
-      if (this.names.has(stem(word))) return word;
+      if (this.names.has(stem(word)) || this.isFree(word)) return word;
       // This animal is not a picture or a number; its prefix resembles "восемь".
       if (/^осьминог(?:а|у|ом|е|и|ов)?$/i.test(word)) return word;
       if(word.toLowerCase()==='weather')return word; // ordinary word, not a typo of "feather"
-      if (isPlainWord(word)) {
+      if (isPlainWord(word) || this.isJammed(word)) {
         heard.push(word);
         return staticFor(word);
       }
@@ -296,14 +322,14 @@ export class Listener {
     let newlyLearned: string | undefined;
     const seen = new Set<string>();
     for (const t of tokenize(masked)) {
-      if (t.length < 5 || PROTECTED_STEMS.has(stem(t)) || t.includes('▓') || this.names.has(stem(t))) continue;
+      if (t.length < 5 || PROTECTED_STEMS.has(stem(t)) || t.includes('▓') || this.names.has(stem(t)) || this.isFree(t)) continue;
       const s = stem(t);
       if (seen.has(s)) continue;
       seen.add(s);
       const entry = this.counts.get(s) ?? { n: 0, form: t };
       entry.n++;
       this.counts.set(s, entry);
-      if (!newlyLearned && entry.n >= LEARN_AFTER && now - this.lastLearnAt > LEARN_COOLDOWN_MS) {
+      if (!newlyLearned && entry.n >= this.learnAfter && now - this.lastLearnAt > this.learnCooldown) {
         newlyLearned = entry.form;
         this.learnedStems.set(s, entry.form);
         this.lastLearnAt = now;

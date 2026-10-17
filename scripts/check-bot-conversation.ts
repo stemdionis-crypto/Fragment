@@ -8,7 +8,7 @@ const brain=new CompanionBrain();
 const chat:ChatMessage[]=[];
 const say=(text:string)=>{chat.push({id:chat.length+1,kind:'player',from:'human',text,t:Date.now()});return brain.think(mutable,'tuning',chat,'Друг','ru');};
 let result=say('то что светит');assert.equal(result.value,undefined);assert(result.lines.some(line=>line.includes('А')));
-result=say('Б');assert.equal(result.value,'moon');assert(result.lines.some(line=>line.includes('Понял')));
+result=say('Б');assert.equal(result.value,'moon');assert(result.lines.some(line=>/Понял|Ага|Есть|Принял|Ставлю/.test(line)));
 result=say('неправильно');assert.equal(result.value,undefined);assert(result.withdraw);
 result=say('светит днем и греет');assert.equal(result.value,'sun');
 assert.equal(brain.think(mutable,'tuning',chat,'Друг','ru').lines.length,0,'unchanged chat is not repeated');

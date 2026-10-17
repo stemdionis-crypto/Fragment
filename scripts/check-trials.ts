@@ -6,7 +6,7 @@ import { HAND_TRIALS, decodeClue } from '../shared/trial-rules';
 //   - pooled together, the table knows every answer; alone, nobody does
 //   npm run check
 import { ITEM_SETS, type ItemSet } from '../shared/protocol';
-import { TRIAL_CHAPTERS, TRIAL_KINDS, generateTrial, solveFromKnowledge, trialSequence } from '../server/puzzle';
+import { TRIAL_KINDS, generateTrial, solveFromKnowledge, trialSequence } from '../server/puzzle';
 
 const RUNS = 800;
 let failed = false;
@@ -43,21 +43,20 @@ for (const kind of TRIAL_KINDS) {
   }
 }
 let varied = 0;
-for (let i = 0; i < 500; i++) if (new Set(trialSequence(5).map((p) => p.kind)).size === 5) varied++;
+for (let i = 0; i < 500; i++) if (new Set(trialSequence(4).map((p) => p.kind)).size === 4) varied++;
 failed ||= varied !== 500;
-console.log(`${varied === 500 ? 'ok  ' : 'FAIL'} every game has 5 different trials (${varied}/500)`);
+console.log(`${varied === 500 ? 'ok  ' : 'FAIL'} every game has 4 different trials (${varied}/500)`);
 for (let i = 0; i < 500; i++) {
-  const sequence = trialSequence(5);
-  assert.equal(sequence[0].kind, 'tuning', 'first trial introduces direct clue exchange');
-  assert.equal(new Set(sequence.map((trial) => trial.set)).size, 5, 'every trial uses a distinct picture set');
-  sequence.forEach((trial, index) => assert.ok(TRIAL_CHAPTERS[index].includes(trial.kind), `trial ${index + 1} belongs to its difficulty chapter`));
+  const sequence = trialSequence(4);
+  assert.ok(['wave', 'cassette', 'antenna', 'equalizer', 'wires'].includes(sequence[0].kind), 'a hands-on part opens the match');
+  assert.equal(new Set(sequence.map((trial) => trial.set)).size, 4, 'every trial uses a distinct picture set');
 }
-assert.equal(TRIAL_KINDS.length, 15);
-assert.equal(new Set(TRIAL_KINDS).size, 15);
+assert.equal(TRIAL_KINDS.length, 10);
+assert.equal(new Set(TRIAL_KINDS).size, 10);
 const seen = new Set<string>();
-for (let i = 0; i < 500; i++) trialSequence(5).forEach(t => seen.add(t.kind));
-assert.equal(seen.size, 15, 'all trials can be selected');
-assert.throws(() => trialSequence(6));
+for (let i = 0; i < 500; i++) trialSequence(4).forEach(t => seen.add(t.kind));
+assert.equal(seen.size, 10, 'all trials can be selected');
+assert.throws(() => trialSequence(11));
 assert.throws(() => trialSequence(0));
 const digits = [0,1,2,3,4,5,6,7,8,9];
 const expected = { echo: [1,2,3,4,5,6,7,8,9,0] };

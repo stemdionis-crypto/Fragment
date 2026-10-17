@@ -1,6 +1,7 @@
-// Tiny procedural sound: radio static, a thud and a chime. No audio files.
+// One continuous soundtrack across screens, plus procedural radio and action sounds.
 
 import { settings } from './settings';
+import soundtrackUrl from './assets/audio/fragment-dark-loop.wav?url';
 let ctx: AudioContext | null = null;
 let unlocked = false;
 let master: GainNode;
@@ -8,6 +9,16 @@ let music: GainNode;
 let ambience: GainNode;
 let effects: GainNode;
 let tension: GainNode;
+let soundtrackLevel: GainNode;
+let inMatch = false;
+let currentSuspicion = 0;
+
+function syncSoundscape() {
+  if (!ctx) return;
+  // Change only gain, never restart the source when the screen changes.
+  soundtrackLevel.gain.setTargetAtTime(inMatch ? 0.4 : 1, ctx.currentTime, 1.2);
+  tension.gain.setTargetAtTime(inMatch ? 0.005 + currentSuspicion * 0.0005 : 0.005, ctx.currentTime, 1.5);
+}
 
 function syncVolumes() {
   if (!ctx) return;
@@ -20,28 +31,32 @@ function syncVolumes() {
 }
 
 function soundtrack(a: AudioContext) {
-  // Original, slowly breathing minor drone and a radio hiss. No external assets.
-  for (const [i, frequency] of [55, 110, 130.81, 164.81, 220].entries()) {
-    const osc = a.createOscillator();
-    const voice = a.createGain();
-    osc.frequency.value = frequency;
-    osc.detune.value = i % 2 ? 3 : -3;
-    voice.gain.value = i === 0 ? 0.09 : 0.035;
-    osc.connect(voice).connect(music);
-    const breath = a.createOscillator();
-    const depth = a.createGain();
-    breath.frequency.value = 0.025 + i * 0.007;
-    depth.gain.value = 0.012;
-    breath.connect(depth).connect(voice.gain);
-    breath.start();
-    osc.start();
-  }
+  soundtrackLevel = a.createGain();
+  soundtrackLevel.gain.value = 0;
+  soundtrackLevel.connect(music);
+  // The WAV has an offline crossfade at its seam. A decoded buffer loops
+  // sample-accurately, without media-element seek delays or codec padding.
+  void fetch(soundtrackUrl)
+    .then(response => {
+      if (!response.ok) throw new Error(`Soundtrack HTTP ${response.status}`);
+      return response.arrayBuffer();
+    })
+    .then(bytes => a.decodeAudioData(bytes))
+    .then(buffer => {
+      const source = a.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(soundtrackLevel);
+      source.start();
+      syncSoundscape();
+    })
+    .catch(error => console.warn('Fragment soundtrack unavailable', error));
   const overtone = a.createOscillator();
   overtone.frequency.value = 233.08;
   overtone.type = 'triangle';
   tension = a.createGain();
   tension.gain.value = 0.005;
-  overtone.connect(tension).connect(music);
+  overtone.connect(tension).connect(ambience);
   overtone.start();
   const buffer = a.createBuffer(1, a.sampleRate * 4, a.sampleRate);
   const data = buffer.getChannelData(0);
@@ -59,8 +74,11 @@ function soundtrack(a: AudioContext) {
 }
 
 export function setSoundscape(playing: boolean, suspicion: number) {
-  if (!ctx) return;
-  tension.gain.setTargetAtTime(playing ? 0.005 + Math.max(0, Math.min(100, suspicion)) * 0.0005 : 0.005, ctx.currentTime, 1.5);
+  const nextSuspicion = Math.max(0, Math.min(100, suspicion));
+  if (inMatch === playing && currentSuspicion === nextSuspicion) return;
+  inMatch = playing;
+  currentSuspicion = nextSuspicion;
+  syncSoundscape();
 }
 
 function ac() {

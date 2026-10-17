@@ -24,6 +24,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      - run: node scripts/check-connection.mjs
       - run: npm run check
       - run: npx tsx scripts/check-cosmetics.ts
       - run: npx tsx scripts/check-wallet-auth.ts

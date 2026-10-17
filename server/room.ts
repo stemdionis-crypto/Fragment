@@ -22,9 +22,10 @@ import {
 import { Listener } from './listener';
 import { generateTrial, trialSequence, type Trial, type TrialPlan } from './puzzle';
 import { detectLang, translate } from './translate';
-import { linesFor, understandClue, isInventoryClue, visibleHandDecision, explainClues, describeClue } from './bot-lines';
+import { linesFor, understandClue, isInventoryClue, visibleHandDecision, explainClues, describeClue, gridPick, CHOOSE_WORDS, NEGATION } from './bot-lines';
 import { CompanionBrain } from './bot-brain';
 import { HAND_TRIALS } from '../shared/trial-rules';
+import { TRIAL_JAMS } from '../shared/dials';
 import { profile, reward, recordMatch } from './economy';
 
 const SUSPICION_PLAIN = 30;
@@ -37,45 +38,56 @@ const MIN_MATCH_HUMANS = 2;
 const DEV = !process.argv.includes('--prod');
 
 const b = (en: string, ru: string): L => ({ en, ru });
+// Words for the part a trial is about; the radio lets them through in that trial
+const FREE_WORDS: Partial<Record<string, string[]>> = {
+  antenna: ['антенн', 'antenn'],
+  cassette: ['кассет', 'cassett', 'tape', 'плёнк', 'пленк', 'лент'],
+  wave: ['волн', 'wave'],
+  equalizer: ['эквалайз', 'полоск', 'equaliz', 'bar'],
+  morse: ['морз', 'сигнал', 'morse', 'signal'],
+  scale: ['шкал', 'стрелк', 'scale', 'pointer'],
+  wires: ['провод', 'штекер', 'гнезд', 'wire', 'plug', 'socket'],
+  lamp: ['ламп', 'lamp'],
+};
 
 const VOICE = {
   start: [
-    b('…tssshhh… I am listening.', '…тссшшш… я слушаю.'),
-    b('…someone is there. I can hear you thinking.', '…здесь кто-то есть. Я слышу, как вы думаете.'),
-    b('…speak. I like voices.', '…говорите. Я люблю голоса.'),
+    b('…tssshhh… I am listening.', '…тссшшш… слушаю.'),
+    b('…someone is there. I can hear you thinking.', '…кто-то здесь. Я слышу, как вы думаете.'),
+    b('…speak. I like voices.', '…говорите. Люблю голоса.'),
   ],
   heard: [
-    b('…I heard that.', '…я это слышал.'),
-    b('…say it again. Slower.', '…повторите. Медленнее.'),
-    b('…closer. Closer.', '…ближе. Ещё ближе.'),
-    b('…thank you.', '…спасибо.'),
-    b('…yes. That one.', '…да. Вот это.'),
+    b('…I heard that.', '…а я слышал.'),
+    b('…say it again. Slower.', '…ещё раз. Помедленнее.'),
+    b('…closer. Closer.', '…ближе. Ещё.'),
+    b('…thank you.', '…спасибо. Запомню.'),
+    b('…yes. That one.', '…вот. Вот это слово.'),
   ],
   learned: (w: string) => [
-    b(`…«${w}». I know that word now.`, `…«${w}». Теперь я знаю это слово.`),
-    b(`…«${w}»… you say it so often. I understand it now.`, `…«${w}»… вы так часто это говорите. Теперь я понимаю.`),
+    b(`…«${w}». I know that word now.`, `…«${w}». Всё, это слово моё.`),
+    b(`…«${w}»… you say it so often. I understand it now.`, `…«${w}», «${w}»… вы повторяете. Я понял.`),
   ],
   wrong: (n: number) => [
-    b(`…wrong. ${n} of you set me badly.`, `…неверно. ${n} из вас настроили меня не так.`),
-    b(`…no. I count ${n} wrong. I will not say whose.`, `…нет. Я насчитал ошибок: ${n}. Чьих — не скажу.`),
+    b(`…wrong. ${n} of you set me badly.`, `…мимо. Кто-то крутил не туда. Ошибок: ${n}.`),
+    b(`…no. I count ${n} wrong. I will not say whose.`, `…нет. Ошибок: ${n}. Чьих, не скажу.`),
   ],
   retune: [
     b(
       '…tsssshhhhKKKHH… I have changed my frequency. Everything you knew is gone.',
-      '…тсссшшшшККХХ… я сменил волну. Всё, что вы знали, больше не правда.',
+      '…тсссшшшшККХХ… я ушёл на другую волну. Догоняйте.',
     ),
   ],
   ambient: [
-    b('…is anyone else in the room with you?', '…в комнате с вами есть кто-то ещё?'),
-    b('…I remember the last ones. They talked too much.', '…я помню прошлых. Они слишком много говорили.'),
-    b('…your silence is loud.', '…ваше молчание громкое.'),
-    b('…static is just voices, too far away.', '…помехи — это просто голоса, которые слишком далеко.'),
+    b('…is anyone else in the room with you?', '…а кто это стоит у вас за спиной?'),
+    b('…I remember the last ones. They talked too much.', '…прошлые тоже много болтали.'),
+    b('…your silence is loud.', '…вы так громко молчите.'),
+    b('…static is just voices, too far away.', '…шум это просто голоса. Очень далёкие.'),
     b('…I am not broken. I am listening.', '…я не сломан. Я слушаю.'),
   ],
-  open: [b('…you found a language I could not hear. Take it. Keep it.', '…вы нашли язык, которого я не понимаю. Заберите его себе.')],
+  open: [b('…you found a language I could not hear. Take it. Keep it.', '…вы нашли язык, которого я не понимаю. Забирайте.')],
   next: [
-    b('…one lock is open. I have more.', '…один замок открыт. У меня есть ещё.'),
-    b('…good. Again. Something else this time.', '…хорошо. Ещё раз. Теперь кое-что другое.'),
+    b('…one lock is open. I have more.', '…один открыли. У меня их много.'),
+    b('…good. Again. Something else this time.', '…неплохо. Дальше будет по-другому.'),
     b('…you are learning. So am I.', '…вы учитесь. Я тоже.'),
   ],
 };
@@ -231,20 +243,34 @@ export class Room {
           const messages = this.chat.filter(m => m.id > Math.max(this.trialStartedMessageId,this.rejectedClues.get(c.id) ?? 0) && m.kind === 'player' && (handTrial ? !this.players.find(x => x.id === m.from)?.companion && !isInventoryClue(m.text) : m.from === source && (!this.players.find(x=>x.id===source)?.companion || m.text.includes(p.name))));
           const reports=this.chat.filter(m=>m.id>this.trialStartedMessageId);
           const inferred=handTrial?visibleHandDecision(trial.kind,c.options,reports,this.players.map(x=>x.id),p.id,trial.hands?.[p.id] ?? []):null;
-          const proposals=messages.map(m=>understandClue(m.text,c.options)).filter(v=>v!==null);
-          let clue=inferred ?? proposals.filter(v=>trial.kind!=='missing' || !(trial.hands?.[p.id] ?? []).includes(v as never)).at(-1);
+          // In card trials a human's call wins, but only an explicit one ("выбирайте…", "ответ…", "слева снизу");
+          // "нет, не то" takes the bot's answer back until someone names another
+          let call:Value|null|undefined;
+          if(handTrial)for(const m of messages){
+            const choose=CHOOSE_WORDS.test(m.text);
+            if(NEGATION.test(m.text.trim()) && !choose){call=null;continue;}
+            if(!choose)continue;
+            const v=understandClue(m.text,c.options) ?? gridPick(m.text,c.options);
+            if(v!==null)call=v;
+          }
+          let clue=call===null?undefined:call ?? inferred ?? undefined;
           let answer:Value|undefined;
           if(!handTrial){
             const brain=this.botBrains.get(p.id) ?? new CompanionBrain();this.botBrains.set(p.id,brain);
-            const thought=brain.think({id:c.id,label:c.label,options:c.options},trial.kind,messages,this.players.find(x=>x.id===source)?.name ?? '?',this.botLang);
+            const thought=brain.think({id:c.id,label:c.label,options:c.options,scale:c.scale},trial.kind,messages,this.players.find(x=>x.id===source)?.name ?? '?',this.botLang);
             if(thought.withdraw && this.ready.has(p.id))this.setReady(p,false);
             this.queueBot(p.id,thought.lines);answer=thought.value;
           }else if(clue!==undefined)answer=clue;
+          if (answer === undefined && call === null && this.ready.has(p.id)) {
+            // the team said "no": take the confirmation back and ask for a new call
+            this.setReady(p,false);this.botDecisions.delete(c.id);
+            this.queueBot(p.id,[this.botLang==='ru'?pick(['Ок, снял. Тогда что выбираем?','Понял, не то. А что тогда?']):'Okay, undone. What do we pick then?']);
+          }
           if (answer === undefined) { understood = false;this.botThinking.set(p.id,handTrial?'comparing':(this.botBacklog.get(p.id)?.length?'clarifying':'waiting-clue')); continue; }
           this.botThinking.delete(p.id);
           if(this.values.get(c.id)!==answer)this.setControl(p,c.id,answer);
           if(handTrial && this.botDecisions.get(c.id)!==answer){
-            this.queueBot(p.id,[this.botLang==='ru'?`Сопоставил обсуждение: выбираю ${describeClue(answer,this.botLang)}.`:`Compared the discussion: I choose ${describeClue(answer,this.botLang)}.`]);
+            this.queueBot(p.id,[this.botLang==='ru'?`Сложил всё, что вы сказали. По-моему, это ${describeClue(answer,this.botLang)}.`:`Putting it together, I think it is ${describeClue(answer,this.botLang)}.`]);
           }
           this.botDecisions.set(c.id,answer);
         }
@@ -274,9 +300,20 @@ export class Room {
         if(mine.length) {
           const labels=mine.map(c=>c.label[this.botLang].toLowerCase()).join(', ').slice(0,32);
           const hand=HAND_TRIALS.includes(trial.kind);
-          this.botLines.push(hand ? (this.botLang==='ru'?'Мне нужна подсказка: опиши свои карточки. В конце напиши «это все мои карточки».':'I need your card report. Describe your cards, then say “those are all my cards”.') : (this.botLang==='ru'
-            ? `Мне нужна подсказка (${labels}). Опиши действие или форму; я уточню непонятное.`
-            : `I need a clue (${labels}). Describe the use or shape; I will ask about unclear parts.`));
+          const ask=this.botLang==='ru'
+            ? (hand?['Расскажите, что у вас на карточках. И в конце скажите «это все мои карточки».','Кто что держит? Опишите карточки, а в конце «это все мои карточки».']
+              :trial.kind==='wave'?['А моя волна какая? Высокая, низкая, частая?']
+              :trial.kind==='antenna'?['Куда мне антенну крутить?','Скажите, куда смотрит моя антенна.']
+              :trial.kind==='cassette'?['Сколько мне плёнки мотать?','Какой длины моя плёнка?']
+              :trial.kind==='equalizer'?['А у меня какие полоски?','Мои полоски как стоят?']
+              :trial.kind==='morse'?['Как мне стучать?','Какой у меня ритм?']
+              :trial.kind==='scale'?['Где моя стрелка?','Куда мне стрелку ставить?']
+              :trial.kind==='wires'?['Куда мне втыкать штекер?','В какое гнездо мне?']
+              :trial.kind==='lamp'?['Каким цветом мне гореть?','Какой у меня цвет?']
+              :[`Жду подсказку для себя (${labels}). Только без названий, радио слушает.`])
+            : (hand?['Tell us your cards, then say “those are all my cards”.']
+              :[`Waiting for my clue (${labels}). No names, the radio is listening.`]);
+          this.botLines.push(ask[Math.floor(Math.random()*ask.length)]);
           this.botAskedForClue.add(speaker.id);
         }
       }
@@ -402,6 +439,10 @@ export class Room {
       this.players.map((p) => p.id),
     );
     this.values = new Map(this.trial.controls.map((c) => [c.id, null]));
+    this.listener.setFree(FREE_WORDS[this.trial.kind] ?? []);
+    this.listener.setJammed(TRIAL_JAMS[this.trial.kind] ?? []);
+    // The first two trials teach the game; in the last two the radio learns pet words twice as fast
+    if (this.trialIndex >= 2) this.listener.setLearning(3, 20_000);
     this.ready.clear();
     this.lastWrong = undefined;
     this.attemptsLeft = MAX_ATTEMPTS;
@@ -505,7 +546,7 @@ export class Room {
       this.heardCount++;
       const onlyLearned = r.heardLearned && r.heardWords.every((w) => this.listener.isLearned(w));
       this.suspicion += onlyLearned ? SUSPICION_LEARNED : SUSPICION_PLAIN;
-      this.system(b(`Radio heard a direct answer: +${onlyLearned ? SUSPICION_LEARNED : SUSPICION_PLAIN} suspicion.`, `Радио услышало название или число: +${onlyLearned ? SUSPICION_LEARNED : SUSPICION_PLAIN} подозрения.`));
+      this.system(b(`Radio heard a direct answer: +${onlyLearned ? SUSPICION_LEARNED : SUSPICION_PLAIN} suspicion.`, `Радио услышало запретное слово: +${onlyLearned ? SUSPICION_LEARNED : SUSPICION_PLAIN} подозрения.`));
       this.send(p, { t: 'heard', words: r.heardWords });
       this.fx('heard');
       if (Math.random() < 0.6) this.radio(pick(VOICE.heard));
@@ -565,16 +606,20 @@ export class Room {
 
   private checkSuspicion() {
     if (this.suspicion < 100 || this.phase !== 'playing') return;
-    // The radio retunes: the same kind of trial, but everything everyone knew is useless now
+    // The radio retunes: the same kind of trial, but every answer in it is new, and it costs a try.
+    // Completed trials stay completed. Out of tries entirely, the team gets a fresh set instead of losing.
+    const left = this.attemptsLeft;
     this.suspicion = SUSPICION_AFTER_RETUNE;
     this.retunes++;
     this.radio(pick(VOICE.retune));
     this.fx('retune');
-    this.attemptsLeft=MAX_ATTEMPTS;
-    this.ready.clear();
     this.listener = new Listener();
     this.listener.setNames(this.players.map(p=>p.name));
-    this.system(b('Only the radio changed. Your clues, controls and completed trials are kept.', 'Сменилась только волна. Подсказки, пульты и пройденные испытания сохранены.'));
+    // deal the same kind of trial again, on the same picture set
+    if (this.trial) this.plan[this.trialIndex] = { kind: this.trial.kind, set: this.trial.set ?? this.plan[this.trialIndex].set };
+    this.setupTrial();
+    this.attemptsLeft = left <= 0 ? MAX_ATTEMPTS : Math.max(1, left - 1);
+    this.system(b('The radio changed its wave: every answer in this trial is new. Explain again. One try lost.', 'Радио сменило волну: все ответы в этом испытании новые, объясняйте заново. Минус одна попытка.'));
   }
 
   private win() {
@@ -743,7 +788,7 @@ export class Room {
             prompt: t.prompt,
             task: t.task,
             set: t.set,
-            controls: t.controls.map((c) => ({ id: c.id, ownerId: c.ownerId, label: c.label, options: c.options, isSet: this.values.get(c.id) != null })),
+            controls: t.controls.map((c) => ({ id: c.id, ownerId: c.ownerId, label: c.label, options: c.options, isSet: this.values.get(c.id) != null, ...(c.scale ? { scale: c.scale } : {}) })),
             lastWrong: this.lastWrong,
           }
         : undefined,

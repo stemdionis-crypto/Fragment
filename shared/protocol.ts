@@ -25,7 +25,8 @@ export interface L {
 
 // Every trial gives each player their own control on the radio.
 // The right setting of your control is known to someone else.
-export type TrialKind = 'tuning' | 'frequency' | 'code' | 'missing'
+export type TrialKind = 'wave' | 'cassette' | 'antenna' | 'equalizer' | 'morse' | 'scale' | 'wires' | 'lamp'
+  | 'tuning' | 'frequency' | 'code' | 'missing'
   | 'common' | 'duplicate' | 'rare' | 'crowd'
   | 'echo'
   | 'next' | 'previous' | 'opposite' | 'reflection' | 'pairs' | 'leap';
@@ -38,7 +39,7 @@ export const PLAYER_COLORS = ['#c9c4b8', '#8d9499', '#7d93a3', '#a8655a', '#8690
 export const MIN_PLAYERS = 4;
 export const MAX_PLAYERS = 4;
 export const MAX_ATTEMPTS = 3; // per trial
-export const TRIALS_PER_GAME = 5;
+export const TRIALS_PER_GAME = 4;
 export const ROUND_SECONDS = 15 * 60;
 export const CHAT_MAX = 140;
 export const TURN_MESSAGES = 3;
@@ -91,6 +92,7 @@ export interface ControlView {
   label: L; // "Volume knob", "2nd digit", "right after the start"…
   options: Value[];
   isSet: boolean;
+  scale?: Glyph[]; // "Station scale": the pictures printed on the dial, left to right
 }
 
 export interface TrialView {

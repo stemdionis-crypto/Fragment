@@ -1,5 +1,7 @@
 import type { ChatMessage, Glyph, Lang, PrivateInfo, PublicState, TrialKind, Value } from '../shared/protocol';
 import { isCipher, handCandidates, decodeClue } from '../shared/trial-rules';
+import { scorePictures } from './picture-keys';
+import { describeDial, isDial, readAntenna, readEqualizer, readLamp, readMorse, readTape, readWave, readWires, waveValue } from '../shared/dials';
 
 const RU: Record<Glyph, string> = {
   triangle: 'крыша домика',
@@ -65,8 +67,53 @@ const DIGITS_EN = [
   'the fingers on a hand', 'the legs of a beetle', 'the days in a week', 'the arms of an octopus', 'your fingers except a pinky',
 ];
 const describeValue = (v: Value, LANG: Lang) =>
-  typeof v === 'number' ? (LANG === 'ru' ? DIGITS_RU : DIGITS_EN)[v] : `«${(LANG === 'ru' ? RU : EN)[v]}»`;
+  typeof v === 'number' ? (LANG === 'ru' ? DIGITS_RU : DIGITS_EN)[v] : (LANG === 'ru' ? RU : EN)[v];
 export const describeClue=describeValue;
+// Kind-aware: hands-on parts are described by shape, length or direction
+export function describeFor(kind: TrialKind, v: Value, lang: Lang, scale?: Glyph[]): string {
+  if (kind === 'scale' && typeof v === 'number' && scale?.length) {
+    const say = (g: Glyph) => (lang === 'ru' ? RU : EN)[g];
+    return v % 2 === 0
+      ? (lang === 'ru' ? `стрелка прямо на картинке: ${say(scale[v / 2])}` : `the pointer is right on the picture: ${say(scale[v / 2])}`)
+      : (lang === 'ru' ? `стрелка между двумя картинками: ${say(scale[(v - 1) / 2])}; и ${say(scale[(v + 1) / 2])}` : `the pointer is between two pictures: ${say(scale[(v - 1) / 2])}; and ${say(scale[(v + 1) / 2])}`);
+  }
+  return isDial(kind) && typeof v === 'number' ? describeDial(kind, v, lang) : describeValue(v, lang);
+}
+
+// The station scale: which printed pictures the message points at, and whether it says "between"
+function readScale(text: string, scale: Glyph[]): number | null {
+  const t = text.toLowerCase().replace(/ё/g, 'е');
+  const between = /между|посередине|between/.test(t);
+  const body = t.includes(':') ? t.slice(t.indexOf(':') + 1) : t;
+  const unique = (p: string) => { const v = understandClue(p, scale); return v === null ? -1 : scale.indexOf(v as Glyph); };
+  const parts = body.split(/;|(?:^|\s)и(?:\s|$)|(?:^|\s)and(?:\s|$)/).filter((p) => p.trim());
+  if (parts.length >= 2) {
+    const idx = [...new Set(parts.map(unique).filter((i) => i >= 0))];
+    if (idx.length === 2 && Math.abs(idx[0] - idx[1]) === 1) return Math.min(...idx) * 2 + 1;
+  }
+  const whole = unique(body);
+  if (whole >= 0 && !between) return whole * 2;
+  const hits = scale.map((g, i) => understandClue(body, [g]) === g ? i : -1).filter((i) => i >= 0);
+  if (hits.length === 2 && Math.abs(hits[0] - hits[1]) === 1) return Math.min(...hits) * 2 + 1;
+  if (hits.length === 1 && !between) return hits[0] * 2;
+  if (!hits.length && /(самый|самом|крайн).{0,8}(лев|начал)|left edge|far left/.test(t)) return 0;
+  if (!hits.length && /(самый|самом|крайн).{0,8}(прав|конц)|right edge|far right/.test(t)) return 8;
+  return null;
+}
+const pickLine = <T>(arr: readonly T[]) => arr[Math.floor(Math.random() * arr.length)];
+
+// Read a teammate's message for a given trial. Hands-on parts have their own vocabulary.
+export function understandFor(kind: TrialKind, text: string, options: Value[], scale?: Glyph[]): Value | null {
+  if (kind === 'antenna') return readAntenna(text);
+  if (kind === 'equalizer') return readEqualizer(text);
+  if (kind === 'morse') return readMorse(text);
+  if (kind === 'wires') return readWires(text);
+  if (kind === 'lamp') return readLamp(text);
+  if (kind === 'scale') return scale?.length ? readScale(text, scale) : null;
+  if (kind === 'cassette') { const v = readTape(text) ?? understandClue(text, options); return v !== null && options.includes(v) ? v : null; }
+  if (kind === 'wave') { const w = readWave(text); return w.height !== undefined && w.density !== undefined ? waveValue(w.height, w.density) : null; }
+  return understandClue(text, options) ?? gridPick(text, options);
+}
 
 
 // What the bot says about what it knows, addressed to whoever owns each control
@@ -78,15 +125,21 @@ export function linesFor(info: PrivateInfo, s: PublicState, LANG: Lang): string[
     const c = t.controls.find((x) => x.id === k.controlId);
     const owner = s.players.find((p) => p.id === c?.ownerId)?.name ?? '?';
     const label = c ? (LANG === 'ru' ? c.label.ru : c.label.en).toLowerCase() : '';
-    if (isCipher(t.kind)) return tr(`${owner}, исходная подсказка для тебя: ${describeValue(k.value, LANG)}.`, `${owner}, your input clue: ${describeValue(k.value, LANG)}.`);
-    if (t.kind === 'frequency') return tr(`${owner}, твоя цифра — ${describeValue(k.value, LANG)}.`, `${owner}, your digit: ${describeValue(k.value, LANG)}.`);
-    if (t.kind === 'code') return tr(`${owner}, у тебя (${label}) стоит ${describeValue(k.value, LANG)}.`, `${owner}, in your place (${label}): ${describeValue(k.value, LANG)}.`);
-    return tr(`${owner}, твоя ${label} — на ${describeValue(k.value, LANG)}.`, `${owner}, your ${label}: ${describeValue(k.value, LANG)}.`);
+    const what = describeFor(t.kind, k.value, LANG, c?.scale);
+    if (isDial(t.kind)) return pickLine(LANG === 'ru'
+      ? [`${owner}, у тебя ${what}.`, `${owner}, смотри: ${what}.`, `${owner}, у тебя так: ${what}.`]
+      : [`${owner}, yours is ${what}.`, `${owner}, look: ${what}.`]);
+    if (isCipher(t.kind)) return tr(`${owner}, тебе пришло ${what}. Дальше по правилу.`, `${owner}, your input is ${what}. Apply the rule.`);
+    if (t.kind === 'frequency') return tr(`${owner}, твоя цифра: ${what}.`, `${owner}, your digit: ${what}.`);
+    if (t.kind === 'code') return pickLine(LANG === 'ru'
+      ? [`${owner}, у тебя ${label} ${what}.`, `${owner}, ${label} у тебя ${what}.`]
+      : [`${owner}, your wheel (${label}) is ${what}.`, `${owner}, for ${label}: ${what}.`]);
+    return tr(`${owner}, у тебя ${what}.`, `${owner}, yours is ${what}.`);
   });
   // Send each item separately so a clue cannot be cut off by CHAT_MAX.
   if (info.hand?.length) {
     for (const item of info.hand) lines.push(tr(`У меня есть ${describeValue(item, LANG)}.`, `I have ${describeValue(item, LANG)}.`));
-    lines.push(tr('Это все мои карточки.', 'Those are all my cards.'));
+    lines.push(pickLine(LANG === 'ru' ? ['Всё, это все мои карточки.', 'Больше у меня ничего, это все мои карточки.'] : ['That is it, those are all my cards.']));
   }
   return lines;
 }
@@ -143,6 +196,40 @@ const ALIASES: Record<Glyph, string[]> = {
   wire: ['провод','проводок','шнур ток','wire','electric cord'],
   switch: ['выключатель','переключатель','включает свет','switch','turns light on'],
 };
+// How the drawings look: players often describe the picture, not the thing
+const LOOKS: Partial<Record<Glyph, string[]>> = {
+  record: ['диск', 'круг с точкой', 'шар с точкой', 'пончик', 'бублик', 'кругляш с дыркой', 'disc', 'donut', 'circle with a dot'],
+  dial: ['спидометр', 'стрелка в круге', 'круг со стрелкой', 'speedometer', 'gauge'],
+  speaker: ['рупор', 'громкоговоритель', 'звуковые волны', 'megaphone', 'sound waves'],
+  battery: ['аккумулятор', 'заряд', 'плюс и минус', 'charge'],
+  wire: ['зигзаг', 'ломаная линия', 'шнур', 'zigzag', 'cord'],
+  switch: ['тумблер', 'рычажок', 'кнопка включения', 'toggle'],
+  headphones: ['дуга с чашками', 'на уши', 'для музыки', 'на голову для музыки', 'over the ears'],
+  microphone: ['палка с шариком', 'караоке', 'на сцене', 'говорят в него', 'karaoke'],
+  antenna: ['усы', 'мачта', 'вышка', 'для телевизора', 'на крыше', 'mast', 'tower'],
+  gear: ['зубчики', 'колесо с зубьями', 'cog'],
+  lock: ['навесной', 'дужка', 'вешают на дверь', 'shackle'],
+  lantern: ['керосинка', 'лампа с ручкой'],
+  hourglass: ['два треугольника', 'песок сыплется'],
+  cassette: ['две катушки', 'магнитофон', 'tape recorder', 'фильм', 'фильмы', 'смотрят фильмы', 'смотреть фильмы', 'видео', 'видик', 'видак', 'двд', 'dvd', 'vhs', 'кассетник', 'видеокассета', 'старое кино', 'movies', 'video'],
+  moth: ['бабочка', 'butterfly'],
+  cloud: ['облачко', 'тучка'],
+  thermometer: ['ртуть', 'температура', 'простуда', 'при простуде'],
+  umbrella: ['от дождя', 'раскрывают'],
+};
+// Everyday associations people reach for first
+const ASSOCIATIONS: Partial<Record<Glyph, string[]>> = {
+  triangle: ['пирамидка', 'пирамида'], circle: ['кружочек', 'кружок'], square: ['коробка', 'коробочка'],
+  cross: ['аптека', 'как в аптеке', 'кладбище', 'на кладбище', 'крестик'], star: ['с лучами', 'лучи', 'пять концов', 'пятиконечная', 'много на небе', 'их много на небе', 'очень много ночью', 'больше всего углов', 'на погонах'],
+  moon: ['серп', 'серп в небе'], key: ['отпирает', 'в замок вставляют'], candle: ['воск', 'восковая', 'фитиль', 'фитилем', 'с фитилем'], cup: ['кофе', 'для кофе', 'кружечка'],
+  knife: ['острое', 'острое на кухне', 'ножом', 'ножиком', 'для хлеба'], clock: ['тикающий', 'тикающим', 'тикающие', 'тикающая'], book: ['библиотека', 'в библиотеке'], coin: ['копейка', 'копеечка'], feather: ['птичье', 'лёгкое птичье'],
+  bottle: ['стеклянная', 'для вина', 'вино'], cat: ['мышей', 'ловит мышей'], owl: ['большими глазами', 'большие глаза'],
+  crow: ['черная птица', 'кар кар', 'кар'], snake: ['ядовитая', 'без ног'], moth: ['одежду', 'в шкафу', 'моль'],
+  bell: ['динь динь', 'церковь', 'в церкви', 'звон'], gear: ['механизм', 'в механизме', 'в механизме часов'],
+  rain: ['капает', 'капли', 'мокро'], snowflake: ['снег', 'снежок'], lightning: ['бьет с неба', 'гроза'], wind: ['сдувает', 'дует'],
+  umbrella: ['над головой', 'в дождь'], speaker: ['из нее звук', 'звук идет'], wire: ['ток идет', 'по нему ток'], switch: ['щелкаешь', 'щелкать', 'щелкаешь на стене'],
+};
+for (const map of [LOOKS, ASSOCIATIONS]) for (const [g, extra] of Object.entries(map)) ALIASES[g as Glyph].push(...extra!);
 const NUMBER_ALIASES = [
   ['ноль','ничего','пусто','zero','nothing'], ['один','нос человека','one','human nose'],
   ['два','пара','глаза человека','two','pair','human eyes'], ['три','медведи','медведя','медведи маша','three','goldilocks bears'],
@@ -177,6 +264,7 @@ export function understandClue(text: string, options: Value[]): Value | null {
   const contextual:Partial<Record<Glyph,RegExp[]>>={
     sun:[/днем|дневн|daytime|day light/,/свет|ярк|тепл|гре|shin|warm|light/],
     moon:[/ноч|night/,/свет|неб|светил|shin|sky/],
+    star:[/ноч|night/,/неб|sky/],
     candle:[/воск|фитил|торт|wax|wick|cake/,/огон|гор|задув|flame|burn|blow/],
     lantern:[/нести|перенос|руке|carry|portable|hand/,/свет|ламп|light|lamp/],
     gear:[/зуб|teeth|tooth/,/колес|крут|wheel|turn/],
@@ -234,7 +322,9 @@ export function understandClue(text: string, options: Value[]): Value | null {
       return canonical.some(word => !ignored.has(word.slice(0,5)) && input.some(token => closeWord(word,token)));
     });
   });
-  return matches.length === 1 ? matches[0] : null;
+  if (matches.length === 1) return matches[0];
+  // Nothing matched a known phrase: fall back to what the words make people think of
+  return scorePictures(text, options);
 }
 
 export function explainClues(info:PrivateInfo,s:PublicState,lang:Lang,recipientId?:string):string[]{
@@ -244,14 +334,27 @@ export function explainClues(info:PrivateInfo,s:PublicState,lang:Lang,recipientI
     const control=s.trial.controls.find(c=>c.id===knowledge.controlId);
     if(!control || (recipientId && control.ownerId!==recipientId))continue;
     const owner=s.players.find(p=>p.id===control.ownerId)?.name ?? '?';
-    lines.push(lang==='ru'?`${owner}, для твоего пульта: ${describeValue(knowledge.value,lang)}.`:`${owner}, for your control: ${describeValue(knowledge.value,lang)}.`);
+    lines.push(lang==='ru'?`${owner}, ещё раз: ${describeFor(s.trial.kind,knowledge.value,lang,control.scale)}.`:`${owner}, once more: ${describeFor(s.trial.kind,knowledge.value,lang,control.scale)}.`);
     if(isCipher(s.trial.kind)){
       const result=decodeClue(s.trial.kind,knowledge.value,control.options);
       lines.push(lang==='ru'?`Это исходная подсказка. После правила выбирай ${describeValue(result,lang)}.`:`That is the input clue. After the rule choose ${describeValue(result,lang)}.`);
-    }else lines.push(lang==='ru'?'Выбери эту картинку на своём пульте и подтверди ответ.':'Choose that picture on your control and confirm.');
+    }else lines.push(lang==='ru'?pickLine(['Ставь так и жми «Я уверен».','Выставь это у себя и подтверждай.']):'Set that and press “I’m sure”.');
   }
   return lines.map(line=>line.slice(0,140));
 }
+
+// "слева снизу", "справа сверху": a place on the shared 4×2 button grid
+export function gridPick(text: string, options: Value[]): Value | null {
+  if (options.length !== 8) return null;
+  const t = text.toLowerCase().replace(/ё/g, 'е');
+  const row = /верх|сверху|top/.test(t) ? 0 : /низ|ниж|снизу|bottom/.test(t) ? 1 : -1;
+  const col = /(^|\s)(слева|левая|левую|левой|самая левая|left)/.test(t) ? 0 : /(^|\s)(справа|правая|правую|правой|right)/.test(t) ? 3
+    : /левее середины|left of the middle/.test(t) ? 1 : /правее середины|right of the middle/.test(t) ? 2 : -1;
+  return row >= 0 && col >= 0 ? options[row * 4 + col] : null;
+}
+// A teammate telling everyone what to pick, not describing their own cards
+export const CHOOSE_WORDS = /выбир|выбер|выбор|ответ|слово это|(^|\s)это (то|та|тот)(\s|$)|жм[иё]|нажм|нажим|став(ь|им|ьте)|тыка|клика|choose|pick|answer|press|select|it's the/i;
+export const NEGATION = /^(нет|не то|не так|не та|неправ|не угадал|wrong|no)(?:[\s,.!]|$)/i;
 
 export const isInventoryClue = (text:string)=> /у меня|мои карточки|i have|my cards/i.test(text) && !/ответ|мой выбор|answer|choose|pick/i.test(text);
 export function visibleHandDecision(kind:TrialKind, options:Value[], messages:ChatMessage[], players:string[], ownId:string, ownHand:Glyph[]):Value|null {

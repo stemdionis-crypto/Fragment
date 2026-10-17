@@ -15,7 +15,7 @@ Built by **Dionis and Zhenya**, a two-person team from Kazakhstan. Status: **liv
 - **Presentation:** https://stemdionis-crypto.github.io/Fragment/
 - **Source code:** https://github.com/stemdionis-crypto/Fragment
 
-The earlier video shows an older version and mentions twenty trial types. The current game has **fifteen**. The current pitch describes the released iDos integration and FRAG/Signals economy.
+The earlier videos show previous trial catalogues. The current game has **ten active trial types**, with **four trials per match**. The English pitch describes the iDos integration and FRAG/Signals economy.
 
 ### Quick start for judges
 
@@ -30,12 +30,12 @@ The Render free instance may take around a minute to wake after inactivity. If c
 
 ## Current release
 
-The October 12, 2026 release is **iDos version 22**. Its matching gameplay/server commit is [012349a](https://github.com/stemdionis-crypto/Fragment/commit/012349a6cf53fba905011b46a5f3e3eea12c6414).
+The October 17, 2026 update contains matching client and server changes. GitHub is the source for the Render backend and the locally built iDos static client.
 
 | Feature | Current status |
 | --- | --- |
 | Multiplayer, room codes and random matchmaking | Implemented |
-| Five challenges per match, drawn from fifteen trial types | Implemented |
+| Four challenges per match, drawn from ten active trial types | Implemented |
 | Three-step interactive tutorial | Implemented |
 | Bot practice with contextual clue interpretation, clarification and corrections | Implemented; unusual metaphors can still need clarification |
 | iDos account login, nickname editing, profiles, inventory and equipment saving | Implemented |
@@ -48,18 +48,19 @@ The October 12, 2026 release is **iDos version 22**. Its matching gameplay/serve
 | Learning from an on-chain collection of previous Fragments | Planned |
 | External LLM-based companion reasoning or radio judge | Not used by the current companion logic |
 
-### What changed in version 22
+### What changed in the October 17 update
 
 - Companions remember hypotheses, ask clarifying questions and accept corrections. They use their own clues and visible chat, not the hidden solution.
 - Bot messages do not train the radio or increase suspicion. Common helper words are protected from learning.
-- Retuning preserves completed trials, current clues and control values. Failed attempts identify the affected controls.
-- Bot practice has no countdown and can be left freely.
+- Retuning preserves completed trials and deals new answers for the current trial. New clues must be shared and controls set again. Failed attempts identify the affected controls.
+- Bot practice has no countdown and can be left freely. A stalled or expired iDos login no longer blocks guest practice; connecting to a wallet is not required.
+- The original Fragment soundtrack loops continuously across menu and match, becomes quieter during play and has a saved music-volume setting.
 - Multiplayer matches have a fifteen-minute limit. Leaving an active matchmaking match pauses matchmaking for five minutes. A brief connection loss has a sixty-second reconnect grace period.
 - The interface identifies your control, explains suspicion changes and includes an interactive tutorial.
 
 ## Gameplay
 
-A match contains **five challenges**, beginning with direct clue exchange and progressing through a catalogue of **fifteen rules**. Picture sets and private clues vary between matches.
+A match contains **four challenges**, beginning with direct clue exchange and progressing through a catalogue of **ten active trial types**. Picture sets and private clues vary between matches.
 
 Every player owns a control. The public rule explains how clues become answers; private clues are held by teammates or distributed across their card hands. Players must communicate through chat without giving the radio an obvious word or number.
 

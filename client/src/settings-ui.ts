@@ -5,7 +5,8 @@ import { sfx } from './audio';
 const copy = {
   ru: {
     title: 'Настройки', audio: 'Звук', visuals: 'Изображение', general: 'Общее',
-    master: 'Общая громкость', music: 'Музыка', ambience: 'Фон и шум радио', effects: 'Звуки действий',
+    master: 'Общая громкость', music: 'Громкость музыки', ambience: 'Фон и шум радио', effects: 'Звуки действий',
+    musicNote: 'В матче музыка становится тише автоматически. Ползунок меняет её громкость во всех экранах.',
     muted: 'Выключить весь звук', backgroundAudio: 'Звук в фоновой вкладке', camera: 'Камера следует за говорящим',
     reducedMotion: 'Уменьшить движение и тряску', filmGrain: 'Зернистость плёнки', flashes: 'Вспышки помех',
     language: 'Язык интерфейса', close: 'Готово', reset: 'По умолчанию', test: 'Проверить звук',
@@ -13,7 +14,8 @@ const copy = {
   },
   en: {
     title: 'Settings', audio: 'Audio', visuals: 'Display', general: 'General',
-    master: 'Master volume', music: 'Music', ambience: 'Ambience and radio hiss', effects: 'Sound effects',
+    master: 'Master volume', music: 'Music volume', ambience: 'Ambience and radio hiss', effects: 'Sound effects',
+    musicNote: 'Music automatically becomes quieter during a match. This slider adjusts it on every screen.',
     muted: 'Mute all audio', backgroundAudio: 'Audio in background tabs', camera: 'Camera follows the speaker',
     reducedMotion: 'Reduce motion and shaking', filmGrain: 'Film grain', flashes: 'Static flashes',
     language: 'Interface language', close: 'Done', reset: 'Restore defaults', test: 'Test sound',
@@ -43,7 +45,7 @@ export function initSettingsUI() {
     const slider = (key: 'master' | 'music' | 'ambience' | 'effects') => `<label class="setting-slider" for="setting-${key}"><span>${c[key]}</span><output id="value-${key}">${settings[key]}%</output><input id="setting-${key}" data-volume="${key}" type="range" min="0" max="100" step="1" value="${settings[key]}" /></label>`;
     const toggle = (key: 'muted' | 'backgroundAudio' | 'camera' | 'reducedMotion' | 'filmGrain' | 'flashes') => `<label class="setting-toggle"><input type="checkbox" data-toggle="${key}" ${settings[key] ? 'checked' : ''} /><span>${c[key]}</span></label>`;
     dialog.innerHTML = `<div class="settings-heading"><h2 id="settings-title">${c.title}</h2><button id="settings-x" aria-label="${c.close}">×</button></div>
-      <fieldset><legend>${c.audio}</legend>${slider('master')}${slider('music')}${slider('ambience')}${slider('effects')}${toggle('muted')}${toggle('backgroundAudio')}<button id="sound-test">${c.test}</button></fieldset>
+      <fieldset><legend>${c.audio}</legend>${slider('master')}${slider('music')}<p class="fine">${c.musicNote}</p>${slider('ambience')}${slider('effects')}${toggle('muted')}${toggle('backgroundAudio')}<button id="sound-test">${c.test}</button></fieldset>
       <fieldset><legend>${c.visuals}</legend>${toggle('camera')}${toggle('reducedMotion')}${toggle('filmGrain')}${toggle('flashes')}</fieldset>
       <fieldset><legend>${c.general}</legend><label class="setting-language">${c.language}<select id="settings-lang"><option value="ru" ${lang === 'ru' ? 'selected' : ''}>Русский</option><option value="en" ${lang === 'en' ? 'selected' : ''}>English</option></select></label></fieldset>
       <p class="fine">${c.note}</p><div class="settings-footer"><button id="settings-reset">${c.reset}</button><button id="settings-done" class="primary">${c.close}</button></div>`;
