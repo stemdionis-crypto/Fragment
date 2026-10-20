@@ -2,6 +2,7 @@
 
 import { settings } from './settings';
 import soundtrackUrl from './assets/audio/fragment-dark-loop.wav?url';
+import { radioFoleySamples } from './radio-foley';
 let ctx: AudioContext | null = null;
 let unlocked = false;
 let master: GainNode;
@@ -107,25 +108,28 @@ export function unlockAudio() {
   document.addEventListener('visibilitychange', syncVolumes);
 }
 
-export function staticBurst(seconds = 0.35, volume = 0.18, freq = 1800) {
+const radioBuffers = new Map<string, AudioBuffer>();
+let radioVariant = 0;
+
+function radioContact(seconds: number, volume: number) {
   try {
     const a = ac();
     if (!a || document.hidden && !settings.backgroundAudio) return;
-    const len = Math.floor(a.sampleRate * seconds);
-    const buf = a.createBuffer(1, len, a.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (Math.random() < 0.97 ? 0.6 : 1);
+    const variant = radioVariant++ % 4;
+    const key = `${seconds}:${variant}`;
+    let buf = radioBuffers.get(key);
+    if (!buf) {
+      const data = radioFoleySamples(a.sampleRate, seconds, variant);
+      buf = a.createBuffer(1, data.length, a.sampleRate);
+      buf.getChannelData(0).set(data);
+      radioBuffers.set(key, buf);
+    }
     const src = a.createBufferSource();
     src.buffer = buf;
-    const filter = a.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = freq;
-    filter.Q.value = 0.7;
     const gain = a.createGain();
-    gain.gain.setValueAtTime(volume, a.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, a.currentTime + seconds);
-    src.connect(filter).connect(gain).connect(effects);
-    src.onended = () => { src.disconnect(); filter.disconnect(); gain.disconnect(); };
+    gain.gain.value = volume;
+    src.connect(gain).connect(effects);
+    src.onended = () => { src.disconnect(); gain.disconnect(); };
     src.start();
   } catch {
     /* audio not available */
@@ -156,23 +160,20 @@ function tone(freq: number, seconds: number, volume: number, type: OscillatorTyp
 export const sfx = {
   key: () => tone(180, 0.08, 0.08, 'square'),
   dial: () => { tone(440, 0.06, 0.045, 'triangle'); tone(660, 0.08, 0.025, 'sine', 0.04); },
-  send: () => { tone(260, 0.09, 0.035, 'triangle'); staticBurst(0.07, 0.025, 2800); },
+  send: () => { tone(260, 0.09, 0.035, 'triangle'); radioContact(0.07, 0.025); },
   confirm: () => { tone(392, 0.16, 0.05, 'sine'); tone(587, 0.22, 0.04, 'sine', 0.08); },
   pass: () => { tone(440, 0.12, 0.035, 'triangle'); tone(330, 0.18, 0.035, 'triangle', 0.08); },
   hurry: () => { tone(220, 0.15, 0.03, 'sine'); tone(220, 0.15, 0.03, 'sine', 0.24); },
   turn: () => {
     tone(330, 0.12, 0.05, 'triangle');
-    staticBurst(0.12, 0.05, 3000);
+    radioContact(0.12, 0.05);
   },
-  heard: () => staticBurst(0.45, 0.22, 2200),
-  learned: () => {
-    staticBurst(0.25, 0.12, 900);
-    tone(110, 0.6, 0.06, 'sawtooth', 0.1);
-  },
+  heard: () => radioContact(0.45, 0.22),
+  learned: () => radioContact(0.6, 0.15),
   wrong: () => {
     tone(70, 0.45, 0.25, 'triangle');
-    staticBurst(0.2, 0.1, 400);
+    radioContact(0.2, 0.1);
   },
-  retune: () => staticBurst(1.6, 0.3, 1200),
+  retune: () => radioContact(1.6, 0.24),
   open: () => [392, 523, 659, 784].forEach((f, i) => tone(f, 1.4, 0.07, 'sine', i * 0.12)),
 };

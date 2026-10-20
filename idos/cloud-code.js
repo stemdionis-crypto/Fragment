@@ -35,6 +35,10 @@ handlers.fragmentMatch = function(args,context) {
   if (!Number.isInteger(receipt.earned) || receipt.earned<0 || receipt.earned>50) throw new Error('Invalid reward amount');
   // Maximum aggregation is replay-safe: a repeat cannot add another reward.
   if (receipt.ready && receipt.day===new Date().toISOString().slice(0,10)) check(server.AddQuestProgress('fragment_signals_verified_daily',receipt.earned));
+  if (receipt.botRatingPeak !== undefined) {
+    if (!Number.isSafeInteger(receipt.botRatingPeak) || receipt.botRatingPeak < 0) throw new Error('Invalid bot rating');
+    if (receipt.ready) check(server.AddQuestProgress('fragment_bot_rating_peak',receipt.botRatingPeak));
+  }
   var old=handlers.fragmentProfile({},context).stats || {};
   var stats={};
   ['wins','gamesPlayed','totalSignalsEarned'].forEach(function(key) {

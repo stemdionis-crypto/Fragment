@@ -20,6 +20,8 @@ import { settings } from './settings';
 import { initSettingsUI, placeSettingsButton } from './settings-ui';
 import { initShop, placeShopButton, handleShopMessage } from './shop';
 import { initProfileUI, placeProfileButton, handleProfileMessage } from './profile-ui';
+import { initRewardsUI, placeRewardsButton, handleRewardsMessage } from './rewards-ui';
+import { handleRatingMessage } from './rating-notice';
 import { SKINS, type ProfileView } from '../../shared/economy';
 import { isCipher, SYMBOL_CIPHERS } from '../../shared/trial-rules';
 import { DESCRIBE_HINTS, isDial, waveDensity, waveHeight, waveValue, TAPE_FRAMES, bitAt, LAMP_COLORS } from '../../shared/dials';
@@ -44,6 +46,7 @@ let mounted: 'home' | 'lobby' | 'game' | null = null;
 let lastChatId = -1;
 let wallet = '';
 let account: ProfileView | null = null;
+let stakePending = false;
 
 const app = document.getElementById('app')!;
 
@@ -231,6 +234,7 @@ function playerChip(p: PlayerView) {
     ${p.id === state?.hostId ? `<span class="tag">${t('host')}</span>` : ''}
     ${p.id === myId ? `<span class="tag">${t('you')}</span>` : ''}
     ${p.bot ? `<span class="tag">${t('bot')}</span>` : ''}
+    ${p.stake ? `<span class="tag stake-tag" title="${lang === 'ru' ? 'Ставка в Сигналах' : 'Signals stake'}">${p.stake} SI</span>` : ''}
     ${p.bot && state?.phase === 'lobby' && !state.practice && !state.matchmaking && state.hostId === myId ? `<button class="remove-bot" data-bot-id="${p.id}" title="${t('removeBot')}" aria-label="${t('removeBot')}: ${esc(p.name)}">×</button>` : ''}
     ${p.skin && p.skin !== 'classic' ? `<span class="tag">${SKINS.find((s) => s.id === p.skin)?.name[lang] ?? ''}</span>` : ''}
     ${p.wallet ? `<span class="tag wallet" title="${p.wallet}">◎ ${shortAddr(p.wallet)}</span>` : ''}
@@ -246,6 +250,12 @@ function mountLobby() {
         <button id="codeBtn" class="room-code" title="${t('copyInvite')}"></button>
         <p class="fine">${state!.matchmaking ? t('matchLobbyNote') : state!.practice ? t('practiceNote') : t('shareCode')}</p>
         <ul id="players" class="players"></ul>
+        <section class="stake-panel" id="stakeBox" ${state!.practice ? 'hidden' : ''}>
+          <label for="stakeInput">${lang === 'ru' ? 'Ваша ставка в Сигналах' : 'Your Signals stake'}</label>
+          <p class="fine">${lang === 'ru' ? 'Победа возвращает двойную ставку и долю ставок выбывших. Поражение, исключение или выход после старта теряет ставку. До старта её можно отменить.' : 'Win returns double your stake plus a share of eliminated players’ stakes. Loss, elimination or leaving after start forfeits your stake. Cancel freely before start.'}</p>
+          <div class="stake-controls"><input id="stakeInput" type="number" min="0" max="1000000" step="1" value="0"><button id="stakeApply">${lang === 'ru' ? 'Подтвердить ставку' : 'Confirm stake'}</button><button id="stakeCancel">${lang === 'ru' ? 'Без ставки' : 'No stake'}</button></div>
+          <p class="fine" id="stakeStatus" role="status"></p>
+        </section>
         <div class="lobby-actions">
           <button id="start" class="primary">${t('turnOn')}</button>
           <button id="addBot">${t('addBot')}</button>
@@ -271,6 +281,13 @@ function mountLobby() {
     }
   };
   $('#start').onclick = () => net.send({ t: 'start' });
+  const submitStake = (amount: number) => {
+    if (stakePending) return;
+    if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1_000_000) { toast(lang === 'ru' ? 'Введите целое число от 0 до 1000000' : 'Enter a whole number from 0 to 1000000', 'error'); return; }
+    stakePending = true; updateLobby(); net.send({ t: 'stake', amount });
+  };
+  $('#stakeApply').onclick = () => submitStake(Number($<HTMLInputElement>('#stakeInput').value));
+  $('#stakeCancel').onclick = () => submitStake(0);
   $('#lobbyTutorial').onclick=()=>openTutorial();
   $('#addBot').onclick = () => net.send({ t: 'add_bot' });
   $('#home').onclick = () => {
@@ -288,6 +305,16 @@ function updateLobby() {
     button.onclick = () => net.send({ t: 'remove_bot', playerId: button.dataset.botId! });
   });
   const isHost = state.hostId === myId;
+  const canStake = Boolean((account?.wallet || account?.platform) && (!account?.platform || account.signalsLocal));
+  $<HTMLButtonElement>('#stakeApply').disabled = stakePending || !canStake;
+  $<HTMLButtonElement>('#stakeCancel').disabled = stakePending || !canStake || !me()?.stake;
+  const stakeInput = $<HTMLInputElement>('#stakeInput');
+  stakeInput.disabled = stakePending || !canStake;
+  if (document.activeElement !== stakeInput && !stakePending) stakeInput.value = String(me()?.stake ?? 0);
+  $('#stakeStatus').textContent = !canStake
+    ? (lang === 'ru' ? 'Войдите через iDos или подтвердите кошелёк. Новые расчёты живого iDos пока не опубликованы.' : 'Sign in with iDos or verify your wallet. New live iDos settlement is not published yet.')
+    : stakePending ? (lang === 'ru' ? 'Сохраняем ставку…' : 'Saving stake…')
+    : (lang === 'ru' ? `Доступно: ${account?.balance ?? 0}. Ваша ставка: ${me()?.stake ?? 0}.` : `Available: ${account?.balance ?? 0}. Your stake: ${me()?.stake ?? 0}.`) + (account?.signalsLocal ? (lang === 'ru' ? ' Локальный баланс, живые Сигналы iDos не списываются.' : ' Local balance; live iDos Signals are unchanged.') : '');
   const enough = state.players.length >= MIN_PLAYERS;
   const canManageBots = isHost && !state.practice && !state.matchmaking;
   const addBot = $<HTMLButtonElement>('#addBot');
@@ -296,7 +323,7 @@ function updateLobby() {
   $('#botHint').hidden = state.practice || state.matchmaking;
   const start = $<HTMLButtonElement>('#start');
   start.hidden = !isHost || state.matchmaking;
-  start.disabled = !enough;
+  start.disabled = !enough || stakePending;
   $('#startHint').textContent = state.matchmaking
     ? state.matchStartsAt ? t('matchCountdown')(Math.max(0, Math.ceil((state.matchStartsAt - Date.now()) / 1000))) : t('matchWaiting')(state.players.length)
     : isHost
@@ -320,6 +347,7 @@ function mountGame() {
         <span class="hud-item trial-steps" id="hudTrial"></span>
         <span class="hud-item">${t('tries')} <b id="hudTries"></b></span>
         <span class="hud-item">${t('retunes')} <b id="hudRetunes"></b></span>
+        <span class="hud-item" id="hudStake" hidden></span>
         <span class="hud-item timer"><b id="hudTime">--:--</b></span>
         ${langSwitchHtml()}
       </header>
@@ -334,10 +362,11 @@ function mountGame() {
           <div class="controls-left">
             <div class="prompt" id="prompt"></div>
             <div class="game-guide" id="gameGuide" aria-live="polite"></div>
-            <div class="suspicion" aria-label="Suspicion" title="${lang==='ru'?'Название или число +30 · Ошибка +20 · Решённый этап −20':'Name or digit +30 · Wrong answer +20 · Solved trial −20'}">
+            <div class="suspicion" aria-label="Suspicion" title="${lang==='ru'?'Запретное слово +50 · Ошибка +20 · Решённый этап −20':'Forbidden word +50 · Wrong answer +20 · Solved trial −20'}">
               <span>${t('attention')} · <b id="susPercent"></b></span>
               <div class="bar"><div id="susBar"></div></div>
             </div>
+            <p class="fine" id="eliminationInfo"></p>
           </div>
           <div class="mine describe" id="mine"></div>
           <div class="pult">
@@ -401,6 +430,11 @@ function confirmLeave(){
   const dialog=document.createElement('dialog');dialog.className='tutorial-dialog';
   dialog.innerHTML=`<h2>${lang==='ru'?'Выйти из матча?':'Leave this match?'}</h2><p>${penalty?(lang==='ru'?'Новый поиск будет недоступен 5 минут. Бот займёт ваше место.':'Matchmaking will be unavailable for 5 minutes. A companion takes your place.'):(lang==='ru'?'Можно выйти без штрафа.':'You can leave without a penalty.')}</p><button data-stay>${lang==='ru'?'Остаться':'Stay'}</button><button data-leave class="primary">${lang==='ru'?'Выйти':'Leave'}</button>`;
   document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove());
+  if (state?.phase === 'playing' && me()?.stake) {
+    const warning = document.createElement('p');
+    warning.textContent = lang === 'ru' ? `При выходе вы потеряете ставку ${me()!.stake} Сигналов.` : `Leaving forfeits your ${me()!.stake} Signals stake.`;
+    dialog.querySelector('p')!.after(warning);
+  }
   dialog.querySelector<HTMLButtonElement>('[data-stay]')!.onclick=()=>dialog.close();
   dialog.querySelector<HTMLButtonElement>('[data-leave]')!.onclick=()=>{dialog.close();net.send({t:'leave'});};dialog.showModal();
 }
@@ -589,6 +623,14 @@ function updateGame() {
   $('#hudCode').textContent = s.code;
   $('#hudTries').textContent = `${s.attemptsLeft}`;
   $('#hudRetunes').textContent = `${s.retunes}`;
+  const stakeHud = $('#hudStake');
+  stakeHud.hidden = !me()?.stake;
+  stakeHud.textContent = lang === 'ru' ? `Ставка: ${me()?.stake ?? 0} SI` : `Stake: ${me()?.stake ?? 0} SI`;
+  const myFaults = me();
+  $('#eliminationInfo').textContent = lang === 'ru'
+    ? `До исключения: ${2 - s.retunes % 2} смены волны. У вас: ${myFaults?.forbiddenWords ?? 0} запретных слов, ${myFaults?.wrongAnswers ?? 0} неверных ответов.`
+    : `Elimination in ${2 - s.retunes % 2} retunes. Yours: ${myFaults?.forbiddenWords ?? 0} forbidden words, ${myFaults?.wrongAnswers ?? 0} wrong answers.`;
+  $('#eliminationInfo').title = lang === 'ru' ? 'Каждая вторая смена волны исключает игрока с наибольшей суммой запрещённых слов и неверных ответов.' : 'Every second retune removes the player with the most forbidden words and wrong answers combined.';
   $<HTMLDivElement>('#susBar').style.width = `${s.suspicion}%`;
   $('#susPercent').textContent=`${s.suspicion}%`;
   $('#susBar').classList.toggle('hot', s.suspicion >= 70);
@@ -829,7 +871,7 @@ function updateOverlay() {
     delete ov.dataset.victory;
     ov.innerHTML = `
       <div class="lost-card">
-        <p class="eyebrow">${s.lostReason === 'time' ? t('timeUp') : t('noTries')}</p>
+        <p class="eyebrow">${s.lostReason === 'voices' ? (lang === 'ru' ? 'Не осталось напарников' : 'Not enough voices') : s.lostReason === 'time' ? t('timeUp') : t('noTries')}</p>
         <h2>${t('keepsVoices')}</h2>
         <p class="fine">${t('lostStats')(s.retunes, s.learned.length)}</p>
         ${again}
@@ -904,6 +946,7 @@ function render() {
     placeSettingsButton();
     placeShopButton();
     placeProfileButton();
+    placeRewardsButton();
     return;
   }
   if (state.phase === 'lobby') {
@@ -916,11 +959,14 @@ function render() {
   placeSettingsButton();
   placeShopButton();
   placeProfileButton();
+  placeRewardsButton();
 }
 
 net.onMessage = (m) => {
+  handleRatingMessage(m);
   handleShopMessage(m);
   handleProfileMessage(m);
+  handleRewardsMessage(m);
   void handleWalletMessage(m);
   switch (m.t) {
     case 'profile':
@@ -932,12 +978,19 @@ net.onMessage = (m) => {
         if (input) input.value = m.profile.nickname;
       }
       updateHomeWallet();
+      if (mounted === 'lobby') updateLobby();
+      break;
+    case 'stake_updated':
+      stakePending = false;
+      if (mounted === 'lobby') updateLobby();
       break;
     case 'reward':
       if (m.reward.receipt) void platformReward(m.reward.receipt, message => net.send(message)).catch(() => toast(lang === 'ru' ? 'Награда в Сигналах ожидает активации или подтверждения' : 'Signals reward awaits activation or confirmation'));
       if (m.reward.amount > 0) toast(`+${m.reward.amount} ${lang === 'ru' ? 'Сигналов' : 'Signals'} · ${lang === 'ru' ? 'Баланс' : 'Balance'}: ${m.reward.balance}`);
       break;
+    case 'eliminated':
     case 'left':
+      stakePending = false;
       saveSession(null);
       state = null;
       priv = null;
@@ -945,6 +998,9 @@ net.onMessage = (m) => {
       mounted = null;
       history.replaceState(null, '', location.pathname);
       render();
+      if (m.t === 'eliminated') toast(lang === 'ru'
+        ? `Радио исключило вас из матча. Запретных слов: ${m.words}, неверных ответов: ${m.answers}.`
+        : `The radio removed you from the match. Forbidden words: ${m.words}, wrong answers: ${m.answers}.`, 'error');
       break;
     case 'joined':
       myId = m.playerId;
@@ -965,12 +1021,14 @@ net.onMessage = (m) => {
       break;
     }
     case 'heard':
-      toast(`${t('heardYou')} <b>${m.words.map(esc).join(', ')}</b><br>${lang==='ru'?'Запретное слово: +30. Скажите образом или через ориентир.':'Direct item name or number: +30. Describe it indirectly.'}`, 'radio');
+      toast(`${t('heardYou')} <b>${m.words.map(esc).join(', ')}</b><br>${lang==='ru'?'Запретное слово: +50. Скажите образом или через ориентир.':'Direct item name or number: +50. Describe it indirectly.'}`, 'radio');
       break;
     case 'fx':
       handleFx(m.kind);
       break;
     case 'error':
+      stakePending = false;
+      if (mounted === 'lobby') updateLobby();
       const practiceButton = app.querySelector<HTMLButtonElement>('#practice');
       if (practiceButton) { practiceButton.disabled = false; practiceButton.textContent = t('playBots'); }
       const matchButton = app.querySelector<HTMLButtonElement>('#match');
@@ -1035,6 +1093,7 @@ unlockAudio();
 initSettingsUI();
 initShop((message) => net.send(message));
 initProfileUI((message) => net.send(message));
+initRewardsUI((message) => net.send(message));
 initWalletAuth((message) => net.send(message), (message, error) => {
   toast(esc(message), error ? 'error' : '');
   window.dispatchEvent(new CustomEvent('fragment:wallet-notice', { detail: message }));

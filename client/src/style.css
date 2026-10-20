@@ -1593,3 +1593,20 @@ body.reduced-motion .victory-preview i, body.reduced-motion .victory-particles i
   .controls.play-row { grid-template-columns: minmax(0, 1fr); }
 }
 .scene-wrap { max-height: max(300px, calc(100vh - 410px)); }
+.rating-rewards { display: grid; gap: 12px; margin: 24px 0; }
+.rating-reward { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; }
+.rating-reward > div { display: grid; gap: 12px; min-width: 0; flex: 1; max-width: 360px; }
+.rating-reward progress { width: 100%; max-width: 280px; accent-color: var(--bone); }
+.stake-panel { margin: 18px 0; padding: 16px; border: 1px solid var(--line); border-radius: 8px; }
+.stake-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.stake-controls input { width: 130px; }
+.stake-tag { white-space: nowrap; flex-shrink: 0; }
+.rewards-dialog .settings-heading button { font-size: 14px; }
+#rating-notices { position: fixed; top: 20px; right: 20px; width: min(350px, calc(100vw - 40px)); display: grid; gap: 10px; z-index: 110; pointer-events: none; }
+.rating-notice { position: relative; padding: 18px 36px 16px 18px; color: var(--text); background: var(--bg-2); border: 1px solid var(--line-2); border-left: 3px solid var(--bone); border-radius: 8px; box-shadow: 0 8px 24px #0006; }
+.rating-notice.rating-gain { border-left-color: #86906c; }
+.rating-notice.rating-loss { border-left-color: #a8655a; }
+.rating-notice p { margin: 0; }
+.rating-notice strong { display: block; font-size: 26px; margin: 8px 0; color: var(--bone); }
+.rating-notice-close { position: absolute; top: 6px; right: 6px; padding: 3px 8px; border: 0; pointer-events: auto; }
+.profile-rating { display: inline-block; margin-left: 9px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }

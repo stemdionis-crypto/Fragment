@@ -1,6 +1,6 @@
 // Messages and types shared by the server and the client.
 import type { ProfileView, RewardView, SkinId, Loadout } from './economy';
-export type LadderMetric = 'speed' | 'signal' | 'games';
+export type LadderMetric = 'speed' | 'signal' | 'games' | 'bots';
 export interface LadderEntry { name: string; wallet: string; value: number; }
 
 // Item pictures, in sets of 8. A trial uses one set.
@@ -55,6 +55,9 @@ export interface PlayerView {
   wallet?: string;
   bot?: boolean;
   botStatus?: 'waiting-clue' | 'clarifying' | 'comparing';
+  forbiddenWords?: number;
+  wrongAnswers?: number;
+  stake?: number;
   skin?: SkinId;
   cosmetics?: Loadout;
 }
@@ -127,7 +130,7 @@ export interface PublicState {
   turnMessagesLeft: number;
   chat: ChatMessage[];
   fragment?: FragmentRecord;
-  lostReason?: 'time' | 'attempts';
+  lostReason?: 'time' | 'attempts' | 'voices';
 }
 
 // What you know about someone else's control
@@ -145,6 +148,8 @@ export interface PrivateInfo {
 }
 
 export type ClientMessage =
+  | { t: 'claim_rating_reward'; tier: number }
+  | { t: 'stake'; amount: number }
   | { t: 'set_nickname'; nickname: string }
   | { t: 'idos_identify'; userId: string; ticket: string }
   | { t: 'wallet_challenge'; address: string }
@@ -172,6 +177,8 @@ export type ClientMessage =
   | { t: 'again' };
 
 export type ServerMessage =
+  | { t: 'rating_reward'; amount: number; tier: number }
+  | { t: 'stake_updated'; amount: number }
   | { t: 'wallet_challenge'; message: string; address: string }
   | { t: 'wallet_conflict'; profile: ProfileView }
   | { t: 'wallet_verified'; restored: boolean }
@@ -179,6 +186,7 @@ export type ServerMessage =
   | { t: 'leaderboard'; metric: LadderMetric; entries: LadderEntry[] }
   | { t: 'reward'; reward: RewardView }
   | { t: 'left' }
+  | { t: 'eliminated'; words: number; answers: number }
   | { t: 'joined'; playerId: string; code: string }
   | { t: 'state'; state: PublicState }
   | { t: 'private'; info: PrivateInfo }

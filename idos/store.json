@@ -228,7 +228,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 1000
+                    "Amount": 2000
                   }
                 ]
               }
@@ -272,7 +272,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 1500
+                    "Amount": 3000
                   }
                 ]
               }
@@ -316,7 +316,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 2500
+                    "Amount": 5000
                   }
                 ]
               }
@@ -360,7 +360,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 300
+                    "Amount": 600
                   }
                 ]
               }
@@ -404,7 +404,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 300
+                    "Amount": 600
                   }
                 ]
               }
@@ -448,7 +448,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 400
+                    "Amount": 800
                   }
                 ]
               }
@@ -492,7 +492,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 450
+                    "Amount": 900
                   }
                 ]
               }
@@ -536,7 +536,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 600
+                    "Amount": 1200
                   }
                 ]
               }
@@ -580,7 +580,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 750
+                    "Amount": 1500
                   }
                 ]
               }
@@ -624,7 +624,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 500
+                    "Amount": 1000
                   }
                 ]
               }
@@ -668,7 +668,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 400
+                    "Amount": 800
                   }
                 ]
               }
@@ -712,7 +712,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 300
+                    "Amount": 600
                   }
                 ]
               }
@@ -756,7 +756,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 350
+                    "Amount": 700
                   }
                 ]
               }
@@ -800,7 +800,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 400
+                    "Amount": 800
                   }
                 ]
               }
@@ -844,7 +844,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 600
+                    "Amount": 1200
                   }
                 ]
               }
@@ -888,7 +888,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 400
+                    "Amount": 800
                   }
                 ]
               }
@@ -932,7 +932,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 600
+                    "Amount": 1200
                   }
                 ]
               }
@@ -976,7 +976,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 300
+                    "Amount": 600
                   }
                 ]
               }
@@ -1020,7 +1020,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 400
+                    "Amount": 800
                   }
                 ]
               }
@@ -1064,7 +1064,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 300
+                    "Amount": 600
                   }
                 ]
               }
@@ -1108,7 +1108,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 350
+                    "Amount": 700
                   }
                 ]
               }
@@ -1152,7 +1152,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 350
+                    "Amount": 700
                   }
                 ]
               }
@@ -1196,7 +1196,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 300
+                    "Amount": 600
                   }
                 ]
               }
@@ -1240,7 +1240,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 300
+                    "Amount": 600
                   }
                 ]
               }
@@ -1284,7 +1284,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 500
+                    "Amount": 1000
                   }
                 ]
               }
@@ -1328,7 +1328,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 600
+                    "Amount": 1200
                   }
                 ]
               }
@@ -1372,7 +1372,7 @@
                   {
                     "Type": "VirtualCurrency",
                     "CurrencyID": "SI",
-                    "Amount": 750
+                    "Amount": 1500
                   }
                 ]
               }

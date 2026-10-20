@@ -37,3 +37,22 @@ export async function platformSnapshot(session: PlatformSession) {
   if (!Number.isSafeInteger(Number(signals)) || Number(signals) < 0) throw new Error('Invalid Signals balance');
   return { nickname: cloud.FunctionResult.nickname, earnedToday: Math.min(50, earnedToday), stats: cloud.FunctionResult.stats, ...inventoryLook(inventory, cloud.FunctionResult), balance: ready ? String(signals) : '0', ready };
 }
+
+// The platform owns the grant and replay protection. Never credit a cached snapshot.
+export async function claimPlatformBotReward(session: PlatformSession, receipt: string, tier: number, call = platformCall): Promise<number> {
+  const confirmed = await call<{ Error?: unknown }>(session, 'CloudCode', 'Execute', { FunctionName: 'fragmentMatch', FunctionParameter: { receipt } });
+  if (confirmed.Error) throw new Error('Rating confirmation pending / Рейтинг ожидает подтверждения');
+  const questID = 'fragment_bot_rating_' + tier;
+  const readStatus = async () => (await call<GetUserQuestStateResponse>(session, 'Quest', 'GetUserQuestState')).State?.PermanentQuests?.[questID]?.Status;
+  const status = await readStatus();
+  if (status !== 'Claimed') {
+    if (status !== 'Completed') throw new Error('Rating reward is locked / Награда ещё недоступна');
+    try { await call(session, 'Quest', 'ClaimQuestReward', { QuestID: questID }); }
+    catch { /* A reply may be lost after commit. Reconcile authoritative state below. */ }
+    if (await readStatus() !== 'Claimed') throw new Error('iDos reward not confirmed / iDos не подтвердил награду');
+  }
+  const inventory = await call<UserInventoryState>(session, 'User', 'GetInventory');
+  const balance = Number(inventory.VirtualCurrencies?.SI?.Amount ?? 0);
+  if (!Number.isSafeInteger(balance) || balance < 0) throw new Error('Invalid iDos balance');
+  return balance;
+}

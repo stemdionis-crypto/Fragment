@@ -26,10 +26,10 @@ import { linesFor, understandClue, isInventoryClue, visibleHandDecision, explain
 import { CompanionBrain } from './bot-brain';
 import { HAND_TRIALS } from '../shared/trial-rules';
 import { TRIAL_JAMS } from '../shared/dials';
-import { profile, reward, recordMatch } from './economy';
+import { profile, reward, recordMatch, reserveStake, activateStakes, refundStakes, forfeitStake, settleStakes } from './economy';
 
-const SUSPICION_PLAIN = 30;
-const SUSPICION_LEARNED = 20;
+const SUSPICION_PLAIN = 50;
+const SUSPICION_LEARNED = 50;
 const SUSPICION_WRONG = 20;
 const SUSPICION_AFTER_RETUNE = 25;
 const CHAT_COOLDOWN_MS = 600;
@@ -115,6 +115,8 @@ export interface Player {
   roundMessages?: number;
   wallet?: string;
   lastChat: number;
+  onEliminated?: () => void;
+  stake?: number;
 }
 
 export class Room {
@@ -137,7 +139,9 @@ export class Room {
   chat: ChatMessage[] = [];
   listener = new Listener();
   fragment?: FragmentRecord;
-  lostReason?: 'time' | 'attempts';
+  lostReason?: 'time' | 'attempts' | 'voices';
+  private faults = new Map<string, { words: number; answers: number; last: number }>();
+  private faultSequence = 0;
   turnId = '';
   turnEndsAt = 0;
   turnMessagesLeft = TURN_MESSAGES;
@@ -151,6 +155,54 @@ export class Room {
   matchStartsAt = 0;
   private roundId = '';
   private matchTimer: NodeJS.Timeout | null = null;
+  private stakeKey = randomUUID();
+  private stakeBusy = 0;
+  private starting = false;
+  private stakesActive = false;
+
+  async setStake(p: Player, amount: number) {
+    if (this.practice || this.phase !== 'lobby' || this.starting || !this.players.includes(p) || !p.accountId || p.companion) throw new GameError('Stakes are available before human matches', 'Ставки доступны до начала матча с людьми');
+    this.stakeBusy++;
+    try {
+      await reserveStake(p.accountId, this.stakeKey, amount);
+      if (!this.players.includes(p)) { await refundStakes(this.stakeKey, p.accountId); return; }
+      p.stake = amount;
+    } finally { this.stakeBusy--; this.broadcast(); }
+  }
+
+  async begin(by: Player) {
+    if (by.id !== this.hostId) throw new GameError('Only the host can start', 'Начать может только ведущий');
+    if (this.phase !== 'lobby' || this.starting) return;
+    if (this.stakeBusy) throw new GameError('Wait for stake confirmation', 'Дождитесь подтверждения ставок');
+    const entries = this.players.filter(p => p.stake && p.accountId && !p.companion).map(p => ({ id: p.accountId!, amount: p.stake! }));
+    if (!entries.length) { this.start(by); return; }
+    if (this.practice || this.players.filter(p => !p.companion && p.socket && p.accountId && (profile(p.accountId).wallet || profile(p.accountId).platform)).length < 2) throw new GameError('Stakes need two signed-in players', 'Для ставок нужны хотя бы два вошедших в аккаунт игрока');
+    if (this.players.length < Number(process.env.MIN_PLAYERS ?? MIN_PLAYERS)) throw new GameError('Wait for the team', 'Дождитесь команды');
+    this.starting = true;
+    const roster = this.players.map(p => p.id).join(',');
+    try {
+      await activateStakes(this.stakeKey, entries);
+      if (this.phase !== 'lobby' || this.players.map(p => p.id).join(',') !== roster) throw new GameError('The team changed; confirm stakes again', 'Состав изменился, подтвердите ставки заново');
+      this.stakesActive = true;
+      this.start(by);
+    } catch (error) {
+      this.stakesActive = false;
+      await refundStakes(this.stakeKey);
+      this.players.forEach(p => { p.stake = 0; });
+      this.broadcast();
+      throw error;
+    } finally { this.starting = false; }
+  }
+
+  private finishStakes(won: boolean) {
+    const winners = won ? this.players.filter(p => !p.companion && p.accountId).map(p => p.accountId!) : [];
+    return settleStakes(this.stakeKey, winners).catch(() => {
+      this.system(b('Signals settlement could not be saved. Contact support before placing another stake.', 'Не удалось сохранить расчёт Сигналов. Обратитесь в поддержку перед новой ставкой.'));
+      this.broadcast();
+    });
+  }
+
+  closeStakes() { return this.phase === 'lobby' ? refundStakes(this.stakeKey) : this.finishStakes(false); }
 
   updateMatchmaking() {
     if (!this.matchmaking || this.phase !== 'lobby') return;
@@ -167,10 +219,10 @@ export class Room {
         const host = this.players.find((p) => p.id === this.hostId && p.socket);
         if (this.phase === 'lobby' && host && this.players.filter((p) => p.socket && !p.bot).length >= MIN_MATCH_HUMANS) {
           this.fillBots();
-          this.start(host);
+          void this.begin(host).catch(error => { this.system(b((error as Error).message, error instanceof GameError ? error.ru : (error as Error).message)); this.broadcast(); this.updateMatchmaking(); });
         }
         this.broadcast();
-      }, 8000);
+      }, 12000);
     }
     this.broadcast();
   }
@@ -368,6 +420,7 @@ export class Room {
   disconnect(p: Player) {
     p.socket = null;
     if (this.phase === 'lobby') {
+      if (p.accountId && p.stake) void refundStakes(this.stakeKey, p.accountId).catch(() => console.error('Lobby stake refund failed'));
       this.players = this.players.filter((x) => x !== p);
       this.system(b(`${p.name} left.`, `${p.name} уходит.`));
     }
@@ -378,13 +431,17 @@ export class Room {
   }
 
   abandon(p: Player) {
+    if (!this.players.includes(p)) return;
     if(this.phase !== 'playing') { this.disconnect(p); return; }
+    if (p.accountId && p.stake) void forfeitStake(p.accountId, this.stakeKey).catch(() => console.error('Stake forfeiture could not be saved'));
+    p.stake = 0;
     p.socket=null; p.accountId=undefined; p.bot=true; p.companion=true;
     this.ready.delete(p.id);
     this.system(b(`${p.name} left; a companion takes this seat.`, `${p.name} вышел; его место занимает бот.`));
     if(this.turnId===p.id)this.nextTurn();
     if(!this.players.some(player=>player.socket))this.emptySince=Date.now();
     this.broadcast();
+    if (!this.players.some(player => !player.companion)) { this.stopTimer(); void this.finishStakes(false); }
   }
 
   // ---------- game flow ----------
@@ -392,6 +449,7 @@ export class Room {
   start(by: Player) {
     if (by.id !== this.hostId) throw new GameError('Only the host can start', 'Начать может только ведущий');
     if (this.phase !== 'lobby') return;
+    if (this.players.some(p => p.stake) && !this.stakesActive) throw new GameError('Confirm stakes first', 'Сначала подтвердите ставки');
     if (this.matchTimer) clearTimeout(this.matchTimer);
     this.matchTimer = null;
     this.matchStartsAt = 0;
@@ -401,6 +459,8 @@ export class Room {
     this.phase = 'playing';
     this.roundId = randomUUID();
     this.players.forEach((p) => { p.roundMessages = 0; });
+    this.faults.clear();
+    this.faultSequence = 0;
     this.plan = trialSequence(TRIALS_PER_GAME);
     this.trialIndex = 0;
     this.trialsDone = [];
@@ -508,6 +568,9 @@ export class Room {
   again(by: Player) {
     if (by.id !== this.hostId || this.phase === 'playing') return;
     this.phase = 'lobby';
+    this.stakeKey = randomUUID();
+    this.stakesActive = false;
+    this.players.forEach(p => { p.stake = 0; });
     this.trial = null;
     this.ready.clear();
     this.players = this.players.filter((p) => p.socket || p.companion);
@@ -544,6 +607,7 @@ export class Room {
 
     if (r.heardWords.length) {
       this.heardCount++;
+      this.addFault(p.id, r.heardWords.length, 0);
       const onlyLearned = r.heardLearned && r.heardWords.every((w) => this.listener.isLearned(w));
       this.suspicion += onlyLearned ? SUSPICION_LEARNED : SUSPICION_PLAIN;
       this.system(b(`Radio heard a direct answer: +${onlyLearned ? SUSPICION_LEARNED : SUSPICION_PLAIN} suspicion.`, `Радио услышало запретное слово: +${onlyLearned ? SUSPICION_LEARNED : SUSPICION_PLAIN} подозрения.`));
@@ -556,7 +620,7 @@ export class Room {
       this.fx('learned');
     }
     this.checkSuspicion();
-    if (--this.turnMessagesLeft <= 0) this.nextTurn();
+    if (this.players.includes(p) && this.turnId === p.id && --this.turnMessagesLeft <= 0) this.nextTurn();
     this.broadcast();
   }
 
@@ -592,6 +656,7 @@ export class Room {
     this.ready.clear();
     this.suspicion += SUSPICION_WRONG;
     const wrongControls=t.controls.filter(c=>this.values.get(c.id)!==c.target);
+    for (const id of new Set(wrongControls.map(c => c.ownerId))) this.addFault(id, 0, 1);
     this.system(b(`Check these controls: ${wrongControls.map(c=>this.players.find(p=>p.id===c.ownerId)?.name+': '+c.label.en).join(', ')}. +20 suspicion.`, `Перепроверьте пульты: ${wrongControls.map(c=>this.players.find(p=>p.id===c.ownerId)?.name+': '+c.label.ru).join(', ')}. +20 подозрения.`));
     for(const control of wrongControls)if(this.players.find(p=>p.id===control.ownerId)?.companion){
       this.rejectedClues.set(control.id,this.msgId); this.botAskedForClue.delete(control.ownerId);
@@ -613,6 +678,8 @@ export class Room {
     this.retunes++;
     this.radio(pick(VOICE.retune));
     this.fx('retune');
+    if (this.retunes % 2 === 0) this.eliminateWorst();
+    if (this.phase !== 'playing') return;
     this.listener = new Listener();
     this.listener.setNames(this.players.map(p=>p.name));
     // deal the same kind of trial again, on the same picture set
@@ -622,9 +689,46 @@ export class Room {
     this.system(b('The radio changed its wave: every answer in this trial is new. Explain again. One try lost.', 'Радио сменило волну: все ответы в этом испытании новые, объясняйте заново. Минус одна попытка.'));
   }
 
+  private addFault(id: string, words: number, answers: number) {
+    const fault = this.faults.get(id) ?? { words: 0, answers: 0, last: 0 };
+    fault.words += words;
+    fault.answers += answers;
+    fault.last = ++this.faultSequence;
+    this.faults.set(id, fault);
+  }
+
+  private eliminateWorst() {
+    const ranked = this.players.map(p => ({ p, fault: this.faults.get(p.id) ?? { words: 0, answers: 0, last: 0 } }))
+      .sort((a, b) => (b.fault.words + b.fault.answers) - (a.fault.words + a.fault.answers)
+        || b.fault.words - a.fault.words || b.fault.last - a.fault.last || a.p.id.localeCompare(b.p.id));
+    const worst = ranked[0];
+    if (!worst || worst.fault.words + worst.fault.answers === 0) return;
+    const { p, fault } = worst;
+    if (p.accountId && p.stake) void forfeitStake(p.accountId, this.stakeKey).catch(() => console.error('Stake forfeiture could not be saved'));
+    const socket = p.socket;
+    // The result is committed through the same idempotent account transaction as a normal match.
+    if (p.accountId && !p.bot) void recordMatch(p.accountId, this.roundId, false,
+      Math.round((Date.now() - this.startedAt) / 1000), p.name, true, this.practice).catch(() => {
+      if (socket?.readyState === socket?.OPEN) socket?.send(JSON.stringify({ t: 'error', message: 'Match statistics could not be saved', ru: 'Не удалось сохранить результат матча' }));
+    });
+    this.players = this.players.filter(player => player !== p);
+    this.ready.delete(p.id);
+    this.system(b(`${p.name} was taken off the air: ${fault.words} forbidden words, ${fault.answers} wrong answers.`,
+      `${p.name} исключён из эфира: запрещённых слов ${fault.words}, неверных ответов ${fault.answers}.`));
+    this.send(p, { t: 'eliminated', words: fault.words, answers: fault.answers });
+    p.onEliminated?.();
+    p.onEliminated = undefined;
+    p.socket = null;
+    if (this.hostId === p.id) this.hostId = this.players.find(player => player.socket)?.id ?? this.players[0]?.id ?? '';
+    if (this.turnId === p.id) this.nextTurn();
+    if (!this.players.some(player => player.socket)) this.emptySince = Date.now();
+    if (this.players.length < 2 || !this.players.some(player => !player.companion)) this.lose('voices');
+  }
+
   private win() {
     this.stopTimer();
     this.phase = 'won';
+    void this.finishStakes(true);
     this.fragment = {
       id: `FRG-${randomBytes(3).toString('hex').toUpperCase()}`,
       room: this.code,
@@ -644,13 +748,14 @@ export class Room {
     this.broadcast();
   }
 
-  private lose(reason: 'time' | 'attempts') {
+  private lose(reason: 'time' | 'attempts' | 'voices') {
     this.stopTimer();
     this.phase = 'lost';
+    void this.finishStakes(false);
     this.lostReason = reason;
     this.recordParticipants(false);
     this.radio(
-      reason === 'time'
+      reason === 'voices' ? b('…not enough voices remain. The signal is lost.', '…голосов больше не хватает. Сигнал потерян.') : reason === 'time'
         ? b('…time is up. I keep your voices.', '…время вышло. Ваши голоса остаются у меня.')
         : b('…no more tries. I keep your voices.', '…попыток больше нет. Ваши голоса остаются у меня.'),
     );
@@ -667,7 +772,7 @@ export class Room {
     for (const p of participants) {
       if (!p.accountId || p.bot || seen.has(p.accountId)) continue;
       seen.add(p.accountId);
-      try { await recordMatch(p.accountId, roundId, won, seconds, p.name, practice || humanAccounts.size < 2); }
+      try { await recordMatch(p.accountId, roundId, won, seconds, p.name, practice || humanAccounts.size < 2, practice); }
       catch { this.send(p, { t: 'error', message: 'Match statistics could not be saved', ru: 'Не удалось сохранить статистику матча' }); continue; }
       if (!practice && seconds >= 60 && humanAccounts.size >= 2 && humanAccounts.has(p.accountId)) {
         try { this.send(p, { t: 'reward', reward: await reward(p.accountId, roundId, false, won) }); }
@@ -774,6 +879,9 @@ export class Room {
         connected: !!p.socket || !!p.companion,
         bot: p.bot,
         botStatus: this.botThinking.get(p.id),
+        forbiddenWords: this.faults.get(p.id)?.words ?? 0,
+        wrongAnswers: this.faults.get(p.id)?.answers ?? 0,
+        stake: p.stake ?? 0,
         skin: p.accountId ? profile(p.accountId).equipped : 'classic',
         cosmetics: p.accountId ? profile(p.accountId).loadout : undefined,
         ready: this.ready.has(p.id),

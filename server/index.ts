@@ -6,8 +6,8 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import type { ClientMessage, ServerMessage } from '../shared/protocol';
 import { GameError, Room, type Player } from './room';
 import { translationEngine } from './translate';
-import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet, leaderboard, setNickname, restoreWalletProfile, platformSyncState, platformSyncComplete, durableAccounts } from './economy';
-import { platformSnapshot, platformCall, type PlatformSession } from './idos';
+import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet, leaderboard, setNickname, restoreWalletProfile, platformSyncState, platformSyncComplete, durableAccounts, claimRatingReward, validatePlatformRatingReward, confirmPlatformRatingReward } from './economy';
+import { platformSnapshot, platformCall, claimPlatformBotReward, type PlatformSession } from './idos';
 import { syncPlatform, platformReceipt } from './economy';
 import { challenge, verifyChallenge } from './wallet-auth';
 import { penalizeMatchLeave, matchLeaveRemaining } from './economy';
@@ -65,6 +65,14 @@ wss.on('connection', (socket: WebSocket, request) => {
     syncTimer = setTimeout(() => { syncTimer = undefined; void syncStats(); },delay);
   };
   const send = (msg: ServerMessage) => { if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(msg)); };
+  const trackPlayer = (player: Player) => {
+    player.onEliminated = () => {
+      const grace = disconnectGrace.get(player.id);
+      if (grace) clearTimeout(grace);
+      disconnectGrace.delete(player.id);
+      if (me === player) { room = null; me = null; }
+    };
+  };
   const syncStats = async () => {
     if (syncing || !platformSession || !accountId || socket.readyState !== socket.OPEN) return;
     const state = platformSyncState(accountId);
@@ -105,6 +113,26 @@ wss.on('connection', (socket: WebSocket, request) => {
     }
     try {
       switch (msg.t) {
+        case 'claim_rating_reward': {
+          let result;
+          if (profile(accountId).platform && !profile(accountId).signalsLocal) {
+            if (!platformSession) throw new GameError('Sign in to iDos again', 'Войдите в iDos снова');
+            const eligibility = validatePlatformRatingReward(accountId, msg.tier);
+            if (eligibility.alreadyClaimed) result = { amount: 0, tier: msg.tier };
+            else {
+              const balance = await claimPlatformBotReward(platformSession, eligibility.receipt, msg.tier);
+              result = await confirmPlatformRatingReward(accountId, msg.tier, balance);
+            }
+          } else result = await claimRatingReward(accountId, msg.tier);
+          send({ t: 'rating_reward', ...result });
+          break;
+        }
+        case 'stake': {
+          if (!room || !me) throw new GameError('Join a room first', 'Сначала войдите в комнату');
+          await room.setStake(me, msg.amount);
+          send({ t: 'stake_updated', amount: msg.amount });
+          break;
+        }
         case 'idos_identify': {
           if (room && platformSession?.userId !== msg.userId) throw new GameError('Leave the room before switching accounts', 'Выйдите из комнаты перед сменой аккаунта');
           const session = { userId: msg.userId, ticket: msg.ticket };
@@ -146,6 +174,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           const origin = request.headers.origin;
           const expected = process.env.FRAGMENT_PUBLIC_ORIGIN || process.env.RENDER_EXTERNAL_URL || `http://${request.headers.host}`;
           const allowed = [expected, 'https://49hlin0j.idos.games', 'https://49hlin0j-preview.idos.games', ...(!PROD ? ['http://localhost:5174', 'http://127.0.0.1:5174'] : [])];
+          if (!PROD && process.env.FRAGMENT_LOCAL_PREVIEW === 'true') allowed.push('http://127.0.0.1:5190', 'http://localhost:5190');
           if (!origin || !allowed.includes(origin)) throw new GameError('Wallet login origin is not allowed', 'Этот адрес сайта не разрешён для входа через кошелёк');
           walletProof = challenge(msg.address, origin, accountId);
           send({ t: 'wallet_challenge', message: walletProof.message, address: walletProof.address });
@@ -196,7 +225,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           break;
         }
         case 'leaderboard': {
-          if (!['speed', 'signal', 'games'].includes(msg.metric)) return;
+          if (!['speed', 'signal', 'games', 'bots'].includes(msg.metric)) return;
           send({ t: 'leaderboard', metric: msg.metric, entries: leaderboard(msg.metric) });
           break;
         }
@@ -236,15 +265,17 @@ wss.on('connection', (socket: WebSocket, request) => {
           room.matchmaking = true;
           rooms.set(room.code, room);
           me = room.addPlayer(profile(accountId).nickname || msg.name, msg.color, socket, false, accountId);
+          trackPlayer(me);
           send({ t: 'joined', playerId: me.id, code: room.code });
           room.updateMatchmaking();
           break;
         }
         case 'leave': {
           if (room && me) {
+            const leavingRoom = room, leavingPlayer = me;
             const grace=disconnectGrace.get(me.id);if(grace)clearTimeout(grace);disconnectGrace.delete(me.id);
             if(room.matchmaking && room.phase==='playing')await penalizeMatchLeave(accountId);
-            room.abandon(me);
+            leavingRoom.abandon(leavingPlayer);
           }
           room = null;
           me = null;
@@ -257,6 +288,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           room = new Room(newCode(), msg.practice === true, msg.lang === 'en' ? 'en' : 'ru');
           rooms.set(room.code, room);
           me = room.addPlayer(msg.name, msg.color, socket, !!msg.bot, accountId || undefined);
+          trackPlayer(me);
           if (room.practice) room.addCompanions();
           send({ t: 'joined', playerId: me.id, code: room.code });
           room.broadcast();
@@ -269,6 +301,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           if (!r) throw new GameError('No room with this code', 'Комнаты с таким кодом нет');
           if (r.practice) throw new GameError('This is a solo practice room', 'Это комната для одиночной тренировки');
           me = r.addPlayer(profile(accountId).nickname || msg.name, msg.color, socket, !r.matchmaking && !!msg.bot, accountId);
+          trackPlayer(me);
           room = r;
           send({ t: 'joined', playerId: me.id, code: r.code });
           r.broadcast();
@@ -292,6 +325,7 @@ wss.on('connection', (socket: WebSocket, request) => {
           const returning = r.players.find((p) => p.id === msg.playerId);
           if (returning?.accountId && returning.accountId !== accountId) throw new GameError('This player belongs to another profile', 'Этот игрок принадлежит другому профилю');
           me = r.resume(msg.playerId, socket);
+          trackPlayer(me);
           const grace=disconnectGrace.get(me.id);if(grace)clearTimeout(grace);disconnectGrace.delete(me.id);
           me.accountId = accountId || undefined;
           room = r;
@@ -301,7 +335,7 @@ wss.on('connection', (socket: WebSocket, request) => {
         }
         default: {
           if (!room || !me) return;
-          if (msg.t === 'start') room.start(me);
+          if (msg.t === 'start') await room.begin(me);
           else if (msg.t === 'chat') room.chatFrom(me, String(msg.text ?? ''));
           else if (msg.t === 'set') room.setControl(me, String(msg.control), msg.value);
           else if (msg.t === 'ready') room.setReady(me, !!msg.on);
@@ -325,11 +359,12 @@ wss.on('connection', (socket: WebSocket, request) => {
     if (room && me && me.socket === socket) {
       const departingRoom=room,departingPlayer=me,id=accountId;
       room.disconnect(me);
-      if(room.matchmaking && room.phase==='playing' && id && !disconnectGrace.has(me.id)){
+      if((room.matchmaking || me.stake) && room.phase==='playing' && id && !disconnectGrace.has(me.id)){
         disconnectGrace.set(me.id,setTimeout(()=>{
           disconnectGrace.delete(departingPlayer.id);
           if(departingPlayer.socket || departingRoom.phase!=='playing')return;
-          void penalizeMatchLeave(id).then(()=>departingRoom.abandon(departingPlayer)).catch(error=>console.error('Leave penalty persistence failed:',error instanceof Error?error.message:'storage error'));
+          const penalty = departingRoom.matchmaking ? penalizeMatchLeave(id) : Promise.resolve();
+          void penalty.then(()=>departingRoom.abandon(departingPlayer)).catch(error=>console.error('Leave penalty persistence failed:',error instanceof Error?error.message:'storage error'));
         },60_000));
       }
     }
@@ -341,6 +376,7 @@ setInterval(() => {
   for (const [code, r] of rooms)
     if ((r.emptySince && Date.now() - r.emptySince > 10 * 60_000) || (r.players.length === 0 && r.phase === 'lobby')) {
       r.stopTimer();
+      void r.closeStakes().catch(() => console.error('Room stake cleanup failed'));
       rooms.delete(code);
     }
 }, 60_000);

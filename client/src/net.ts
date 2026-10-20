@@ -83,7 +83,7 @@ export class Net {
         if (s) ws.send(JSON.stringify({ t: 'resume', code: s.code, playerId: s.playerId } satisfies ClientMessage));
         this.queue.splice(0).forEach(m => ws.send(m));
       }
-      if (message.t === 'left' && this.preferGuest) {
+      if ((message.t === 'left' || message.t === 'eliminated') && this.preferGuest) {
         this.preferGuest = false;
         this.connect();
         ws.close();

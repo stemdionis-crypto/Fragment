@@ -1,0 +1,93 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import type { WebSocket } from 'ws';
+const directory = mkdtempSync(join(tmpdir(), 'fragment-stakes-'));
+process.env.FRAGMENT_DATA_DIR = directory;
+delete process.env.DATABASE_URL; delete process.env.RENDER; delete process.env.FRAGMENT_LOCAL_PREVIEW;
+const e = await import('../server/economy');
+const { Room } = await import('../server/room');
+const rooms: InstanceType<typeof Room>[] = [];
+const fund = async (label: string) => {
+  const a = await e.identify(); await e.bindWallet(a.id, `test-wallet-${label}`);
+  for (let n = 0; n < 20; n++) await e.recordMatch(a.id, `${label}-${n}`, true, 60, label, true, true);
+  return a;
+};
+try {
+  const a = await fund('A'), b = await fund('B'), c = await fund('C');
+  await assert.rejects(e.claimRatingReward(a.id, 2), /locked/);
+  const rewards = await Promise.all([e.claimRatingReward(a.id, 1), e.claimRatingReward(a.id, 1)]);
+  assert.deepEqual(rewards.map(r => r.amount), [200, 0]); assert.equal(e.profile(a.id).balance, 200);
+  await e.recordMatch(a.id, 'lose-rating', false, 10, 'A', true, true);
+  assert.equal(e.profile(a.id).botPoints, 190); assert.equal(e.profile(a.id).botRatingPeak, 200);
+  await e.recordMatch(a.id, 'recover-rating', true, 10, 'A', true, true);
+  assert.equal((await e.claimRatingReward(a.id, 1)).amount, 0);
+  await e.claimRatingReward(b.id, 1); await e.claimRatingReward(c.id, 1);
+  const guest = await e.identify(); await assert.rejects(e.claimRatingReward(guest.id, 1), /Sign in/);
+  for (const amount of [-1, 1.5, NaN, Infinity, 1_000_001, 201]) await assert.rejects(e.reserveStake(a.id, 'bad', amount));
+  await Promise.all([e.reserveStake(a.id, 'race-1', 150), e.reserveStake(a.id, 'race-2', 150).catch(() => {})]);
+  assert.equal(e.profile(a.id).balance, 50, 'parallel stakes cannot double spend');
+  await e.refundStakes('race-1'); await e.refundStakes('race-2');
+  assert.equal(e.profile(a.id).balance, 200);
+  await e.reserveStake(a.id, 'match', 100); await e.reserveStake(b.id, 'match', 200); await e.reserveStake(c.id, 'match', 100);
+  await e.activateStakes('match', [{ id: a.id, amount: 100 }, { id: b.id, amount: 200 }, { id: c.id, amount: 100 }]);
+  await assert.rejects(e.reserveStake(a.id, 'match', 0), /locked/);
+  await e.forfeitStake(a.id, 'match');
+  await Promise.all([e.settleStakes('match', [b.id, c.id]), e.settleStakes('match', [b.id, c.id])]);
+  assert.equal(e.profile(a.id).balance, 100);
+  assert.equal(e.profile(b.id).balance, 467); assert.equal(e.profile(c.id).balance, 333);
+  assert.equal(e.profile(b.id).lastStakeResult!.bonus, 67); assert.equal(e.profile(c.id).lastStakeResult!.bonus, 33);
+  assert.equal(e.profile(b.id).reservedSignals, 0);
+  await e.reserveStake(c.id, 'loss', 100); await e.activateStakes('loss', [{ id: c.id, amount: 100 }]);
+  await e.settleStakes('loss', []); assert.equal(e.profile(c.id).balance, 233);
+  await e.refundStakes('loss'); assert.equal(e.profile(c.id).balance, 233, 'a loss cannot be refunded by replay');
+  const platform = await e.syncPlatform('paid-signals', { owned: ['classic'], items: [], equipped: 'classic', loadout: {} }, '500', true);
+  await assert.rejects(e.reserveStake(platform.id, 'platform', 100), /not published/);
+  assert.equal(e.profile(platform.id).balance, 500, 'live iDos balance must not be changed by local ledger');
+
+  const socket = { OPEN: 1, readyState: 1, send() {} } as unknown as WebSocket;
+  const room = new Room('BETS'); rooms.push(room);
+  const p = room.addPlayer('A', '#c9c4b8', socket, false, a.id), q = room.addPlayer('B', '#8d9499', socket, false, b.id);
+  room.addBot(p); room.addBot(p);
+  await room.setStake(p, 50); await room.setStake(q, 50); await room.begin(p); room.stopTimer();
+  assert.equal(room.phase, 'playing'); room.abandon(p);
+  (room as unknown as { win(): void }).win();
+  for (let n = 0; n < 100 && !e.profile(b.id).lastStakeResult?.won; n++) await new Promise(r => setTimeout(r, 10));
+  // Wait for this match's settlement, not a prior receipt.
+  for (let n = 0; n < 100 && e.profile(b.id).reservedSignals; n++) await new Promise(r => setTimeout(r, 10));
+  assert.equal(e.profile(b.id).lastStakeResult!.payout, 150, 'leaver stake is distributed to the remaining winner');
+  assert.equal(e.profile(a.id).lastStakeResult!.won, false);
+
+  await e.reserveStake(c.id, 'restart', 70); await e.activateStakes('restart', [{ id: c.id, amount: 70 }]);
+  const child = spawnSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', `
+    import assert from 'node:assert/strict';
+    const e = await import('./server/economy.ts');
+    const c = await e.identify(process.env.TEST_TOKEN);
+    assert.equal(e.profile(c.id).balance, 233);
+    assert.equal(e.profile(c.id).reservedSignals, 0);
+    await e.refundStakes('restart'); assert.equal(e.profile(c.id).balance, 233);
+    await e.closeAccountStore();
+  `], { env: { ...process.env, TEST_TOKEN: c.token }, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(child.status, 0, child.stderr);
+  assert.equal(JSON.parse(readFileSync(join(directory, 'profiles.json'), 'utf8')).find((a: {id:string}) => a.id === c.id).stakes.restart.status, 'refunded');
+  const local = spawnSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', `
+    import assert from 'node:assert/strict';
+    const e = await import('./server/economy.ts');
+    const state = { owned:['classic'], items:[], equipped:'classic', loadout:{} };
+    const p = await e.syncPlatform('paid-signals', state, '500', true);
+    await e.reserveStake(p.id, 'local-paid', 100);
+    assert.equal(e.profile(p.id).balance, 400);
+    assert.equal(e.profile(p.id).platform.balance, '500');
+    await e.activateStakes('local-paid', [{id:p.id, amount:100}]);
+    await e.settleStakes('local-paid', [p.id]);
+    assert.equal(e.profile(p.id).balance, 600);
+    await e.syncPlatform('paid-signals', state, '500', true);
+    assert.equal(e.profile(p.id).balance, 600, 'platform refresh cannot reset the local ledger');
+    assert.equal(e.profile(p.id).platform.balance, '500', 'the live balance snapshot remains unchanged');
+    await e.closeAccountStore();
+  `], { env: { ...process.env, FRAGMENT_LOCAL_PREVIEW: 'true' }, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(local.status, 0, local.stderr);
+  console.log('PASS: one-time 200-point rewards, peak/drop/replay, atomic holds, proportional forfeits, double payout, loss, leaver integration, restart refund, live iDos isolation');
+} finally { rooms.forEach(room => room.stopTimer()); await e.closeAccountStore(); rmSync(directory, { recursive: true, force: true }); }

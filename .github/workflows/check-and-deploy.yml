@@ -34,6 +34,10 @@ jobs:
           FRAGMENT_TEST_WORK: ${{ runner.temp }}
       - run: npx tsx scripts/check-upgrade.ts
       - run: npx tsx scripts/check-idos.ts
+      - run: npx tsx scripts/check-bot-rating.ts
+      - run: npx tsx scripts/check-elimination.ts
+      - run: npx tsx scripts/check-rating-rewards-stakes.ts
+      - run: npx tsx scripts/check-platform-rating-rewards.ts
       - run: npm run build
 
   deploy:
