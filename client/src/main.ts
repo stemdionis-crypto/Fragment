@@ -1,4 +1,4 @@
-import { platformLogin, platformReward } from './idos';
+import { platformLogin, platformReward, platformAuthPopup, runPlatformAuthPopup } from './idos';
 import './style.css';
 import './preview.css';
 import { openTutorial } from './tutorial';
@@ -1089,6 +1089,8 @@ function tMatchCountdown(startsAt: number) {
   return t('matchCountdown')(Math.max(0, Math.ceil((startsAt - Date.now()) / 1000)));
 }
 
+if (platformAuthPopup) runPlatformAuthPopup();
+else {
 unlockAudio();
 initSettingsUI();
 initShop((message) => net.send(message));
@@ -1111,4 +1113,6 @@ render();
 net.connect();
 requestAnimationFrame(frame);
 
-document.addEventListener('click', e => { if ((e.target as HTMLElement).closest('#idos-login') && !account?.platform) platformLogin(); });
+document.addEventListener('click', e => { if ((e.target as HTMLElement).closest('#idos-login') && !account?.platform) platformLogin(message => net.send(message), message => toast(esc(message), 'error')); });
+
+}

@@ -75,6 +75,7 @@ export class Net {
         guestFallback();
         return;
       }
+      if (message.t === 'profile' && message.profile.platform) this.preferGuest = false;
       this.onMessage(message);
       if (message.t === 'profile' && !this.authenticated) {
         clearTimeout(authTimer);

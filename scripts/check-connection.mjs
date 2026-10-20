@@ -88,3 +88,14 @@ for (const mode of ['expired', 'server-error', 'timeout']) {
   assert.deepEqual(sockets[0].sent.map(m => m.t), ['identify', 'create']);
 }
 console.log('PASS: guest practice, stalled/expired/rejected SSO, auth timeout, late-response isolation, reconnect and account retry after leaving');
+
+{
+  let expired = true;
+  const { net, sockets } = setup(async () => { if (expired) throw Error('expired'); return {t:'idos_identify',userId:'restored',ticket:'test-ticket'}; });
+  await sockets[0].open(); await sockets[1].open(); sockets[1].receive(profile);
+  expired = false;
+  sockets[1].receive({t:'profile',profile:{platform:{userId:'restored'}}});
+  net.connect(); await sockets[2].open();
+  assert.equal(sockets[2].sent[0].t,'idos_identify','manual popup sign-in must restore account authentication on reconnect');
+}
+console.log('PASS: manual iDos sign-in clears guest fallback on reconnect');

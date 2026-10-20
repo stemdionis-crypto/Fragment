@@ -2,6 +2,7 @@
 import { createIDosGamesClient, beginSsoRedirect, readSsoCodeFromUrl } from '@idosgames/core';
 import type { ClientMessage } from '../../shared/protocol';
 import { SIGNAL_TOPUPS_ENABLED } from '../../shared/economy';
+import { popupAuthCode } from './popup-auth-guard';
 const TITLE = '49HLIN0J';
 export const idos = createIDosGamesClient({ titleID: TITLE });
 let enabled = false;
@@ -70,9 +71,53 @@ export async function refreshPlatformShop() {
     if (typeof price === 'number' && Number.isSafeInteger(price) && price > 0) platformPrices.set(offer.OfferID.replace(/^fragment_/, ''), price);
   }
 }
-export function platformLogin() {
-  localStorage.setItem('fragment.idos-enabled', 'true');
-  beginSsoRedirect({ titleID: TITLE });
+let loginPopup: Window | null = null;
+export const platformAuthPopup = new URLSearchParams(location.search).has('fragment_auth');
+export function runPlatformAuthPopup() {
+  const nonce = new URLSearchParams(location.search).get('fragment_auth') ?? '';
+  const status = document.createElement('p');
+  status.style.cssText = 'padding:40px;color:#d9d3c5;text-align:center';
+  document.getElementById('app')!.replaceChildren(status);
+  if (!/^[a-f0-9]{32}$/.test(nonce) || !window.opener) {
+    status.textContent = 'Откройте вход из игры. / Start sign-in from the game.'; return;
+  }
+  const hadCode = location.hash.includes('idos_sso=');
+  const code = readSsoCodeFromUrl();
+  if (code) {
+    window.opener.postMessage({ type: 'fragment:idos-sso', nonce, code: code.code }, location.origin);
+    status.textContent = 'Возвращаемся в игру. / Returning to the game.';
+    window.close();
+  } else if (hadCode) status.textContent = 'Повторите вход из игры. / Retry sign-in from the game.';
+  else beginSsoRedirect({ titleID: TITLE });
+}
+export function platformLogin(send: (message: ClientMessage) => void, error: (message: string) => void) {
+  if (window.self === window.top) {
+    localStorage.setItem('fragment.idos-enabled', 'true');
+    beginSsoRedirect({ titleID: TITLE }); return;
+  }
+  if (loginPopup && !loginPopup.closed) { loginPopup.focus(); return; }
+  const nonce = crypto.randomUUID().replaceAll('-', '');
+  const url = new URL(location.pathname, location.origin);
+  url.searchParams.set('fragment_auth', nonce);
+  const popup = window.open(url.href, 'fragment-idos-signin', 'popup,width=560,height=720');
+  if (!popup) { error('Разрешите всплывающее окно для входа iDos. / Allow the iDos sign-in popup.'); return; }
+  loginPopup = popup;
+  const cleanup = () => { clearTimeout(timer); window.removeEventListener('message', receive); if (loginPopup === popup) loginPopup = null; };
+  const receive = (event: MessageEvent) => {
+    const code = popupAuthCode(event, popup, location.origin, nonce);
+    if (!code) return;
+    cleanup();
+    void (async () => {
+      const result = await idos.auth.loginWithSsoCode(code);
+      if (!result.ok) throw new Error('Не удалось войти в iDos. Повторите вход. / iDos sign-in failed.');
+      localStorage.setItem('fragment.idos-enabled', 'true');
+      if (idos.auth.context) localStorage.setItem('fragment.idos-user', idos.auth.context.userID);
+      const identity = await platformIdentity();
+      if (identity) send(identity);
+    })().catch(reason => error(reason instanceof Error ? reason.message : 'iDos sign-in failed'));
+  };
+  const timer = setTimeout(() => { cleanup(); error('Вход не завершён. Повторите попытку. / Sign-in timed out. Please retry.'); }, 180_000);
+  window.addEventListener('message', receive);
 }
 export async function platformIdentity(): Promise<ClientMessage | null> {
   const code = readSsoCodeFromUrl();
