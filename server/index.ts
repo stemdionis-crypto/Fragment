@@ -7,8 +7,8 @@ import type { ClientMessage, ServerMessage } from '../shared/protocol';
 import { GameError, Room, type Player } from './room';
 import { translationEngine } from './translate';
 import { identify, profile, buy, equip, buyItem, equipItem, profileListeners, walletAccount, bindWallet, leaderboard, setNickname, restoreWalletProfile, platformSyncState, platformSyncComplete, durableAccounts, claimRatingReward, validatePlatformRatingReward, confirmPlatformRatingReward } from './economy';
-import { platformSnapshot, platformCall, claimPlatformBotReward, type PlatformSession } from './idos';
-import { syncPlatform, platformReceipt } from './economy';
+import { platformSnapshot, platformCall, claimPlatformBotReward, executePlatformStake, type PlatformSession } from './idos';
+import { syncPlatform, platformReceipt, platformStakeReceipt, configureStakeGateway, retryPlatformStakes, syncPlatformStakes, withPlatformBalanceLock, preparePlatformStakeAttempt } from './economy';
 import { challenge, verifyChallenge } from './wallet-auth';
 import { penalizeMatchLeave, matchLeaveRemaining } from './economy';
 
@@ -18,6 +18,20 @@ const PORT = Number((PROD && process.env.PORT) || process.env.SERVER_PORT || 256
 const DIST = fileURLToPath(new URL('../client/dist', import.meta.url));
 const rooms = new Map<string, Room>();
 const disconnectGrace = new Map<string,ReturnType<typeof setTimeout>>();
+// Tickets stay in memory only. Unpaid receipts survive restart and resume on sign-in.
+const stakeSessions = new Map<string, { session: PlatformSession; expires: number }>();
+configureStakeGateway(async (id, receipt) => {
+  const entry = stakeSessions.get(id);
+  if (!entry || entry.expires < Date.now()) { stakeSessions.delete(id); return null; }
+  await preparePlatformStakeAttempt(id, receipt);
+  return executePlatformStake(entry.session, receipt);
+});
+let retryingStakes = false;
+setInterval(() => {
+  if (retryingStakes) return;
+  retryingStakes = true;
+  void retryPlatformStakes().catch(() => console.error('Stake reconciliation pending')).finally(() => { retryingStakes = false; });
+}, 15_000).unref();
 
 function newCode() {
   const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -30,6 +44,12 @@ function newCode() {
 // In production the same server also serves the built client
 const MIME: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
 const http = createServer((req, res) => {
+  if (req.url?.startsWith('/api/idos/stake/')) {
+    const key = req.url.slice('/api/idos/stake/'.length);
+    const receipt = req.method === 'GET' && /^[a-f0-9]{64}$/.test(key) ? platformStakeReceipt(key) : null;
+    res.setHeader('Cache-Control', 'no-store'); res.setHeader('Content-Type', 'application/json');
+    return res.writeHead(receipt ? 200 : 404).end(JSON.stringify(receipt ?? { error: 'not_found' }));
+  }
   if (req.url?.startsWith('/api/idos/receipt/')) {
     const key = req.url.slice('/api/idos/receipt/'.length);
     const receipt = /^[a-f0-9]{64}$/.test(key) ? platformReceipt(key) : null;
@@ -120,8 +140,11 @@ wss.on('connection', (socket: WebSocket, request) => {
             const eligibility = validatePlatformRatingReward(accountId, msg.tier);
             if (eligibility.alreadyClaimed) result = { amount: 0, tier: msg.tier };
             else {
-              const balance = await claimPlatformBotReward(platformSession, eligibility.receipt, msg.tier);
-              result = await confirmPlatformRatingReward(accountId, msg.tier, balance);
+              const session = platformSession;
+              result = await withPlatformBalanceLock(accountId, async () => {
+                const balance = await claimPlatformBotReward(session, eligibility.receipt, msg.tier);
+                return confirmPlatformRatingReward(accountId, msg.tier, balance);
+              });
             }
           } else result = await claimRatingReward(accountId, msg.tier);
           send({ t: 'rating_reward', ...result });
@@ -141,6 +164,8 @@ wss.on('connection', (socket: WebSocket, request) => {
           platformSession = session;
           const account = await syncPlatform(msg.userId, snapshot, snapshot.balance, snapshot.ready);
           accountId = account.id;
+          stakeSessions.set(accountId, { session, expires: Date.now() + 60 * 60_000 });
+          await syncPlatformStakes(accountId);
           if (account.nickname && !snapshot.nickname) {
             const saved = await platformCall<{ Error?: unknown }>(session, 'CloudCode', 'Execute', { FunctionName: 'fragmentNickname', FunctionParameter: { nickname: account.nickname } });
             if (saved.Error) throw new Error('Nickname could not be saved in iDos');

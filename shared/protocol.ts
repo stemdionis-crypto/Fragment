@@ -58,6 +58,7 @@ export interface PlayerView {
   forbiddenWords?: number;
   wrongAnswers?: number;
   stake?: number;
+  stakePending?: boolean;
   skin?: SkinId;
   cosmetics?: Loadout;
 }

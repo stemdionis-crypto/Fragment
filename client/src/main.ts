@@ -223,6 +223,9 @@ function updateHomeWallet() {
     $<HTMLButtonElement>('#create').textContent=t('createRoom');
     $<HTMLButtonElement>('#join').title='';
   }
+  if (account?.signalsSyncPending) $('#wallet-hint').textContent = lang === 'ru'
+    ? `Расчёт ставки ожидает подтверждения iDos. Повторно платить не нужно.${account.pendingSignals ? ` К зачислению: ${account.pendingSignals} SI.` : ''}`
+    : `Stake settlement is awaiting iDos confirmation. No repeat payment is needed.${account.pendingSignals ? ` Pending credit: ${account.pendingSignals} SI.` : ''}`;
 }
 
 // ---------- lobby ----------
@@ -305,15 +308,16 @@ function updateLobby() {
     button.onclick = () => net.send({ t: 'remove_bot', playerId: button.dataset.botId! });
   });
   const isHost = state.hostId === myId;
-  const canStake = Boolean((account?.wallet || account?.platform) && (!account?.platform || account.signalsLocal));
-  $<HTMLButtonElement>('#stakeApply').disabled = stakePending || !canStake;
-  $<HTMLButtonElement>('#stakeCancel').disabled = stakePending || !canStake || !me()?.stake;
+  const canStake = Boolean((account?.wallet || account?.platform) && (!account?.platform || account.signalsLocal || account.platform.stakesReady));
+  const confirming = stakePending || account?.signalsSyncPending === true;
+  $<HTMLButtonElement>('#stakeApply').disabled = confirming || !canStake;
+  $<HTMLButtonElement>('#stakeCancel').disabled = confirming || !canStake || !me()?.stake;
   const stakeInput = $<HTMLInputElement>('#stakeInput');
-  stakeInput.disabled = stakePending || !canStake;
+  stakeInput.disabled = confirming || !canStake;
   if (document.activeElement !== stakeInput && !stakePending) stakeInput.value = String(me()?.stake ?? 0);
   $('#stakeStatus').textContent = !canStake
-    ? (lang === 'ru' ? 'Войдите через iDos или подтвердите кошелёк. Новые расчёты живого iDos пока не опубликованы.' : 'Sign in with iDos or verify your wallet. New live iDos settlement is not published yet.')
-    : stakePending ? (lang === 'ru' ? 'Сохраняем ставку…' : 'Saving stake…')
+    ? (lang === 'ru' ? 'Для ставок войдите в iDos. Если вы уже вошли, расчёт ставок ещё не включён на сервере.' : 'Sign in to iDos for stakes. If signed in, stake settlement is not enabled on the server yet.')
+    : confirming ? (lang === 'ru' ? 'Ожидаем подтверждение iDos. Повторно платить не нужно.' : 'Waiting for iDos confirmation. No repeat payment is needed.') + (account?.pendingSignals ? (lang === 'ru' ? ` К зачислению: ${account.pendingSignals} SI.` : ` Pending credit: ${account.pendingSignals} SI.`) : '')
     : (lang === 'ru' ? `Доступно: ${account?.balance ?? 0}. Ваша ставка: ${me()?.stake ?? 0}.` : `Available: ${account?.balance ?? 0}. Your stake: ${me()?.stake ?? 0}.`) + (account?.signalsLocal ? (lang === 'ru' ? ' Локальный баланс, живые Сигналы iDos не списываются.' : ' Local balance; live iDos Signals are unchanged.') : '');
   const enough = state.players.length >= MIN_PLAYERS;
   const canManageBots = isHost && !state.practice && !state.matchmaking;
@@ -323,7 +327,7 @@ function updateLobby() {
   $('#botHint').hidden = state.practice || state.matchmaking;
   const start = $<HTMLButtonElement>('#start');
   start.hidden = !isHost || state.matchmaking;
-  start.disabled = !enough || stakePending;
+  start.disabled = !enough || confirming || state.players.some(p => p.stakePending);
   $('#startHint').textContent = state.matchmaking
     ? state.matchStartsAt ? t('matchCountdown')(Math.max(0, Math.ceil((state.matchStartsAt - Date.now()) / 1000))) : t('matchWaiting')(state.players.length)
     : isHost

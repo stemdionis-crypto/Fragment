@@ -3,8 +3,19 @@ import { join, resolve } from 'node:path';
 import { openAccountStore } from './account-store';
 import { SKINS, COSMETICS, DEFAULT_ITEMS, DEFAULT_LOADOUT, RATING_REWARD_STEP, RATING_REWARD_SIGNALS, PLATFORM_RATING_TIERS, type ProfileView, type RewardView, type SkinId } from '../shared/economy';
 
-interface Stake { amount: number; status: 'reserved' | 'active' | 'lost' | 'settled' | 'refunded'; }
-interface Account extends ProfileView { localSignalsBalance?: number; stakes?: Record<string, Stake>; economyVersion?: number; legacyDemoBalance?: number; legacyDemoEarned?: number; receipt?: string; id: string; tokenHash: string; rounds: string[]; completedRounds: string[]; day: string; earnedToday: number; publicName?: string; syncPending?: boolean; }
+interface Stake { amount: number; status: 'reserved' | 'active' | 'lost' | 'settled' | 'refunded' | 'settling'; platform?: boolean; refundRequested?: boolean; settlement?: { payout: number; bonus: number; won: boolean }; }
+interface PlatformStakeJob { id: string; key: string; kind: 'reserve' | 'refund' | 'settle'; debit: number; credit: number; target?: number; status: 'pending' | 'applied' | 'rejected'; createdAt: number; attemptedAt?: number; cancelAfterApply?: boolean; error?: string; }
+export interface PlatformStakeReply { applied: boolean; rejected?: boolean; balance: number; error?: string; }
+let stakeGateway: (id: string, receipt: string) => Promise<PlatformStakeReply | null> = async () => null;
+export function configureStakeGateway(gateway: typeof stakeGateway) { stakeGateway = gateway; }
+const stakeLocks = new Map<string, Promise<unknown>>();
+async function stakeLock<T>(id: string, work: () => Promise<T>): Promise<T> {
+  const previous = stakeLocks.get(id) ?? Promise.resolve();
+  const next = previous.catch(() => {}).then(work);
+  stakeLocks.set(id, next);
+  try { return await next; } finally { if (stakeLocks.get(id) === next) stakeLocks.delete(id); }
+}
+interface Account extends ProfileView { platformStakeJobs?: PlatformStakeJob[]; lastPlatformMutationAt?: number; localSignalsBalance?: number; stakes?: Record<string, Stake>; economyVersion?: number; legacyDemoBalance?: number; legacyDemoEarned?: number; receipt?: string; id: string; tokenHash: string; rounds: string[]; completedRounds: string[]; day: string; earnedToday: number; publicName?: string; syncPending?: boolean; }
 const LOCAL_SIGNALS = process.env.FRAGMENT_LOCAL_PREVIEW === 'true' && !process.argv.includes('--prod');
 const directory = resolve(process.env.FRAGMENT_DATA_DIR || '.data');
 const file = join(directory, 'profiles.json');
@@ -43,8 +54,14 @@ export const profileListeners = new Set<(id: string) => void>();
     account.botGamesPlayed ??= 0;
     account.botRatingPeak = Math.max(account.botRatingPeak ?? 0, account.botPoints);
     account.botRewardClaimed ??= 0;
+    // Real platform money must be refunded by the platform, never by changing a snapshot.
+    for (const job of account.platformStakeJobs ?? []) if (job.status === 'pending' && job.kind === 'reserve') { job.cancelAfterApply = true; migrated = true; }
     // Rooms are in memory. An unfinished match is void after a server restart.
     for (const stake of Object.values(account.stakes ?? {})) {
+      if (stake.platform) {
+        if (['reserved', 'active', 'lost'].includes(stake.status)) { stake.refundRequested = true; migrated = true; }
+        continue;
+      }
       if (!['reserved', 'active', 'lost'].includes(stake.status)) continue;
       if (account.localSignalsBalance !== undefined && account.platform) account.localSignalsBalance += stake.amount;
       else account.balance += stake.amount;
@@ -94,7 +111,7 @@ function change<T>(id: string, fn: (account: Account) => T) { return transaction
 }); }
 export function profile(id: string): ProfileView {
   const a = committedAccounts.get(id)!;
-  return { matchmakingBlockedUntil: a.matchmakingBlockedUntil, botRatingPeak: a.botRatingPeak ?? a.botPoints ?? 0, botRewardClaimed: a.botRewardClaimed ?? 0, reservedSignals: Object.values(a.stakes ?? {}).filter(s => s.status === 'reserved' || s.status === 'active').reduce((n, s) => n + s.amount, 0), signalsLocal: LOCAL_SIGNALS, ratingRewardsReady: Boolean(a.platform?.ready), lastStakeResult: a.lastStakeResult, botPoints: a.botPoints ?? 0, botGamesPlayed: a.botGamesPlayed ?? 0, nickname: a.nickname, platform: a.platform, balance: signalsBalance(a), owned: [...a.owned], equipped: a.equipped, wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalSignalEarned: a.totalSignalEarned, wallet: a.wallet, items: [...a.items], loadout: { ...a.loadout } };
+  return { matchmakingBlockedUntil: a.matchmakingBlockedUntil, botRatingPeak: a.botRatingPeak ?? a.botPoints ?? 0, botRewardClaimed: a.botRewardClaimed ?? 0, reservedSignals: Object.values(a.stakes ?? {}).filter(s => s.status === 'reserved' || s.status === 'active').reduce((n, s) => n + s.amount, 0), signalsSyncPending: stakeIsPending(id), pendingSignals: (a.platformStakeJobs ?? []).filter(j => j.status === 'pending').reduce((sum,j) => sum + j.credit,0), signalsLocal: LOCAL_SIGNALS, ratingRewardsReady: Boolean(a.platform?.ready), lastStakeResult: a.lastStakeResult, botPoints: a.botPoints ?? 0, botGamesPlayed: a.botGamesPlayed ?? 0, nickname: a.nickname, platform: a.platform, balance: signalsBalance(a), owned: [...a.owned], equipped: a.equipped, wins: a.wins, gamesPlayed: a.gamesPlayed, fastestSeconds: a.fastestSeconds, totalSignalEarned: a.totalSignalEarned, wallet: a.wallet, items: [...a.items], loadout: { ...a.loadout } };
 }
 export function recordMatch(id: string, round: string, won: boolean, seconds: number, name: string, practice: boolean, botMatch = false) {
   return change(id, a => {
@@ -116,6 +133,12 @@ export type LadderMetric = import('../shared/protocol').LadderMetric;
 
 function signalsBalance(a: Account) {
   return LOCAL_SIGNALS && a.platform ? a.localSignalsBalance ?? a.balance : a.balance;
+}
+function realPlatformStake(a: Account) { return Boolean(a.platform && !LOCAL_SIGNALS); }
+function requireStakeAccount(a: Account) {
+  if (realPlatformStake(a)) {
+    if (!a.platform?.ready || !a.platform.stakesReady) throw new Error('iDos stakes unavailable / Ставки iDos пока недоступны');
+  } else requireSignals(a);
 }
 function requireSignals(a: Account) {
   if (!a.wallet && !a.platform) throw new Error('Sign in first / Войдите через iDos или подтвердите кошелёк');
@@ -154,53 +177,162 @@ export function confirmPlatformRatingReward(id: string, tier: number, balance: n
     if (!Number.isSafeInteger(balance) || balance < 0) throw new Error('Invalid iDos balance');
     const amount = tier > (a.botRewardClaimed ?? 0) ? RATING_REWARD_SIGNALS : 0;
     a.botRewardClaimed = Math.max(a.botRewardClaimed ?? 0, tier);
-    a.balance = balance; a.platform!.balance = String(balance);
+    a.balance = balance; a.platform!.balance = String(balance); a.lastPlatformMutationAt = Date.now();
     a.totalSignalEarned += amount; a.syncPending = true;
     return { amount, tier };
   });
 }
-export function reserveStake(id: string, key: string, amount: number) {
+export function platformStakeReceipt(receipt: string) {
+  for (const a of committedAccounts.values()) {
+    const job = a.platformStakeJobs?.find(j => j.id === receipt);
+    if (job && a.platform) return { userId: a.platform.userId, receipt: job.id, key: job.key, kind: job.kind, debit: job.debit, credit: job.credit, status: job.status, createdAt: job.createdAt, attemptedAt: job.attemptedAt };
+  }
+  return null;
+}
+export function preparePlatformStakeAttempt(id: string, receipt: string) {
   return change(id, a => {
+    const job = a.platformStakeJobs?.find(j => j.id === receipt && j.status === 'pending');
+    if (!job) throw new Error('Stake operation is no longer pending');
+    job.attemptedAt ??= Date.now();
+  });
+}
+function queuePlatformStake(a: Account, key: string, kind: PlatformStakeJob['kind'], debit: number, credit: number, target?: number) {
+  const job: PlatformStakeJob = { id: randomBytes(32).toString('hex'), key, kind, debit, credit, target, status: 'pending', createdAt: Date.now() };
+  a.platformStakeJobs ??= [];
+  // Removed receipts become 404, so they cannot be used to replay an old operation.
+  const terminal = a.platformStakeJobs.filter(j => j.status !== 'pending');
+  if (terminal.length > 64) a.platformStakeJobs = a.platformStakeJobs.filter(j => j.status === 'pending' || terminal.indexOf(j) >= terminal.length - 64);
+  a.platformStakeJobs.push(job);
+  return job.id;
+}
+export function stakeAmount(id: string, key: string) {
+  const stake = committedAccounts.get(id)?.stakes?.[key];
+  return stake && ['reserved','active','lost','settling'].includes(stake.status) ? stake.amount : 0;
+}
+export function stakeIsPending(id: string, key?: string) {
+  const a = committedAccounts.get(id);
+  return Boolean(a?.platformStakeJobs?.some(j => j.status === 'pending' && (!key || j.key === key)) || Object.entries(a?.stakes ?? {}).some(([k,s]) => s.refundRequested && (!key || key === k)));
+}
+async function flushPlatformStakes(id: string) {
+  for (let pass = 0; pass < 8; pass++) {
+    // Refunds requested by a leave/restart wait for an ambiguous debit to reconcile first.
+    await change(id, a => {
+      // An operation that was never sent can be cancelled without charging first.
+      for (const job of a.platformStakeJobs ?? []) if (job.status === 'pending' && job.kind === 'reserve' && job.cancelAfterApply && !job.attemptedAt) { job.status = 'rejected'; job.error = 'Stake cancelled before processing'; }
+      if (!realPlatformStake(a) || a.platformStakeJobs?.some(j => j.status === 'pending')) return;
+      for (const [key, stake] of Object.entries(a.stakes ?? {})) {
+        if (stake.platform && stake.refundRequested && ['reserved','active','lost'].includes(stake.status)) {
+          if (stake.amount) queuePlatformStake(a,key,'refund',0,stake.amount);
+          else { stake.status = 'refunded'; stake.refundRequested = false; }
+          break;
+        }
+      }
+    });
+    const job = committedAccounts.get(id)?.platformStakeJobs?.find(j => j.status === 'pending');
+    if (!job) return;
+    let result: PlatformStakeReply | null;
+    try { result = await stakeGateway(id,job.id); } catch { return; }
+    if (!result) return;
+    if (!Number.isSafeInteger(result.balance) || result.balance < 0) throw new Error('Invalid iDos balance');
+    if (!result.applied && !result.rejected) return;
+    await change(id, a => {
+      const current = a.platformStakeJobs?.find(j => j.id === job.id);
+      if (!current || current.status !== 'pending') return;
+      current.status = result!.applied ? 'applied' : job.kind === 'reserve' ? 'rejected' : 'pending';
+      current.error = result!.error;
+      a.balance = result!.balance; a.platform!.balance = String(result!.balance); a.lastPlatformMutationAt = Date.now();
+      const old = a.stakes?.[job.key];
+      if (!result!.applied) return;
+      a.stakes ??= {};
+      if (job.kind === 'reserve') a.stakes[job.key] = { amount: job.target!, platform: true, status: job.target ? 'reserved' : 'refunded', refundRequested: Boolean(current.cancelAfterApply || old?.refundRequested) && Boolean(job.target) };
+      if (job.kind === 'refund' && old) { old.status = 'refunded'; old.refundRequested = false; }
+      if (job.kind === 'settle' && old?.settlement) {
+        old.status = 'settled';
+        a.lastStakeResult = { stake: old.amount, ...old.settlement };
+      }
+    });
+    // Rejected payouts/refunds must remain recoverable, not turn into a fake payment.
+    if (!result.applied && job.kind !== 'reserve') return;
+  }
+}
+export function syncPlatformStakes(id: string) { return stakeLock(id, () => flushPlatformStakes(id)); }
+export function withPlatformBalanceLock<T>(id: string, work: () => Promise<T>) { return stakeLock(id, work); }
+export async function retryPlatformStakes() {
+  const ids = [...committedAccounts.values()].filter(a => realPlatformStake(a) && stakeIsPending(a.id)).map(a => a.id);
+  await Promise.all(ids.map(id => syncPlatformStakes(id).catch(() => {})));
+}
+export async function reserveStake(id: string, key: string, amount: number) {
+  const snapshot = committedAccounts.get(id);
+  if (!snapshot || !realPlatformStake(snapshot)) return change(id, a => {
     requireSignals(a);
     if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1_000_000) throw new Error('Invalid stake / Ставка должна быть целым числом от 0 до 1000000');
     const old = a.stakes?.[key];
-    if (old && !['reserved', 'refunded'].includes(old.status)) throw new Error('Stake is locked / Ставка уже зафиксирована');
+    if (old && !['reserved','refunded'].includes(old.status)) throw new Error('Stake is locked / Ставка уже зафиксирована');
     adjustSignals(a, (old?.status === 'reserved' ? old.amount : 0) - amount);
-    a.stakes ??= {};
-    a.stakes[key] = { amount, status: amount ? 'reserved' : 'refunded' };
+    a.stakes ??= {}; a.stakes[key] = { amount, status: amount ? 'reserved' : 'refunded' };
+  });
+  return stakeLock(id, async () => {
+    await flushPlatformStakes(id);
+    let receipt = '';
+    await change(id, a => {
+      requireStakeAccount(a);
+      if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1_000_000) throw new Error('Invalid stake / Ставка должна быть целым числом от 0 до 1000000');
+      if (stakeIsPending(id)) throw new Error('Confirmation pending / Дождитесь подтверждения предыдущей операции iDos');
+      if (Object.entries(a.stakes ?? {}).some(([k,s]) => k !== key && ['reserved','active','lost','settling'].includes(s.status))) throw new Error('Finish the previous stake / Завершите предыдущую игру со ставкой');
+      const old = a.stakes?.[key];
+      if (old && !['reserved','refunded'].includes(old.status)) throw new Error('Stake is locked / Ставка уже зафиксирована');
+      const previous = old?.status === 'reserved' ? old.amount : 0;
+      if (previous === amount) return;
+      receipt = queuePlatformStake(a,key,'reserve',Math.max(0,amount-previous),Math.max(0,previous-amount),amount);
+    });
+    if (!receipt) return;
+    await flushPlatformStakes(id);
+    const job = committedAccounts.get(id)!.platformStakeJobs!.find(j => j.id === receipt)!;
+    if (job.status === 'rejected') throw new Error(job.error || 'Stake rejected / iDos отклонил ставку');
+    if (job.status !== 'applied') throw new Error('Confirmation pending / Ставка ожидает подтверждения iDos. Баланс сверится автоматически.');
   });
 }
+
 export function activateStakes(key: string, entries: { id: string; amount: number }[]) {
   return transaction(() => {
     if (new Set(entries.map(e => e.id)).size !== entries.length) throw new Error('Duplicate stake account');
     for (const entry of entries) {
       const a = accounts.get(entry.id);
       if (!a) throw new Error('Profile not found');
-      requireSignals(a);
+      requireStakeAccount(a);
+      if (stakeIsPending(a.id)) throw new Error('Stake confirmation pending / Ставка ещё подтверждается');
       const stake = a.stakes?.[key];
-      if (!stake || stake.status !== 'reserved' || stake.amount !== entry.amount) throw new Error('Reserve your stake again / Подтвердите ставку заново');
+      if (!stake || stake.status !== 'reserved' || stake.amount !== entry.amount || stake.refundRequested) throw new Error('Reserve your stake again / Подтвердите ставку заново');
     }
     for (const entry of entries) accounts.get(entry.id)!.stakes![key].status = 'active';
   });
 }
-export function refundStakes(key: string, id?: string) {
-  return transaction(() => {
+export async function refundStakes(key: string, id?: string) {
+  const platforms: string[] = [];
+  await transaction(() => {
     for (const a of accounts.values()) {
       if (id && a.id !== id) continue;
       const stake = a.stakes?.[key];
-      if (!stake || !['reserved', 'active'].includes(stake.status)) continue;
-      adjustSignals(a, stake.amount); stake.status = 'refunded';
+      if (realPlatformStake(a)) {
+        let needs = false;
+        for (const job of a.platformStakeJobs ?? []) if (job.key === key && job.kind === 'reserve' && job.status === 'pending') { job.cancelAfterApply = true; needs = true; }
+        if (stake?.platform && ['reserved','active'].includes(stake.status)) { stake.refundRequested = true; needs = true; }
+        if (needs) platforms.push(a.id);
+      } else if (stake && ['reserved','active'].includes(stake.status)) { adjustSignals(a,stake.amount); stake.status = 'refunded'; }
     }
   });
+  await Promise.all(platforms.map(id => syncPlatformStakes(id)));
 }
+
 export function forfeitStake(id: string, key: string) {
   return change(id, a => {
     const stake = a.stakes?.[key];
     if (stake?.status === 'active') stake.status = 'lost';
   });
 }
-export function settleStakes(key: string, winnerIds: string[]) {
-  return transaction(() => {
+export async function settleStakes(key: string, winnerIds: string[]) {
+  const platforms: string[] = [];
+  await transaction(() => {
     const rows = [...accounts.values()].filter(a => ['active', 'lost'].includes(a.stakes?.[key]?.status ?? ''));
     const winners = rows.filter(a => a.stakes![key].status === 'active' && winnerIds.includes(a.id));
     const pool = rows.filter(a => !winners.includes(a)).reduce((n, a) => n + a.stakes![key].amount, 0);
@@ -213,11 +345,21 @@ export function settleStakes(key: string, winnerIds: string[]) {
       const stake = a.stakes![key];
       const share = shares.find(share => share.a === a);
       const payout = share ? stake.amount * 2 + share.share : 0;
-      adjustSignals(a, payout);
+      if (stake.platform && realPlatformStake(a) && payout) {
+        stake.settlement = { payout, bonus: share?.share ?? 0, won: Boolean(share) };
+        stake.status = 'settling';
+        queuePlatformStake(a,key,'settle',0,payout);
+        platforms.push(a.id);
+        continue;
+      }
+      if (!stake.platform) adjustSignals(a, payout);
       a.lastStakeResult = { stake: stake.amount, payout, bonus: share?.share ?? 0, won: Boolean(share) };
       stake.status = 'settled';
     }
   });
+  // Also drain a settlement persisted by a previous invocation before an interrupted reply.
+  for (const a of committedAccounts.values()) if (a.platformStakeJobs?.some(j => j.key === key && j.status === 'pending') && !platforms.includes(a.id)) platforms.push(a.id);
+  await Promise.all(platforms.map(id => syncPlatformStakes(id)));
 }
 
 export function leaderboard(metric: LadderMetric) {
@@ -268,7 +410,7 @@ export function equip(id: string, skin: string) {
 }
 export function reward(id: string, round: string, practice: boolean, won = true): Promise<RewardView> {
   return change(id, a => {
-  if (practice || (a.platform && !a.platform.ready)) return { amount: 0, balance: a.balance }; 
+  if (practice || (a.platform && !a.platform.ready)) return { amount: 0, balance: a.balance };
   if (a.rounds.includes(round)) return { amount: 0, balance: a.balance, receipt: a.platform ? a.receipt : undefined };
     const day = new Date().toISOString().slice(0, 10);
     if (a.day !== day) { a.day = day; a.earnedToday = 0; }
@@ -301,7 +443,7 @@ export function equipItem(id: string, itemId: string) {
   });
 }
 
-export function syncPlatform(userId: string, state: Pick<ProfileView, 'owned' | 'items' | 'equipped' | 'loadout'> & { nickname?: string; earnedToday?: number; stats?: { wins: number; gamesPlayed: number; fastestSeconds: number | null; totalSignalsEarned: number } }, balance: string, ready: boolean) {
+export function syncPlatform(userId: string, state: Pick<ProfileView, 'owned' | 'items' | 'equipped' | 'loadout'> & { nickname?: string; earnedToday?: number; capturedAt?: number; stakesReady?: boolean; stats?: { wins: number; gamesPlayed: number; fastestSeconds: number | null; totalSignalsEarned: number } }, balance: string, ready: boolean) {
   return transaction(() => {
   let a = [...accounts.values()].find(a => a.platform?.userId === userId);
   if (!a) { a = newAccount().account; a.platform = { userId, balance, ready }; a.receipt = randomBytes(32).toString('hex'); }
@@ -312,7 +454,9 @@ export function syncPlatform(userId: string, state: Pick<ProfileView, 'owned' | 
     if (account.day !== day) { account.day = day; account.earnedToday = 0; }
     account.earnedToday = Math.max(account.earnedToday, state.earnedToday ?? 0);
     if (state.stats) { account.wins = Math.max(account.wins,state.stats.wins); account.gamesPlayed = Math.max(account.gamesPlayed,state.stats.gamesPlayed); account.totalSignalEarned = Math.max(account.totalSignalEarned,(state.stats.totalSignalsEarned ?? 0)); if (state.stats.fastestSeconds !== null) account.fastestSeconds = Math.min(account.fastestSeconds ?? Infinity,state.stats.fastestSeconds); }
-    account.platform = { userId, balance, ready }; account.balance = Number(balance);
+    const fresh = !state.capturedAt || state.capturedAt >= (account.lastPlatformMutationAt ?? 0);
+    account.platform = { userId, balance: fresh ? balance : String(account.balance), ready, stakesReady: state.stakesReady };
+    if (fresh) account.balance = Number(balance);
   return account;
   });
 }

@@ -24,8 +24,9 @@ export function inventoryLook(inventory: UserInventoryState, saved: { equipped?:
   return { owned, items, loadout, equipped: owned.find(id => id === saved.equipped) ?? 'classic' as const };
 }
 export async function platformSnapshot(session: PlatformSession) {
+  const capturedAt = Date.now();
   const inventory = await platformCall<UserInventoryState>(session, 'User', 'GetInventory');
-  const cloud = await platformCall<{ Error?: unknown; FunctionResult?: { nickname?: string; equipped?: string; loadout?: Loadout; stats?: { wins: number; gamesPlayed: number; fastestSeconds: number | null; totalSignalsEarned: number } } }>(session, 'CloudCode', 'Execute', { FunctionName: 'fragmentProfile' });
+  const cloud = await platformCall<{ Error?: unknown; FunctionResult?: { stakesReady?: boolean; nickname?: string; equipped?: string; loadout?: Loadout; stats?: { wins: number; gamesPlayed: number; fastestSeconds: number | null; totalSignalsEarned: number } } }>(session, 'CloudCode', 'Execute', { FunctionName: 'fragmentProfile' });
   if (cloud.Error || !cloud.FunctionResult) throw new Error('iDos profile service unavailable / Профиль iDos недоступен');
   const currencies = await platformCall<CurrencyDefinitions>(session, 'Title', 'GetCurrencyDefinitions');
   const ready = process.env.FRAGMENT_SIGNALS_ENABLED === 'true' && currencies.VirtualCurrencies?.SI?.Status === 'Active';
@@ -35,7 +36,15 @@ export async function platformSnapshot(session: PlatformSession) {
   const today = new Date().toISOString().slice(0, 10);
   const earnedToday = cycle?.CycleStartUtc?.slice(0, 10) === today ? Math.max(0, ...Object.values(cycle.Quests ?? {}).map(q => q.Objectives?.verified?.CurrentValue ?? 0)) : 0;
   if (!Number.isSafeInteger(Number(signals)) || Number(signals) < 0) throw new Error('Invalid Signals balance');
-  return { nickname: cloud.FunctionResult.nickname, earnedToday: Math.min(50, earnedToday), stats: cloud.FunctionResult.stats, ...inventoryLook(inventory, cloud.FunctionResult), balance: ready ? String(signals) : '0', ready };
+  return { capturedAt, stakesReady: ready && process.env.FRAGMENT_STAKES_ENABLED === 'true' && cloud.FunctionResult.stakesReady === true, nickname: cloud.FunctionResult.nickname, earnedToday: Math.min(50, earnedToday), stats: cloud.FunctionResult.stats, ...inventoryLook(inventory, cloud.FunctionResult), balance: ready ? String(signals) : '0', ready };
+}
+
+export async function executePlatformStake(session: PlatformSession, receipt: string, call = platformCall) {
+  if (!/^[a-f0-9]{64}$/.test(receipt)) throw new Error('Invalid stake receipt');
+  const result = await call<{ Error?: unknown; FunctionResult?: import('./economy').PlatformStakeReply }>(session, 'CloudCode', 'Execute', { FunctionName: 'fragmentStake', FunctionParameter: { receipt } });
+  const value = result.FunctionResult;
+  if (result.Error || !value || typeof value.applied !== 'boolean' || (value.rejected !== undefined && typeof value.rejected !== 'boolean') || (value.applied && value.rejected) || !Number.isSafeInteger(value.balance) || value.balance < 0) throw new Error('iDos stake confirmation pending');
+  return value;
 }
 
 // The platform owns the grant and replay protection. Never credit a cached snapshot.

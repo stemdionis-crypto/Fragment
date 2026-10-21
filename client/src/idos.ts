@@ -72,7 +72,7 @@ export async function refreshPlatformShop() {
   }
 }
 let loginPopup: Window | null = null;
-export const platformAuthPopup = new URLSearchParams(location.search).has('fragment_auth');
+export const platformAuthPopup = typeof location !== 'undefined' && new URLSearchParams(location.search).has('fragment_auth');
 export function runPlatformAuthPopup() {
   const nonce = new URLSearchParams(location.search).get('fragment_auth') ?? '';
   const status = document.createElement('p');
@@ -144,6 +144,8 @@ export async function platformAction(action: string, id: string, ready: boolean,
   try {
     if (action.startsWith('buy')) {
       if (!ready) throw new Error('Signals economy is not active / Экономика Сигналов ещё не активна');
+      const inventory = await idos.user.getUserState(['InventoryV2']);
+      if (!inventory.ok) throw new Error('Refresh your iDos balance before buying / Не удалось обновить баланс iDos перед покупкой');
       const storefront = await idos.store.getStorefront({ forceRefresh: true });
       if (!storefront.ok) throw new Error('iDos shop unavailable / Магазин iDos недоступен');
       let purchased = false;

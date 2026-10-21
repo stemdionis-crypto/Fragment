@@ -1,0 +1,6 @@
+{
+  "Enabled": true,
+  "AllowedConsumeTypes": ["VirtualCurrency"],
+  "AllowedGrantTypes": ["VirtualCurrency"],
+  "AllowEventTokens": false
+}

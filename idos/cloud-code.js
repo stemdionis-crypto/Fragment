@@ -3,7 +3,7 @@ var fragmentItems = [{"id":"head-none","slot":"head","free":true},{"id":"headpho
 
 function check(result) { if (!result.Success) throw new Error('Platform operation rejected'); return result.Data; }
 function fragmentSaved() { var d=check(server.GetUserCustomData()); var r=d.ReadOnly && d.ReadOnly.fragment_profile; return r && r.Value ? JSON.parse(r.Value) : { equipped:'classic',loadout:{} }; }
-handlers.fragmentProfile = function(args,context) { var saved=fragmentSaved(); var d=check(server.GetUserCustomData()); var r=d.ReadOnly && d.ReadOnly.fragment_signal_stats; if(r && r.Value) saved.stats=JSON.parse(r.Value); else { var old=d.ReadOnly && d.ReadOnly.fragment_stats; if(old && old.Value) { saved.stats=JSON.parse(old.Value); saved.stats.totalSignalsEarned=0; } } return saved; };
+handlers.fragmentProfile = function(args,context) { var saved=fragmentSaved(); var d=check(server.GetUserCustomData()); var r=d.ReadOnly && d.ReadOnly.fragment_signal_stats; if(r && r.Value) saved.stats=JSON.parse(r.Value); else { var old=d.ReadOnly && d.ReadOnly.fragment_stats; if(old && old.Value) { saved.stats=JSON.parse(old.Value); saved.stats.totalSignalsEarned=0; } } saved.stakesReady=true; return saved; };
 handlers.fragmentNickname = function(args,context) {
   var nickname=args && typeof args.nickname==='string' ? args.nickname.trim() : '';
   if(!nickname || nickname.length>16 || /[\u0000-\u001f\u007f]/.test(nickname)) throw new Error('Use 1–16 characters');
@@ -49,4 +49,45 @@ handlers.fragmentMatch = function(args,context) {
   stats.fastestSeconds=receipt.fastestSeconds===null ? (old.fastestSeconds || null) : Math.min(old.fastestSeconds || Infinity,receipt.fastestSeconds);
   check(server.SetUserCustomData('ReadOnly','fragment_signal_stats',JSON.stringify(stats)));
   return {verified:true,earned:receipt.earned};
+};
+
+// Only the backend issues receipts. Client-supplied amounts and currencies are ignored.
+handlers.fragmentStake = function(args,context) {
+  if (!args || !/^[a-f0-9]{64}$/.test(args.receipt)) throw new Error('Invalid stake receipt');
+  var response=check(server.HttpRequest({Method:'GET',Url:'https://fragment-demo.onrender.com/api/idos/stake/'+args.receipt}));
+  if (!response.Ok || response.BodyTooLarge) throw new Error('Stake confirmation unavailable');
+  var receipt=JSON.parse(response.Body);
+  if (receipt.userId!==context.UserID || receipt.receipt!==args.receipt) throw new Error('Receipt belongs to another account');
+  if (['reserve','refund','settle'].indexOf(receipt.kind)<0 || ['pending','applied','rejected'].indexOf(receipt.status)<0) throw new Error('Invalid stake operation');
+  if (!Number.isSafeInteger(receipt.debit) || !Number.isSafeInteger(receipt.credit) || receipt.debit<0 || receipt.credit<0 || receipt.debit>1000000 || receipt.credit>5000000 || (receipt.debit && receipt.credit) || (!receipt.debit && !receipt.credit)) throw new Error('Invalid stake amount');
+  if (receipt.kind!=='reserve' && receipt.debit) throw new Error('Invalid stake debit');
+  function balance() {
+    var raw=server.ReadUserData(['InventoryV2']);
+    if (!raw || !raw.InventoryV2) throw new Error('Inventory unavailable');
+    var entry=(raw.InventoryV2.VirtualCurrencies || {}).SI;
+    var n=entry ? entry.Amount : 0;
+    if (!Number.isSafeInteger(n) || n<0) throw new Error('Invalid Signals balance');
+    return n;
+  }
+  if (receipt.status==='applied') return {applied:true,balance:balance()};
+  if (receipt.status==='rejected') return {applied:false,rejected:true,balance:balance()};
+  var custom=check(server.GetUserCustomData());
+  var old=custom.Internal && custom.Internal.fragment_stake_receipts;
+  var seen=old && old.Value ? JSON.parse(old.Value) : [];
+  if (!Array.isArray(seen)) throw new Error('Invalid stake journal');
+  if (seen.indexOf(args.receipt)>=0) return {applied:true,balance:balance()};
+  // Do not retry an unresolved operation indefinitely beyond the replay window.
+  if (!Number.isSafeInteger(receipt.attemptedAt) || Date.now()-receipt.attemptedAt>15*60*1000 || receipt.attemptedAt>Date.now()+60000) throw new Error('Stake needs reconciliation');
+  var operation={};
+  if (receipt.debit) operation.Consume={Standard:{Entries:[{Type:'VirtualCurrency',CurrencyID:'SI',Amount:receipt.debit}]}};
+  if (receipt.credit) operation.Grant={Standard:{Entries:[{Type:'VirtualCurrency',CurrencyID:'SI',Amount:receipt.credit}]}};
+  var result=server.ApplyResourceOperation({Reason:'fragment_stake:'+args.receipt,Operation:operation});
+  if (!result.Success) {
+    if (receipt.kind==='reserve' && receipt.debit && String(result.Error).indexOf('insufficient balance')>=0) return {applied:false,rejected:true,balance:balance(),error:'Not enough Signals / Недостаточно Сигналов'};
+    throw new Error('Stake confirmation pending');
+  }
+  seen.push(args.receipt);
+  // A pending backend receipt blocks further stakes. An unacknowledged entry cannot be evicted.
+  check(server.SetUserCustomData('Internal','fragment_stake_receipts',JSON.stringify(seen.slice(-64))));
+  return {applied:true,balance:balance()};
 };

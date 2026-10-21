@@ -60,6 +60,11 @@ function render() {
     number.textContent = String(value); caption.textContent = String(label); card.append(number, caption); summary.append(card);
   }
   dialog.append(summary);
+  if (profile?.signalsSyncPending) {
+    const confirmation = document.createElement('p'); confirmation.className = 'fine'; confirmation.setAttribute('role', 'status');
+    confirmation.textContent = text('Расчёт ставки ожидает подтверждения iDos. Повторно платить не нужно.', 'Stake settlement is awaiting iDos confirmation. No repeat payment is needed.') + (profile.pendingSignals ? text(` К зачислению: ${profile.pendingSignals} SI.`, ` Pending credit: ${profile.pendingSignals} SI.`) : '');
+    dialog.append(confirmation);
+  }
   const list = document.createElement('div'); list.className = 'rating-rewards';
   for (let tier = claimed + 1; tier <= Math.min(claimed + 4, PLATFORM_RATING_TIERS); tier++) {
     const row = document.createElement('div'); row.className = 'rating-reward';

@@ -26,7 +26,7 @@ import { linesFor, understandClue, isInventoryClue, visibleHandDecision, explain
 import { CompanionBrain } from './bot-brain';
 import { HAND_TRIALS } from '../shared/trial-rules';
 import { TRIAL_JAMS } from '../shared/dials';
-import { profile, reward, recordMatch, reserveStake, activateStakes, refundStakes, forfeitStake, settleStakes } from './economy';
+import { profile, reward, recordMatch, reserveStake, activateStakes, refundStakes, forfeitStake, settleStakes, stakeAmount, stakeIsPending } from './economy';
 
 const SUSPICION_PLAIN = 50;
 const SUSPICION_LEARNED = 50;
@@ -166,17 +166,19 @@ export class Room {
     try {
       await reserveStake(p.accountId, this.stakeKey, amount);
       if (!this.players.includes(p)) { await refundStakes(this.stakeKey, p.accountId); return; }
-      p.stake = amount;
-    } finally { this.stakeBusy--; this.broadcast(); }
+    } finally { p.stake = stakeAmount(p.accountId!, this.stakeKey); this.stakeBusy--; this.broadcast(); }
   }
 
   async begin(by: Player) {
     if (by.id !== this.hostId) throw new GameError('Only the host can start', 'Начать может только ведущий');
     if (this.phase !== 'lobby' || this.starting) return;
     if (this.stakeBusy) throw new GameError('Wait for stake confirmation', 'Дождитесь подтверждения ставок');
+    if (!this.practice && this.players.some(p => p.accountId && stakeIsPending(p.accountId))) throw new GameError('Wait for iDos confirmation', 'Дождитесь подтверждения операций iDos');
+    this.players.forEach(p => { if (p.accountId && !p.companion) p.stake = stakeAmount(p.accountId, this.stakeKey); });
     const entries = this.players.filter(p => p.stake && p.accountId && !p.companion).map(p => ({ id: p.accountId!, amount: p.stake! }));
     if (!entries.length) { this.start(by); return; }
-    if (this.practice || this.players.filter(p => !p.companion && p.socket && p.accountId && (profile(p.accountId).wallet || profile(p.accountId).platform)).length < 2) throw new GameError('Stakes need two signed-in players', 'Для ставок нужны хотя бы два вошедших в аккаунт игрока');
+    const humans = new Set(this.players.filter(p => !p.companion && p.socket && p.accountId && (profile(p.accountId).wallet || profile(p.accountId).platform)).map(p => p.accountId));
+    if (this.practice || humans.size < 2) throw new GameError('Stakes need two signed-in players', 'Для ставок нужны хотя бы два разных вошедших в аккаунт игрока');
     if (this.players.length < Number(process.env.MIN_PLAYERS ?? MIN_PLAYERS)) throw new GameError('Wait for the team', 'Дождитесь команды');
     this.starting = true;
     const roster = this.players.map(p => p.id).join(',');
@@ -420,7 +422,7 @@ export class Room {
   disconnect(p: Player) {
     p.socket = null;
     if (this.phase === 'lobby') {
-      if (p.accountId && p.stake) void refundStakes(this.stakeKey, p.accountId).catch(() => console.error('Lobby stake refund failed'));
+      if (p.accountId) void refundStakes(this.stakeKey, p.accountId).catch(() => console.error('Lobby stake refund failed'));
       this.players = this.players.filter((x) => x !== p);
       this.system(b(`${p.name} left.`, `${p.name} уходит.`));
     }
@@ -881,7 +883,8 @@ export class Room {
         botStatus: this.botThinking.get(p.id),
         forbiddenWords: this.faults.get(p.id)?.words ?? 0,
         wrongAnswers: this.faults.get(p.id)?.answers ?? 0,
-        stake: p.stake ?? 0,
+        stake: p.accountId && !p.companion ? stakeAmount(p.accountId, this.stakeKey) : 0,
+        stakePending: Boolean(p.accountId && stakeIsPending(p.accountId)),
         skin: p.accountId ? profile(p.accountId).equipped : 'classic',
         cosmetics: p.accountId ? profile(p.accountId).loadout : undefined,
         ready: this.ready.has(p.id),

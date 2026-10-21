@@ -44,7 +44,7 @@ try {
   await e.settleStakes('loss', []); assert.equal(e.profile(c.id).balance, 233);
   await e.refundStakes('loss'); assert.equal(e.profile(c.id).balance, 233, 'a loss cannot be refunded by replay');
   const platform = await e.syncPlatform('paid-signals', { owned: ['classic'], items: [], equipped: 'classic', loadout: {} }, '500', true);
-  await assert.rejects(e.reserveStake(platform.id, 'platform', 100), /not published/);
+  await assert.rejects(e.reserveStake(platform.id, 'platform', 100), /unavailable/);
   assert.equal(e.profile(platform.id).balance, 500, 'live iDos balance must not be changed by local ledger');
 
   const socket = { OPEN: 1, readyState: 1, send() {} } as unknown as WebSocket;

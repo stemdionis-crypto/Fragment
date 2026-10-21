@@ -7,14 +7,14 @@ export const SKINS = [
   { id: 'phantom', name: { ru: 'Тёмный человек', en: 'Shadow Figure' }, price: 5000, cloth: '#444b61', accent: '#a6b6c7' },
 ] as const;
 export type SkinId = typeof SKINS[number]['id'];
-export interface ProfileView { nickname?: string; platform?: { userId: string; balance: string; ready: boolean }; balance: number; owned: SkinId[]; equipped: SkinId; wins: number; gamesPlayed: number; fastestSeconds: number | null; totalSignalEarned: number; wallet?: string; items: string[]; loadout: Loadout; }
+export interface ProfileView { nickname?: string; platform?: { userId: string; balance: string; ready: boolean; stakesReady?: boolean }; balance: number; owned: SkinId[]; equipped: SkinId; wins: number; gamesPlayed: number; fastestSeconds: number | null; totalSignalEarned: number; wallet?: string; items: string[]; loadout: Loadout; }
 export interface RewardView { receipt?: string; amount: number; balance: number; }
 export interface ProfileView { matchmakingBlockedUntil?: number; }
 export interface ProfileView { botPoints?: number; botGamesPlayed?: number; }
 export interface StakeResult { stake: number; payout: number; bonus: number; won: boolean; }
 export interface ProfileView {
   botRatingPeak?: number; botRewardClaimed?: number; reservedSignals?: number;
-  signalsLocal?: boolean; ratingRewardsReady?: boolean; lastStakeResult?: StakeResult;
+  signalsLocal?: boolean; signalsSyncPending?: boolean; pendingSignals?: number; ratingRewardsReady?: boolean; lastStakeResult?: StakeResult;
 }
 export const RATING_REWARD_STEP = 200;
 export const RATING_REWARD_SIGNALS = 200;
